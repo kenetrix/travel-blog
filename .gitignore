@@ -1,0 +1,5 @@
+.opencode/
+.claude/
+node_modules/
+backend/data/
+backend/internal/adapter/http/api/openapi.bundle.yaml

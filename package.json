@@ -1,0 +1,15 @@
+{
+    "name": "travel-blog",
+    "private": true,
+    "scripts": {
+        "postinstall": "npm --prefix frontend install",
+        "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors cyan,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
+        "dev:backend": "cd backend && go run ./cmd/api -local-user",
+        "dev:frontend": "npm --prefix frontend run dev",
+        "generate:api": "npm --prefix frontend run generate:api && cd backend && go generate ./internal/adapter/http/api"
+    },
+    "devDependencies": {
+        "@redocly/cli": "^2.70.0",
+        "concurrently": "^10.0.6"
+    }
+}
