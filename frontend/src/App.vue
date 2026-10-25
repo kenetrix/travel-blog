@@ -19,11 +19,11 @@ watch(
     () => (view.value = store.settings.defaultView)
 )
 
-// Without a session only the login page works
+// Without a session visitors see the bare map; every other page needs a login
 watch(
     () => [store.authState, route.name],
     ([state, name]) => {
-        if (state === 'anonymous' && name !== 'login') {
+        if (state === 'anonymous' && name !== 'home' && name !== 'login') {
             router.replace({ name: 'login' })
         }
     },
@@ -55,7 +55,7 @@ watchEffect(() => {
         <!-- Top bar -->
         <div class="topbar">
             <span class="logo">Travel Blog</span>
-            <div class="toggle-pill">
+            <div v-if="store.profile" class="toggle-pill">
                 <button
                     :class="{ active: view === 'countries' }"
                     @click="view = 'countries'"
@@ -69,6 +69,13 @@ watchEffect(() => {
                     Flights
                 </button>
             </div>
+            <RouterLink
+                v-if="store.authState === 'anonymous'"
+                class="account login"
+                :to="{ name: 'login' }"
+            >
+                Log in
+            </RouterLink>
             <RouterLink
                 v-if="store.profile"
                 class="account avatar"
@@ -113,14 +120,14 @@ watchEffect(() => {
 
         <!-- Country panel -->
         <Transition name="slide">
-            <div v-if="view === 'countries'">
+            <div v-if="store.profile && view === 'countries'">
                 <CountryPanel />
             </div>
         </Transition>
 
         <!-- Flight panel -->
         <Transition name="slide">
-            <div v-if="view === 'flights'">
+            <div v-if="store.profile && view === 'flights'">
                 <FlightPanel />
             </div>
         </Transition>
@@ -195,6 +202,18 @@ watchEffect(() => {
 
 .account:hover {
     color: var(--text);
+}
+
+.login {
+    padding: 0.4rem 0.9rem;
+    border-radius: 1rem;
+    background: #3a7d5c;
+    color: #fff;
+}
+
+.login:hover {
+    color: #fff;
+    background: #2f6a4e;
 }
 
 .avatar {
