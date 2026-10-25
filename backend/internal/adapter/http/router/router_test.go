@@ -17,15 +17,14 @@ import (
 	"travel-blog/backend/migrations"
 )
 
-// newServer wires the real stack. With localUser, requests without a
-// session act as the local user (like -local-user).
-func newServer(t *testing.T, localUser bool) http.Handler {
-	h, _ := newStack(t, localUser)
+// newServer wires the real stack.
+func newServer(t *testing.T) http.Handler {
+	h, _ := newStack(t)
 	return h
 }
 
 // newStack is newServer plus the account service, to set up administrators.
-func newStack(t *testing.T, localUser bool) (http.Handler, *service.AccountService) {
+func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 	t.Helper()
 	dir := t.TempDir()
 	db, err := sqlite.NewDB(filepath.Join(dir, "test.db"), migrations.FS)
@@ -42,7 +41,7 @@ func newStack(t *testing.T, localUser bool) (http.Handler, *service.AccountServi
 	users := sqlite.NewUserRepo(db)
 	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
-	return router.New(handler.New(travel, accounts), auth.Sessions(accounts, localUser)), accounts
+	return router.New(handler.New(travel, accounts), auth.Sessions(accounts)), accounts
 }
 
 func do(t *testing.T, h http.Handler, method, path, body string, header map[string]string) *httptest.ResponseRecorder {
@@ -94,32 +93,33 @@ func usernameOf(t *testing.T, rec *httptest.ResponseRecorder) string {
 }
 
 func TestTravelFlow(t *testing.T) {
-	h := newServer(t, true)
+	h := newServer(t)
+	me := register(t, h, "mia")
 
-	rec := do(t, h, "GET", "/api/user", "", nil)
-	if rec.Code != 200 || usernameOf(t, rec) != "local" {
+	rec := do(t, h, "GET", "/api/user", "", me)
+	if rec.Code != 200 || usernameOf(t, rec) != "mia" {
 		t.Fatalf("account: %d %s", rec.Code, rec.Body)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-cache" {
 		t.Error("missing Cache-Control: private, no-cache")
 	}
 	for _, path := range []string{"/api/user", "/api/countries", "/api/flights"} {
-		rec := do(t, h, "GET", path, "", nil)
+		rec := do(t, h, "GET", path, "", me)
 		etag := rec.Header().Get("ETag")
 		if rec.Code != 200 || etag == "" {
 			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
 		}
-		rec = do(t, h, "GET", path, "", map[string]string{"If-None-Match": etag})
+		rec = do(t, h, "GET", path, "", map[string]string{"If-None-Match": etag, "Cookie": me["Cookie"]})
 		if rec.Code != 304 || rec.Body.Len() != 0 {
 			t.Errorf("revalidating %s: %d %q", path, rec.Code, rec.Body)
 		}
 	}
-	if body := do(t, h, "GET", "/api/countries", "", nil).Body.String(); strings.TrimSpace(body) != "[]" {
+	if body := do(t, h, "GET", "/api/countries", "", me).Body.String(); strings.TrimSpace(body) != "[]" {
 		t.Errorf("empty countries: %s", body)
 	}
-	etag := do(t, h, "GET", "/api/flights", "", nil).Header().Get("ETag")
+	etag := do(t, h, "GET", "/api/flights", "", me).Header().Get("ETag")
 
-	rec = do(t, h, "POST", "/api/flights", `{"from":"BER","to":"HND","countries":["DEU","JPN"]}`, nil)
+	rec = do(t, h, "POST", "/api/flights", `{"from":"BER","to":"HND","countries":["DEU","JPN"]}`, me)
 	if rec.Code != 201 {
 		t.Fatalf("create flight: %d %s", rec.Code, rec.Body)
 	}
@@ -136,30 +136,30 @@ func TestTravelFlow(t *testing.T) {
 		t.Errorf("ETag not updated: %q", newTag)
 	}
 
-	rec = do(t, h, "PATCH", "/api/flights/"+created.Id, `{"visibility":"public"}`, nil)
+	rec = do(t, h, "PATCH", "/api/flights/"+created.Id, `{"visibility":"public"}`, me)
 	if rec.Code != 204 || rec.Header().Get("ETag") == "" {
 		t.Errorf("update flight: %d %s", rec.Code, rec.Body)
 	}
 
-	rec = do(t, h, "PUT", "/api/countries/JPN", `{"status":"none","details":{"food":"","sightseeing":"","notes":"","rating":0,"tags":[]}}`, nil)
+	rec = do(t, h, "PUT", "/api/countries/JPN", `{"status":"none","details":{"food":"","sightseeing":"","notes":"","rating":0,"tags":[]}}`, me)
 	if rec.Code != 204 {
 		t.Errorf("remove country: %d %s", rec.Code, rec.Body)
 	}
 
 	// Profile and settings changes change the account's ETag
-	etag = do(t, h, "GET", "/api/user", "", nil).Header().Get("ETag")
-	rec = do(t, h, "PUT", "/api/user/settings", `{"distanceUnit":"mi","theme":"dark","defaultView":"flights","defaultVisibility":"public","profileVisibility":"public"}`, nil)
+	etag = do(t, h, "GET", "/api/user", "", me).Header().Get("ETag")
+	rec = do(t, h, "PUT", "/api/user/settings", `{"distanceUnit":"mi","theme":"dark","defaultView":"flights","defaultVisibility":"public","profileVisibility":"public"}`, me)
 	if rec.Code != 204 || rec.Header().Get("ETag") == etag {
 		t.Errorf("save settings: %d %s", rec.Code, rec.Body)
 	}
-	rec = do(t, h, "PATCH", "/api/user/profile", `{"firstName":"Ken","timezone":"Europe/Berlin"}`, nil)
+	rec = do(t, h, "PATCH", "/api/user/profile", `{"firstName":"Ken","timezone":"Europe/Berlin"}`, me)
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"timezone":"Europe/Berlin"`) {
 		t.Errorf("update profile: %d %s", rec.Code, rec.Body)
 	}
 }
 
 func TestLoginRequired(t *testing.T) {
-	h := newServer(t, false)
+	h := newServer(t)
 
 	for _, path := range []string{"/api/user", "/api/countries", "/api/flights", "/api/user/settings"} {
 		if rec := do(t, h, "GET", path, "", nil); rec.Code != 401 {
@@ -217,28 +217,26 @@ func TestLoginRequired(t *testing.T) {
 }
 
 func TestTravelPerUser(t *testing.T) {
-	h := newServer(t, true)
+	h := newServer(t)
+	me := register(t, h, "mia")
 	alice := register(t, h, "alice")
 
-	local := do(t, h, "GET", "/api/user", "", nil).Header().Get("ETag")
-	if rec := do(t, h, "GET", "/api/user", "", alice); rec.Header().Get("ETag") == local {
+	mine := do(t, h, "GET", "/api/user", "", me).Header().Get("ETag")
+	if rec := do(t, h, "GET", "/api/user", "", alice); rec.Header().Get("ETag") == mine {
 		t.Error("ETags of different users must differ")
 	}
 	if rec := do(t, h, "POST", "/api/flights", `{"from":"BER","to":"HND","countries":["DEU","JPN"]}`, alice); rec.Code != 201 {
 		t.Fatalf("alice's flight: %d %s", rec.Code, rec.Body)
 	}
 	for _, path := range []string{"/api/countries", "/api/flights"} {
-		if body := do(t, h, "GET", path, "", nil).Body.String(); strings.TrimSpace(body) != "[]" {
-			t.Errorf("local user sees alice's data at %s: %s", path, body)
+		if body := do(t, h, "GET", path, "", me).Body.String(); strings.TrimSpace(body) != "[]" {
+			t.Errorf("me sees alice's data at %s: %s", path, body)
 		}
-	}
-	if rec := do(t, h, "DELETE", "/api/user", "", nil); rec.Code != 409 {
-		t.Errorf("deleting the local user: %d", rec.Code)
 	}
 }
 
 func TestPublicTravel(t *testing.T) {
-	h := newServer(t, false)
+	h := newServer(t)
 	alice := register(t, h, "alice")
 	do(t, h, "PUT", "/api/countries/JPN", `{"status":"visited","visibility":"public","details":{"food":"","sightseeing":"","notes":"","rating":0,"tags":[]}}`, alice)
 	do(t, h, "PUT", "/api/countries/FRA", `{"status":"visited","details":{"food":"","sightseeing":"","notes":"","rating":0,"tags":[]}}`, alice)
@@ -259,7 +257,8 @@ func TestPublicTravel(t *testing.T) {
 }
 
 func TestProblems(t *testing.T) {
-	h := newServer(t, true)
+	h := newServer(t)
+	me := register(t, h, "mia")
 	register(t, h, "alice")
 	cases := []struct {
 		method, path, body string
@@ -284,7 +283,7 @@ func TestProblems(t *testing.T) {
 		{"GET", "/api/public/nobody", "", 404},
 	}
 	for _, c := range cases {
-		rec := do(t, h, c.method, c.path, c.body, nil)
+		rec := do(t, h, c.method, c.path, c.body, me)
 		if rec.Code != c.want || rec.Header().Get("Content-Type") != "application/problem+json" {
 			t.Errorf("%s %s: %d %s %s, want %d problem+json", c.method, c.path, rec.Code, rec.Header().Get("Content-Type"), rec.Body, c.want)
 		}
@@ -292,15 +291,16 @@ func TestProblems(t *testing.T) {
 }
 
 func TestTravelOmitsTextsAndCountryHasThem(t *testing.T) {
-	h := newServer(t, true)
+	h := newServer(t)
+	me := register(t, h, "mia")
 	rec := do(t, h, "PUT", "/api/countries/DEU",
-		`{"status":"visited","details":{"food":"Brezel","sightseeing":"","notes":"long","rating":4,"tags":["city trip"]}}`, nil)
+		`{"status":"visited","details":{"food":"Brezel","sightseeing":"","notes":"long","rating":4,"tags":["city trip"]}}`, me)
 	if rec.Code != 200 {
 		t.Fatalf("save: %d %s", rec.Code, rec.Body)
 	}
 
 	var entries []map[string]any
-	json.Unmarshal(do(t, h, "GET", "/api/countries", "", nil).Body.Bytes(), &entries)
+	json.Unmarshal(do(t, h, "GET", "/api/countries", "", me).Body.Bytes(), &entries)
 	if len(entries) != 1 || entries[0]["rating"] != float64(4) {
 		t.Fatalf("entries = %v", entries)
 	}
@@ -310,11 +310,11 @@ func TestTravelOmitsTextsAndCountryHasThem(t *testing.T) {
 		}
 	}
 
-	rec = do(t, h, "GET", "/api/countries/DEU", "", nil)
+	rec = do(t, h, "GET", "/api/countries/DEU", "", me)
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"notes":"long"`) {
 		t.Errorf("country: %d %s", rec.Code, rec.Body)
 	}
-	if rec = do(t, h, "GET", "/api/countries/FRA", "", nil); rec.Code != 404 {
+	if rec = do(t, h, "GET", "/api/countries/FRA", "", me); rec.Code != 404 {
 		t.Errorf("missing country: %d", rec.Code)
 	}
 }

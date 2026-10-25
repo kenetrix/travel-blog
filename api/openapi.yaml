@@ -10,8 +10,7 @@ info:
     Accounts: users register and log in with email and password and get a
     session cookie (`session`, HttpOnly). All data belongs to the user of the
     request; no endpoint takes a user ID. Without a session, protected
-    endpoints answer 401 - unless the backend runs with `-local-user`
-    (development), which maps such requests to the local user.
+    endpoints answer 401.
 
     Visibility: country entries, flights and locations are `private` or
     `public`. New ones get the user's default visibility. Public data of a

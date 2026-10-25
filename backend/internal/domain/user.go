@@ -5,13 +5,9 @@ import "time"
 // UserID identifies a user; all travel data belongs to exactly one.
 type UserID string
 
-// LocalUserID is the user that requests without a session run as in development mode. The init
-// migration creates it; it has no password and can neither log in nor be deleted.
-const LocalUserID UserID = "local"
-
 type Profile struct {
 	Username    string // public name, lowercase
-	Email       string // empty for the local user
+	Email       string // empty if none is set
 	FirstName   string
 	LastName    string
 	DisplayName string
@@ -20,6 +16,7 @@ type Profile struct {
 	Timezone    string // IANA, e.g. "Europe/Berlin"
 	HomeCountry string // ISO 3166 alpha-3 or empty
 	HomeAirport string // IATA or empty
+	Color       string // #rrggbb or empty
 	CreatedAt   time.Time
 }
 
@@ -50,6 +47,7 @@ type ProfileUpdate struct {
 	Timezone    *string
 	HomeCountry *string
 	HomeAirport *string
+	Color       *string
 }
 
 type DistanceUnit string

@@ -4,11 +4,14 @@ Install dependencies:
 
     go mod download
 
-Start the server (development; requests without a session run as the user `local`):
+Start the server (`-dev` is for development only: requests without a session run as the
+passwordless administrator `admin`, so you can start without logging in):
 
-    go run ./cmd/api -local-user
+    go run ./cmd/api -dev
 
-Without `-local-user`, all routes except `/api/auth/*` and `/api/public/*` require a login.
+All routes except `/api/auth/*` and `/api/public/*` require a login. On first start the
+server creates the administrator `admin` with a random password, written to
+`data/initial-admin.txt` until it is changed (see below).
 
 ## Architecture (hexagonal)
 
@@ -49,8 +52,6 @@ from the request context (`internal/adapter/http/auth`).
   the public data.
 - Photos live in `data/photos/<user>/<uuid>.<ext>`; access checks ownership via the
   location. Deleting photos, locations and accounts deletes their files too.
-- The user `local` (init migration) has no password and cannot be deleted; only
-  `-local-user` uses it.
 
 ## OpenID Connect login
 

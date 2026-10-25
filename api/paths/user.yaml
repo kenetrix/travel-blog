@@ -27,8 +27,3 @@ delete:
       headers:
         Set-Cookie: { $ref: '../components/headers.yaml#/SessionCookie' }
     '401': { $ref: '../components/responses.yaml#/Unauthorized' }
-    '409':
-      description: The local user cannot be deleted
-      content:
-        application/problem+json:
-          schema: { $ref: '../components/schemas/common.yaml#/Problem' }

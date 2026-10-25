@@ -233,9 +233,6 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 		}
 	}
 	if up.Email != nil {
-		if user == domain.LocalUserID {
-			return domain.Profile{}, fmt.Errorf("%w: the local user has no email", ErrInvalid)
-		}
 		p.Email = ""
 		if strings.TrimSpace(*up.Email) != "" {
 			if p.Email, err = normalizeEmail(*up.Email); err != nil {
@@ -285,6 +282,12 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 			return domain.Profile{}, err
 		}
 		p.HomeAirport = *up.HomeAirport
+	}
+	if up.Color != nil {
+		if *up.Color != "" && !colorPattern.MatchString(*up.Color) {
+			return domain.Profile{}, fmt.Errorf("%w: color must look like #3a7d5c", ErrInvalid)
+		}
+		p.Color = strings.ToLower(*up.Color)
 	}
 	if p.DisplayName == "" {
 		p.DisplayName = defaultDisplayName(p)
@@ -367,11 +370,7 @@ func (s *AccountService) MustChangePassword(user domain.UserID) bool {
 }
 
 // DeleteAccount removes the user with all data and photos.
-// The local user always stays.
 func (s *AccountService) DeleteAccount(user domain.UserID) error {
-	if user == domain.LocalUserID {
-		return fmt.Errorf("%w: the local user cannot be deleted", ErrConflict)
-	}
 	// Data first (foreign keys also remove sessions, entries, flights, locations and photo
 	// records), then files: if deleting files fails, only orphaned files remain.
 	if err := s.users.Delete(user); err != nil {

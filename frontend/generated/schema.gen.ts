@@ -514,7 +514,7 @@ export interface components {
             username: string
             /**
              * Format: email
-             * @description Missing for the local user
+             * @description Missing for accounts created without one
              */
             email?: string
             firstName: string
@@ -535,6 +535,8 @@ export interface components {
             homeCountry: string
             /** @description IATA code, empty if unset */
             homeAirport: string
+            /** @description Hex colour of the user's avatar, e.g. */
+            color: string
             /** Format: date-time */
             createdAt: string
         }
@@ -552,6 +554,8 @@ export interface components {
             homeCountry?: string
             /** @description IATA or empty */
             homeAirport?: string
+            /** @description Hex colour like #3a7d5c, or empty */
+            color?: string
         }
         Settings: {
             /** @enum {string} */
@@ -1141,15 +1145,6 @@ export interface operations {
                 content?: never
             }
             401: components['responses']['Unauthorized']
-            /** @description The local user cannot be deleted */
-            409: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/problem+json': components['schemas']['Problem']
-                }
-            }
         }
     }
     updateProfile: {

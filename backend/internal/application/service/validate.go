@@ -37,6 +37,8 @@ func checkCode(kind, code string) error {
 	return nil
 }
 
+var colorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
 func checkOptionalCode(kind, code string) error {
 	if code == "" {
 		return nil

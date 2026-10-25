@@ -114,11 +114,7 @@ func (h *Handler) DeleteAccount(ctx context.Context, _ api.DeleteAccountRequestO
 	if err != nil {
 		return nil, err
 	}
-	err = h.accounts.DeleteAccount(user)
-	if errors.Is(err, service.ErrConflict) {
-		return api.DeleteAccount409ApplicationProblemPlusJSONResponse(problem(http.StatusConflict, err)), nil
-	}
-	if err != nil {
+	if err := h.accounts.DeleteAccount(user); err != nil {
 		return nil, err
 	}
 	cookie := auth.ClearCookie()
@@ -141,6 +137,7 @@ func (h *Handler) UpdateProfile(ctx context.Context, req api.UpdateProfileReques
 		Timezone:    in.Timezone,
 		HomeCountry: in.HomeCountry,
 		HomeAirport: in.HomeAirport,
+		Color:       in.Color,
 	}
 	up.Email = in.Email
 	p, err := h.accounts.UpdateProfile(user, up)

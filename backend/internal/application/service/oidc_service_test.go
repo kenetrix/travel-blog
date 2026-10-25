@@ -155,7 +155,7 @@ func TestOIDCAccountsAreListedForAdmins(t *testing.T) {
 	}
 	e.accounts.LoginOIDC(claims("s1", "ada", "", false))
 	users, err := e.accounts.Users(admin)
-	if err != nil || len(users) != 2 {
+	if err != nil || len(users) != 3 { // incl. the test fixture "local"
 		t.Fatalf("users: %d %v", len(users), err)
 	}
 }

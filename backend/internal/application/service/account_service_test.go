@@ -137,9 +137,6 @@ func TestUpdateProfile(t *testing.T) {
 	if _, err := a.UpdateProfile(alice, domain.ProfileUpdate{Email: ptr("bob@example.com")}); !errors.Is(err, service.ErrConflict) {
 		t.Errorf("taken email: %v", err)
 	}
-	if _, err := a.UpdateProfile(local, domain.ProfileUpdate{Email: ptr("me@example.com")}); !errors.Is(err, service.ErrInvalid) {
-		t.Errorf("local user email: %v", err)
-	}
 }
 
 func TestSaveSettings(t *testing.T) {
@@ -188,16 +185,10 @@ func TestChangePassword(t *testing.T) {
 	if _, _, err := a.Login("alice", "a new password!"); err != nil {
 		t.Errorf("login with new password: %v", err)
 	}
-	if err := a.ChangePassword(local, "", "", "a new password!"); !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("local user has no password: %v", err)
-	}
 }
 
 func TestDeleteAccount(t *testing.T) {
 	e := newEnv(t)
-	if err := e.accounts.DeleteAccount(local); !errors.Is(err, service.ErrConflict) {
-		t.Errorf("local user deleted: %v", err)
-	}
 	alice, token := e.register(t, "alice")
 	if err := e.accounts.DeleteAccount(alice); err != nil {
 		t.Fatal(err)
@@ -263,5 +254,22 @@ func TestOffensiveUsernamesRejected(t *testing.T) {
 	// Keeping the current name in an update is not a rename
 	if _, err := a.UpdateProfile(u.ID, domain.ProfileUpdate{Username: ptr("erin")}); err != nil {
 		t.Errorf("same name: %v", err)
+	}
+}
+
+func TestProfileColor(t *testing.T) {
+	e := newEnv(t)
+	alice, _ := e.register(t, "alice")
+	for _, bad := range []string{"red", "#12345", "#gggggg", "3a7d5c"} {
+		if _, err := e.accounts.UpdateProfile(alice, domain.ProfileUpdate{Color: ptr(bad)}); !errors.Is(err, service.ErrInvalid) {
+			t.Errorf("color %q: %v", bad, err)
+		}
+	}
+	p, err := e.accounts.UpdateProfile(alice, domain.ProfileUpdate{Color: ptr("#3A7D5C")})
+	if err != nil || p.Color != "#3a7d5c" {
+		t.Fatalf("set color: %q %v", p.Color, err)
+	}
+	if p, err = e.accounts.UpdateProfile(alice, domain.ProfileUpdate{Color: ptr("")}); err != nil || p.Color != "" {
+		t.Errorf("clear color: %q %v", p.Color, err)
 	}
 }

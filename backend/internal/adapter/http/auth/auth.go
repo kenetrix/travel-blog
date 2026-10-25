@@ -1,5 +1,5 @@
 // Package auth resolves the user of a request from the session cookie and stores it
-// in the context (read via UserFrom). With localFallback, anonymous requests run as the local user.
+// in the context (read via UserFrom).
 package auth
 
 import (
@@ -48,8 +48,8 @@ func TokenFrom(ctx context.Context) string {
 }
 
 // Sessions stores the user of the session cookie in the context. Without a valid
-// session the request stays anonymous, or runs as the local user with localFallback.
-func Sessions(a Authenticator, localFallback bool) func(http.Handler) http.Handler {
+// session the request stays anonymous, or runs as fallback if one is given (development only).
+func Sessions(a Authenticator, fallback ...domain.UserID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -65,8 +65,8 @@ func Sessions(a Authenticator, localFallback bool) func(http.Handler) http.Handl
 					}
 				}
 			}
-			if _, ok := UserFrom(ctx); !ok && localFallback {
-				ctx = WithUser(ctx, domain.LocalUserID)
+			if _, ok := UserFrom(ctx); !ok && len(fallback) > 0 {
+				ctx = WithUser(ctx, fallback[0])
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

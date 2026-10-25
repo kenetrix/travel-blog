@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"travel-blog/backend/internal/adapter/repository/sqlite"
 	"travel-blog/backend/internal/adapter/storage"
@@ -12,7 +13,8 @@ import (
 	"travel-blog/backend/migrations"
 )
 
-const local = domain.LocalUserID
+// local is an ordinary user that newEnv creates, for tests that need one without registering.
+const local = domain.UserID("local")
 
 // env wires all services on a fresh database and an empty photo folder.
 type env struct {
@@ -42,6 +44,12 @@ func newEnv(t *testing.T) *env {
 	users := sqlite.NewUserRepo(db)
 	locationRepo := sqlite.NewLocationRepo(db)
 	photoRepo := sqlite.NewPhotoRepo(db)
+	if err := users.Create(domain.User{
+		ID:      local,
+		Profile: domain.Profile{Username: "local", Language: "en", Timezone: "UTC", CreatedAt: time.Now()},
+	}, ""); err != nil {
+		t.Fatal(err)
+	}
 	return &env{
 		db:        db,
 		photoDir:  photoDir,

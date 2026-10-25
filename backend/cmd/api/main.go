@@ -20,8 +20,8 @@ import (
 )
 
 func main() {
-	localUser := flag.Bool("local-user", false,
-		"treat requests without a session as the local user (development only)")
+	dev := flag.Bool("dev", false,
+		"development only: requests without a session run as the passwordless administrator")
 	flag.Parse()
 
 	db, err := sqlite.NewDB("./data/travel-blog.db", migrations.FS)
@@ -42,12 +42,22 @@ func main() {
 
 	// On first start (or after an update without administrator) the installation
 	// receives an administrator with a generated password
-	created, err := accounts.EnsureAdmin("./data/initial-admin.txt")
-	if err != nil {
-		log.Fatalf("initial admin: %v", err)
-	}
-	if created {
-		log.Println("Administrator created, credentials in data/initial-admin.txt")
+	var asUser []domain.UserID
+	if *dev {
+		id, err := accounts.EnsureDevAdmin()
+		if err != nil {
+			log.Fatalf("dev admin: %v", err)
+		}
+		asUser = append(asUser, id)
+		log.Println("Development mode: requests without a session run as the administrator \"admin\"")
+	} else {
+		created, err := accounts.EnsureAdmin("./data/initial-admin.txt")
+		if err != nil {
+			log.Fatalf("initial admin: %v", err)
+		}
+		if created {
+			log.Println("Administrator created, credentials in data/initial-admin.txt")
+		}
 	}
 
 	// OpenID Connect login: OIDC_* variables win over the admin-area configuration.
@@ -67,11 +77,8 @@ func main() {
 	}
 
 	r := router.New(handler.New(travel, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
-		auth.Sessions(accounts, *localUser), provider.Routes)
+		auth.Sessions(accounts, asUser...), provider.Routes)
 
-	if *localUser {
-		log.Println("Requests without a session run as the local user")
-	}
 	// Listen on localhost only - avoids the Windows firewall dialog on every go run
 	log.Println("Server listening on localhost:8080")
 	srv := &http.Server{

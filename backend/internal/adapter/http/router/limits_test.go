@@ -6,7 +6,7 @@ import (
 )
 
 func TestLoginIsRateLimited(t *testing.T) {
-	h := newServer(t, false)
+	h := newServer(t)
 	body := `{"username":"nobody","password":"wrong-password-1"}`
 	var last int
 	for i := 0; i < 12; i++ {
@@ -25,7 +25,7 @@ func TestLoginIsRateLimited(t *testing.T) {
 }
 
 func TestOversizedBodyIsRejected(t *testing.T) {
-	h := newServer(t, false)
+	h := newServer(t)
 	big := `{"username":"` + strings.Repeat("a", 2<<20) + `"}`
 	if rec := do(t, h, "POST", "/api/auth/login", big, nil); rec.Code != 413 && rec.Code != 400 {
 		t.Errorf("oversized body: %d, want 413 or 400", rec.Code)
@@ -33,7 +33,7 @@ func TestOversizedBodyIsRejected(t *testing.T) {
 }
 
 func TestSecurityHeaders(t *testing.T) {
-	h := newServer(t, false)
+	h := newServer(t)
 	rec := do(t, h, "GET", "/api/user", "", nil)
 	for k, v := range map[string]string{
 		"X-Content-Type-Options":  "nosniff",

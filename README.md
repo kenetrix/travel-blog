@@ -96,7 +96,7 @@ Starts both servers side by side:
 | ⚙️ Backend  | <http://localhost:8080> |
 
 > [!TIP]
-> In development the backend runs with `-local-user`: requests without a session act as the built-in `local` user, so you can start right away without an account.
+> In development the backend runs with `-dev`: requests without a session act as the passwordless administrator `admin`. Without `-dev` (production) `admin` gets a random password in `data/initial-admin.txt` and has to change it at the first login.
 
 ## 🧭 How it fits together
 

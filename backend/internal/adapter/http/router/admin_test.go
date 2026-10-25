@@ -8,7 +8,7 @@ import (
 )
 
 func TestAdminAndPasswordGate(t *testing.T) {
-	h, accounts := newStack(t, false)
+	h, accounts := newStack(t)
 	file := filepath.Join(t.TempDir(), "initial-admin.txt")
 	if _, err := accounts.EnsureAdmin(file); err != nil {
 		t.Fatal(err)
