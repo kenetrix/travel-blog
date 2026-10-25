@@ -35,11 +35,10 @@ func NewDB(path string, migrations fs.FS) (*sql.DB, error) {
 
 // migrate tracks the number of applied migrations in user_version.
 func migrate(db *sql.DB, migrations fs.FS, path string) error {
-	files, err := fs.Glob(migrations, "*.sql")
+	scripts, err := loadMigrations(migrations)
 	if err != nil {
 		return err
 	}
-	sort.Strings(files)
 
 	ctx := context.Background()
 	conn, err := db.Conn(ctx)
@@ -52,21 +51,57 @@ func migrate(db *sql.DB, migrations fs.FS, path string) error {
 	if err := conn.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version); err != nil {
 		return err
 	}
-	if version > 0 && version < len(files) {
+	if version > 0 && version < len(scripts) {
 		if err := backup(ctx, conn, path, version); err != nil {
 			return fmt.Errorf("backup before migrating: %w", err)
 		}
 	}
-	for i := version; i < len(files); i++ {
-		script, err := fs.ReadFile(migrations, files[i])
-		if err != nil {
-			return err
-		}
-		if err := migrateOne(ctx, conn, string(script), i+1); err != nil {
-			return fmt.Errorf("migration %s: %w", files[i], err)
+	for i := version; i < len(scripts); i++ {
+		if err := migrateOne(ctx, conn, scripts[i].sql, i+1); err != nil {
+			return fmt.Errorf("migration %s: %w", scripts[i].name, err)
 		}
 	}
 	return nil
+}
+
+type migration struct{ name, sql string }
+
+// loadMigrations returns one migration per top-level .sql file or folder, in name order.
+// A folder's .sql files are joined in name order.
+func loadMigrations(fsys fs.FS) ([]migration, error) {
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, err
+	}
+	var out []migration
+	for _, e := range entries {
+		switch {
+		case e.IsDir():
+			files, err := fs.Glob(fsys, e.Name()+"/*.sql")
+			if err != nil {
+				return nil, err
+			}
+			sort.Strings(files)
+			var parts []string
+			for _, f := range files {
+				b, err := fs.ReadFile(fsys, f)
+				if err != nil {
+					return nil, err
+				}
+				parts = append(parts, string(b))
+			}
+			if len(parts) > 0 {
+				out = append(out, migration{e.Name(), strings.Join(parts, "\n")})
+			}
+		case strings.HasSuffix(e.Name(), ".sql"):
+			b, err := fs.ReadFile(fsys, e.Name())
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, migration{e.Name(), string(b)})
+		}
+	}
+	return out, nil
 }
 
 // backup saves a consistent copy of the database as <path>.bak-v<version> before pending

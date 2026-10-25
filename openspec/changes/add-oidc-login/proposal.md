@@ -26,9 +26,9 @@ Login has only been possible with a username and password. People who run their 
 
 ## Impact
 
-- Backend: new package for the OIDC flow, extensions to `AccountService` and `UserRepository`, migration `003_oidc.sql` (table `oidc_identities`, `password_hash` stays nullable), the router whitelist `/api/auth/` already covers the new routes, configuration via environment in `cmd/api/main.go`.
+- Backend: new package for the OIDC flow, extensions to `AccountService` and `UserRepository`, `001_init/04_oidc.sql` (table `oidc_identities`, `password_hash` stays nullable), the router whitelist `/api/auth/` already covers the new routes, configuration via environment in `cmd/api/main.go`.
 - API: `api/paths/auth_oidc_config.yaml` plus regenerating `oapi-codegen`; login and callback are browser redirects and only described there.
 - Frontend: `AuthPage.vue` and `store.ts`.
 - Dependencies: `github.com/coreos/go-oidc/v3`, `golang.org/x/oauth2`.
-- Admin configuration: migration `004_oidc_settings.sql` (table `oidc_settings`, client secret encrypted), `GET/PUT/DELETE /api/admin/oidc`, `POST /api/admin/oidc/test`, `AdminPage.vue`, key file `data/secret.key`.
+- Admin configuration: `001_init/04_oidc.sql` (table `oidc_settings`, client secret encrypted), `GET/PUT/DELETE /api/admin/oidc`, `POST /api/admin/oidc/test`, `AdminPage.vue`, key file `data/secret.key`.
 - Docs: `docs/oidc.md` with the environment variables and a Pocket ID example, plus README and Proxmox script.

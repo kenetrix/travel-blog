@@ -21,6 +21,12 @@ documentation (READMEs, `docs/`, OpenSpec artifacts), UI text, error messages,
 branch names and commit messages. Do not add any other language
 text; translate it when touching a file that still has some.
 
+## Database
+
+While v0.1.0 is the only release, do not add migration scripts. Change the files in
+`backend/migrations/001_init/` and recreate the test database. After the first production release,
+`001_init` is frozen: add new numbered migrations (`002_<name>.sql`, ...) instead.
+
 ## Branches
 
 Every feature or fix is developed in its own branch, named:

@@ -13,7 +13,10 @@ CREATE TABLE users (
 	timezone TEXT NOT NULL DEFAULT 'UTC', -- IANA, e.g. 'Europe/Berlin'
 	home_country TEXT NOT NULL DEFAULT '', -- ISO 3166 alpha-3
 	home_airport TEXT NOT NULL DEFAULT '', -- IATA
-	created_at TEXT NOT NULL -- RFC 3339
+	created_at TEXT NOT NULL, -- RFC 3339
+	role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+	-- 1: the password is generated or set by an administrator and must be changed at the next login
+	must_change_password INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE user_settings (
@@ -40,51 +43,9 @@ CREATE TABLE sessions (
 );
 CREATE INDEX sessions_user ON sessions (user_id);
 
-CREATE TABLE country_entries (
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	iso TEXT NOT NULL,
-	status TEXT NOT NULL CHECK (status IN ('visited', 'wishlist')),
-	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
-	food TEXT NOT NULL DEFAULT '',
-	sightseeing TEXT NOT NULL DEFAULT '',
-	notes TEXT NOT NULL DEFAULT '',
-	rating INTEGER NOT NULL DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
-	tags TEXT NOT NULL DEFAULT '[]', -- JSON array
-	PRIMARY KEY (user_id, iso)
+-- Settings of the whole installation (key/value)
+CREATE TABLE app_settings (
+	key TEXT PRIMARY KEY,
+	value TEXT NOT NULL
 );
-
-CREATE TABLE flights (
-	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	from_iata TEXT NOT NULL,
-	to_iata TEXT NOT NULL,
-	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
-	created_at TEXT NOT NULL, -- RFC 3339
-	UNIQUE (user_id, from_iata, to_iata)
-);
-
-CREATE TABLE locations (
-	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	country_id TEXT NOT NULL, -- ISO 3166 alpha-3
-	name TEXT NOT NULL,
-	lat REAL NOT NULL,
-	lng REAL NOT NULL,
-	visited_at TEXT,
-	notes TEXT NOT NULL DEFAULT '',
-	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public'))
-);
-CREATE INDEX locations_user_country ON locations (user_id, country_id);
-
--- Photos belong to a user via their location and inherit its visibility. The file is
--- stored under storage_key ('<user_id>/<uuid>.<ext>').
-CREATE TABLE photos (
-	id TEXT PRIMARY KEY,
-	location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
-	storage_key TEXT NOT NULL UNIQUE,
-	content_type TEXT NOT NULL,
-	caption TEXT NOT NULL DEFAULT '',
-	taken_at TEXT,
-	created_at TEXT NOT NULL -- RFC 3339
-);
-CREATE INDEX photos_location ON photos (location_id);
+INSERT INTO app_settings (key, value) VALUES ('registration_open', 'true');
