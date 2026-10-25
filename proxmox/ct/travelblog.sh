@@ -46,6 +46,9 @@ function update_script() {
     exit
   fi
 
+  # The sqlite3 command line tool, to inspect or repair the database
+  apk add --no-cache sqlite >/dev/null
+
   msg_info "Stopping Service"
   rc-service travel-blog stop
   msg_ok "Stopped Service"
