@@ -55,9 +55,6 @@ onMounted(async () => {
     passwordLogin.value = config.passwordLogin || !config.enabled
 })
 
-// Logged-in users can still browse the map; anonymous visitors cannot
-const closable = computed(() => store.authState !== 'anonymous')
-
 const title = computed(() => {
     if (step.value === 'login') return 'Log in'
     if (step.value === 'register') return 'Create account'
@@ -133,7 +130,6 @@ async function changeUsername() {
     <PageWrapper
         :title="title"
         subtitle="Your countries and flights, on every device"
-        :closable="closable"
     >
         <div v-if="sso" class="card">
             <a class="btn sso" href="/api/auth/oidc/login">
