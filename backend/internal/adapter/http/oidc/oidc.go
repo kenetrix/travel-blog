@@ -295,6 +295,7 @@ func (p *Provider) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func fail(w http.ResponseWriter, r *http.Request, code string) {
+	log.Printf("oidc: login rejected: %s", code)
 	http.Redirect(w, r, "/login?error="+url.QueryEscape(code), http.StatusFound)
 }
 
@@ -308,12 +309,14 @@ func (p *Provider) handleCallback(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Set-Cookie", flowCookieHeader("", -1))
 	c, err := r.Cookie(flowCookie)
 	if err != nil {
+		log.Printf("oidc: flow cookie missing (callback opened on another address, or cookie blocked)")
 		fail(w, r, ErrFailed)
 		return
 	}
 	f, ok := p.unsign(c.Value)
 	q := r.URL.Query()
 	if !ok || subtle.ConstantTimeCompare([]byte(f.State), []byte(q.Get("state"))) != 1 {
+		log.Printf("oidc: flow cookie expired or state mismatch")
 		fail(w, r, ErrFailed)
 		return
 	}
