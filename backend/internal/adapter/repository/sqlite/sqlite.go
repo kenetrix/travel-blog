@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,6 +30,10 @@ func NewDB(path string, migrations fs.FS) (*sql.DB, error) {
 	if err := migrate(db, migrations, path); err != nil {
 		db.Close()
 		return nil, err
+	}
+	// The databases hold sessions and secrets; only the owner may read them
+	if err := os.Chmod(path, 0o600); err != nil {
+		log.Printf("database permissions: %v", err)
 	}
 	return db, nil
 }
@@ -111,8 +116,10 @@ func backup(ctx context.Context, conn *sql.Conn, path string, version int) error
 	if _, err := os.Stat(dest); err == nil {
 		return nil
 	}
-	_, err := conn.ExecContext(ctx, fmt.Sprintf(`VACUUM INTO '%s'`, strings.ReplaceAll(dest, "'", "''")))
-	return err
+	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`VACUUM INTO '%s'`, strings.ReplaceAll(dest, "'", "''"))); err != nil {
+		return err
+	}
+	return os.Chmod(dest, 0o600)
 }
 
 // migrateOne applies one migration in a transaction with foreign keys off so tables can be

@@ -14,10 +14,12 @@ provider answers without saving; **Save** does the same check first and then
 applies the settings at once, no restart needed. If the provider cannot be
 reached, nothing is saved, so a typo cannot lock you out.
 
-The client secret is stored encrypted (AES-256-GCM) in the database and never
-shown again; leave the field empty to keep it. The key is the file
-`data/secret.key`, created on first use. **Back it up with the database**:
-without it a saved secret cannot be read and has to be entered again.
+The settings are saved in `data/config.db`, a database of its own that also holds other
+settings of the installation and is not part of the travel database (`data/travel-blog.db`).
+The client secret is stored there in plain text, as SQLite is not encrypted: the file
+is readable by its owner only (0600), so keep it out of shared backups. The secret
+is never shown again in the app; leave the field empty to keep it. If you prefer not to
+keep it on disk, use the environment variables below.
 
 ## Configuration by environment
 

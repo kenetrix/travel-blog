@@ -33,25 +33,10 @@ func (f *fakeRuntime) Test(_ context.Context, _ domain.OIDCConfig) error {
 }
 func (f *fakeRuntime) Enabled() bool { return f.enabled }
 
-// reverseBox "encrypts" by reversing and tagging, enough to see the
-// database never holds the plain secret.
-type reverseBox struct{}
-
-func (reverseBox) Encrypt(s string) (string, error) {
-	r := []rune(s)
-	for i, j := 0, len(r)-1; i < j; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	return "sealed:" + string(r), nil
-}
-func (b reverseBox) Decrypt(s string) (string, error) {
-	plain, _ := b.Encrypt(strings.TrimPrefix(s, "sealed:"))
-	return strings.TrimPrefix(plain, "sealed:"), nil
-}
-
 type oidcAdminEnv struct {
 	*env
 	svc     *service.OIDCConfigService
+	file    *sqlite.SettingsRepo
 	runtime *fakeRuntime
 	admin   domain.UserID
 	user    domain.UserID
@@ -66,8 +51,9 @@ func newOIDCAdminEnv(t *testing.T, fromEnv *domain.OIDCConfig) *oidcAdminEnv {
 	}
 	user, _ := e.register(t, "alice")
 	rt := &fakeRuntime{}
-	svc := service.NewOIDCConfigService(e.accounts, sqlite.NewOIDCSettingsRepo(e.db), reverseBox{}, rt, fromEnv)
-	return &oidcAdminEnv{env: e, svc: svc, runtime: rt, admin: admin, user: user}
+	file := e.settings
+	svc := service.NewOIDCConfigService(e.accounts, file, rt, fromEnv)
+	return &oidcAdminEnv{env: e, svc: svc, file: file, runtime: rt, admin: admin, user: user}
 }
 
 var validInput = service.OIDCConfigInput{
@@ -100,9 +86,8 @@ func TestOIDCSaveAppliesAndHidesSecret(t *testing.T) {
 		strings.Join(e.runtime.cfg.Scopes, " ") != "openid profile email" {
 		t.Errorf("runtime: %+v", e.runtime.cfg)
 	}
-	var stored string
-	if err := e.db.QueryRow(`SELECT value FROM oidc_settings WHERE key = 'client_secret'`).Scan(&stored); err != nil || stored == "s3cret" {
-		t.Errorf("stored secret %q %v", stored, err)
+	if stored, err := e.file.All(); err != nil || stored["client_secret"] != "s3cret" {
+		t.Errorf("stored secret %q %v", stored["client_secret"], err)
 	}
 	view, err := e.svc.View(e.admin)
 	if err != nil || view.Source != "settings" || !view.SecretSet || !view.Enabled ||

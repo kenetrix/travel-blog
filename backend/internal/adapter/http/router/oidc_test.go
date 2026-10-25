@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/http/auth"
 	"travel-blog/backend/internal/adapter/http/handler"
 	"travel-blog/backend/internal/adapter/http/router"
@@ -32,13 +33,19 @@ func newOIDCServer(t *testing.T, opts ...handler.Option) http.Handler {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { configDB.Close() })
+	settings := sqlite.NewSettingsRepo(configDB)
 	files, err := storage.NewLocalStorage(filepath.Join(dir, "photos"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { files.Close() })
 	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	extra := func(mux *http.ServeMux) {
 		mux.HandleFunc("GET /api/auth/oidc/login", func(w http.ResponseWriter, r *http.Request) {
@@ -103,11 +110,6 @@ func (f *fakeRuntime) Test(context.Context, domain.OIDCConfig) error {
 }
 func (f *fakeRuntime) Enabled() bool { return f.enabled }
 
-type plainBox struct{}
-
-func (plainBox) Encrypt(s string) (string, error) { return "sealed-" + s, nil }
-func (plainBox) Decrypt(s string) (string, error) { return strings.TrimPrefix(s, "sealed-"), nil }
-
 func TestAdminOIDCConfigAPI(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sqlite.NewDB(filepath.Join(dir, "test.db"), migrations.FS)
@@ -115,15 +117,21 @@ func TestAdminOIDCConfigAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { configDB.Close() })
+	settings := sqlite.NewSettingsRepo(configDB)
 	files, err := storage.NewLocalStorage(filepath.Join(dir, "photos"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { files.Close() })
 	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
-	svc := service.NewOIDCConfigService(accounts, sqlite.NewOIDCSettingsRepo(db), plainBox{}, &fakeRuntime{}, nil)
+	svc := service.NewOIDCConfigService(accounts, settings, &fakeRuntime{}, nil)
 	h := router.New(handler.New(travel, accounts, handler.WithOIDCConfig(svc)), auth.Sessions(accounts))
 
 	body := `{"issuer":"https://id.example.com","clientId":"travel","clientSecret":"topsecret","redirectUrl":"https://blog.example/api/auth/oidc/callback","name":"Pocket ID"}`

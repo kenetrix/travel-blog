@@ -32,6 +32,9 @@ Each top-level `.sql` file or folder is one migration, in name order. The folder
 schema version 1, split by area (accounts, travel data, photos, OIDC). While v0.1.0 is the only
 release, change it in place and recreate the test database; after the first production release,
 add `002_<name>.sql`, `003_...` as usual and never edit older ones.
+
+Settings of the installation (registration, single sign-on) live in a second database,
+`data/config.db`, with its own migrations in `configmigrations/` under the same rules.
 Before pending migrations run on an existing database, a consistent copy is saved next to
 it as `<db>.bak-v<version>`; to roll back, stop the app and put that file back.
 
@@ -64,10 +67,10 @@ The result is a normal session. An identity is (issuer, subject) in `oidc_identi
 password (only if registration is open). Such accounts still appear in the user list.
 
 The configuration comes from the `OIDC_*` variables (they win) or from the admin area
-(`/api/admin/oidc`, table `oidc_settings`). `service.OIDCConfigService` checks the
+(`/api/admin/oidc`, configuration database `data/config.db`, not the travel database). `service.OIDCConfigService` checks the
 provider via discovery before saving and reloads `oidc.Provider` without a restart. The
-client secret is stored encrypted (`adapter/secretbox`, AES-GCM, key `data/secret.key`)
-and is never returned.
+client secret is stored in plain text in `config.db` (0600, SQLite is not encrypted) and
+is never returned.
 
 ## Roles
 
@@ -79,5 +82,5 @@ reaches `GET /api/user`, `PUT /api/user/password` and `/api/auth/*` (see
 `router.requirePasswordChange`).
 
 Administrators manage users via `/api/admin/*` (role, password reset, delete) and turn
-self-registration on or off (`app_settings.registration_open`). The last administrator
+self-registration on or off (`registration_open` in `data/config.db`). The last administrator
 stays an administrator.
