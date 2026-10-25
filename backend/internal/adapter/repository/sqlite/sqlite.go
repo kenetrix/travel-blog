@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -25,7 +26,7 @@ func NewDB(path string, migrations fs.FS) (*sql.DB, error) {
 	}
 	// SQLite allows only one writer at a time
 	db.SetMaxOpenConns(1)
-	if err := migrate(db, migrations); err != nil {
+	if err := migrate(db, migrations, path); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func NewDB(path string, migrations fs.FS) (*sql.DB, error) {
 }
 
 // migrate tracks the number of applied migrations in user_version.
-func migrate(db *sql.DB, migrations fs.FS) error {
+func migrate(db *sql.DB, migrations fs.FS, path string) error {
 	files, err := fs.Glob(migrations, "*.sql")
 	if err != nil {
 		return err
@@ -51,6 +52,11 @@ func migrate(db *sql.DB, migrations fs.FS) error {
 	if err := conn.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version); err != nil {
 		return err
 	}
+	if version > 0 && version < len(files) {
+		if err := backup(ctx, conn, path, version); err != nil {
+			return fmt.Errorf("backup before migrating: %w", err)
+		}
+	}
 	for i := version; i < len(files); i++ {
 		script, err := fs.ReadFile(migrations, files[i])
 		if err != nil {
@@ -61,6 +67,17 @@ func migrate(db *sql.DB, migrations fs.FS) error {
 		}
 	}
 	return nil
+}
+
+// backup saves a consistent copy of the database as <path>.bak-v<version> before pending
+// migrations run, so an update can be rolled back. An existing copy of that version is kept.
+func backup(ctx context.Context, conn *sql.Conn, path string, version int) error {
+	dest := fmt.Sprintf("%s.bak-v%d", path, version)
+	if _, err := os.Stat(dest); err == nil {
+		return nil
+	}
+	_, err := conn.ExecContext(ctx, fmt.Sprintf(`VACUUM INTO '%s'`, strings.ReplaceAll(dest, "'", "''")))
+	return err
 }
 
 // migrateOne applies one migration in a transaction with foreign keys off so tables can be
