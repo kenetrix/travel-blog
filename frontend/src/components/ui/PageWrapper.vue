@@ -22,6 +22,7 @@ function back() {
                 <h1>{{ title }}</h1>
                 <p v-if="subtitle" class="sub">{{ subtitle }}</p>
             </div>
+            <div class="actions"><slot name="actions" /></div>
         </header>
         <main>
             <slot />
@@ -47,6 +48,10 @@ header {
     gap: 1.2rem;
     padding: 1.2rem 1.5rem;
     border-bottom: 1px solid var(--line);
+}
+
+.actions {
+    margin-left: auto;
 }
 
 h1 {
