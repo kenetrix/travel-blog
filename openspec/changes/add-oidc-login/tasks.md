@@ -2,7 +2,7 @@
 
 ## 1. Data model and domain
 
-- [x] 1.1 Migration `backend/migrations/003_oidc.sql`: table `oidc_identities (issuer, subject, user_id, created_at)`, primary key `(issuer, subject)`
+- [x] 1.1 Migration `backend/migrations/001_init/04_oidc.sql`: table `oidc_identities (issuer, subject, user_id, created_at)`, primary key `(issuer, subject)`
 - [x] 1.2 `port.UserRepository` and `sqlite/user_repo.go`: `GetByIdentity`, `LinkIdentity`, `GetByEmail`, `Create` with an empty password hash
 - [x] 1.3 Repository tests (linking, uniqueness, cascade when the user is deleted), via service tests with a real SQLite database
 
@@ -44,7 +44,7 @@
 
 ## 7. Configuration in the admin area
 
-- [x] 7.1 Migration `004_oidc_settings.sql`, repository for `oidc_settings` and `secretbox` (AES-GCM, key file `data/secret.key`) with tests
+- [x] 7.1 Table `oidc_settings` in `001_init/04_oidc.sql`, repository for `oidc_settings` and `secretbox` (AES-GCM, key file `data/secret.key`) with tests
 - [x] 7.2 `Provider.Reload` and the configuration source (environment before database); provider and routes always wired, 404 while off; tests
 - [x] 7.3 OpenAPI: `GET/PUT/DELETE /admin/oidc`, `POST /admin/oidc/test`; regenerate API and frontend schema
 - [x] 7.4 Handler (admin only): validation, discovery before saving, never return the secret, lock-out protection, 409 for the environment source; tests
