@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/repository/sqlite"
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
 	"travel-blog/backend/internal/domain"
-	"travel-blog/backend/migrations"
+	configmigrations "travel-blog/backend/migrations/config"
+	migrations "travel-blog/backend/migrations/data"
 )
 
 // local is an ordinary user that newEnv creates, for tests that need one without registering.
