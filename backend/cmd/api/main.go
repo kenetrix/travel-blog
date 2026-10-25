@@ -1,0 +1,87 @@
+package main
+
+import (
+	"flag"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"travel-blog/backend/internal/adapter/http/auth"
+	"travel-blog/backend/internal/adapter/http/handler"
+	"travel-blog/backend/internal/adapter/http/oidc"
+	"travel-blog/backend/internal/adapter/http/router"
+	"travel-blog/backend/internal/adapter/repository/sqlite"
+	"travel-blog/backend/internal/adapter/secretbox"
+	"travel-blog/backend/internal/adapter/storage"
+	"travel-blog/backend/internal/application/service"
+	"travel-blog/backend/internal/domain"
+	"travel-blog/backend/migrations"
+)
+
+func main() {
+	localUser := flag.Bool("local-user", false,
+		"treat requests without a session as the local user (development only)")
+	flag.Parse()
+
+	db, err := sqlite.NewDB("./data/travel-blog.db", migrations.FS)
+	if err != nil {
+		log.Fatalf("db init failed: %v", err)
+	}
+	defer db.Close()
+
+	files, err := storage.NewLocalStorage("./data/photos")
+	if err != nil {
+		log.Fatalf("photo storage: %v", err)
+	}
+	defer files.Close()
+
+	users := sqlite.NewUserRepo(db)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
+	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
+
+	// On first start (or after an update without administrator) the installation
+	// receives an administrator with a generated password
+	created, err := accounts.EnsureAdmin("./data/initial-admin.txt")
+	if err != nil {
+		log.Fatalf("initial admin: %v", err)
+	}
+	if created {
+		log.Println("Administrator created, credentials in data/initial-admin.txt")
+	}
+
+	// OpenID Connect login: OIDC_* variables win over the admin-area configuration.
+	// The provider always exists and stays off until something is configured.
+	envCfg, haveEnv := oidc.ConfigFromEnv(os.Getenv)
+	var fromEnv *domain.OIDCConfig
+	if haveEnv {
+		fromEnv = &envCfg
+	}
+	provider := oidc.New(oidc.Config{}, accounts)
+	oidcConfig := service.NewOIDCConfigService(accounts, sqlite.NewOIDCSettingsRepo(db),
+		secretbox.New("./data/secret.key"), provider, fromEnv)
+	if cfg, ok, err := oidcConfig.Effective(); err != nil {
+		log.Printf("oidc: saved configuration unusable, login disabled: %v", err)
+	} else if ok {
+		provider.Set(cfg)
+	}
+
+	r := router.New(handler.New(travel, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
+		auth.Sessions(accounts, *localUser), provider.Routes)
+
+	if *localUser {
+		log.Println("Requests without a session run as the local user")
+	}
+	// Listen on localhost only - avoids the Windows firewall dialog on every go run
+	log.Println("Server listening on localhost:8080")
+	srv := &http.Server{
+		Addr:              "localhost:8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       60 * time.Second, // photo uploads up to 20 MB
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 16,
+	}
+	log.Fatal(srv.ListenAndServe())
+}
