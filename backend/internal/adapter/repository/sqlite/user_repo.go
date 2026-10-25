@@ -21,7 +21,7 @@ func NewUserRepo(db *sql.DB) *UserRepo {
 }
 
 const userColumns = `id, username, COALESCE(email, ''), first_name, last_name,
-	display_name, bio, language, timezone, home_country, home_airport, created_at,
+	display_name, bio, language, timezone, home_country, home_airport, color, created_at,
 	role, must_change_password`
 
 func scanUser(row scanner) (*domain.User, error) {
@@ -30,7 +30,7 @@ func scanUser(row scanner) (*domain.User, error) {
 	p := &u.Profile
 	err := row.Scan(&u.ID, &p.Username, &p.Email, &p.FirstName, &p.LastName,
 		&p.DisplayName, &p.Bio, &p.Language, &p.Timezone, &p.HomeCountry,
-		&p.HomeAirport, &created, &u.Role, &u.MustChangePassword)
+		&p.HomeAirport, &p.Color, &created, &u.Role, &u.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -76,12 +76,12 @@ func insertUser(tx *sql.Tx, u domain.User, passwordHash string) error {
 	p := u.Profile
 	_, err := tx.Exec(`
 		INSERT INTO users (id, username, email, password_hash, first_name, last_name,
-			display_name, bio, language, timezone, home_country, home_airport, created_at,
+			display_name, bio, language, timezone, home_country, home_airport, color, created_at,
 			role, must_change_password)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, u.ID, p.Username, nullIfEmpty(p.Email), nullIfEmpty(passwordHash), p.FirstName,
 		p.LastName, p.DisplayName, p.Bio, p.Language, p.Timezone, p.HomeCountry,
-		p.HomeAirport, p.CreatedAt.UTC().Format(time.RFC3339Nano),
+		p.HomeAirport, p.Color, p.CreatedAt.UTC().Format(time.RFC3339Nano),
 		cmpOr(u.Role, domain.RoleUser), u.MustChangePassword)
 	if err != nil {
 		return conflict(err)
@@ -157,10 +157,10 @@ func (r *UserRepo) UpdateProfile(id domain.UserID, p domain.Profile) error {
 	_, err := r.db.Exec(`
 		UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?,
 			display_name = ?, bio = ?, language = ?, timezone = ?, home_country = ?,
-			home_airport = ?
+			home_airport = ?, color = ?
 		WHERE id = ?
 	`, p.Username, nullIfEmpty(p.Email), p.FirstName, p.LastName, p.DisplayName, p.Bio,
-		p.Language, p.Timezone, p.HomeCountry, p.HomeAirport, id)
+		p.Language, p.Timezone, p.HomeCountry, p.HomeAirport, p.Color, id)
 	return conflict(err)
 }
 
@@ -197,7 +197,7 @@ func cmpOr[T comparable](v, fallback T) T {
 
 func (r *UserRepo) List() ([]domain.User, error) {
 	rows, err := r.db.Query(`SELECT ` + userColumns + ` FROM users
-		WHERE id != ? ORDER BY created_at, username`, domain.LocalUserID)
+		ORDER BY created_at, username`)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (r *UserRepo) List() ([]domain.User, error) {
 
 func (r *UserRepo) CountAdmins() (int, error) {
 	var n int
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role = 'admin' AND id != ?`, domain.LocalUserID).Scan(&n)
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role = 'admin'`).Scan(&n)
 	return n, err
 }
 

@@ -10,6 +10,7 @@ Profile:
     - timezone
     - homeCountry
     - homeAirport
+    - color
     - createdAt
   properties:
     username:
@@ -19,7 +20,7 @@ Profile:
     email:
       type: string
       format: email
-      description: Missing for the local user
+      description: Missing for accounts created without one
     firstName: { type: string }
     lastName: { type: string }
     displayName: { type: string }
@@ -38,6 +39,9 @@ Profile:
     homeAirport:
       type: string
       description: IATA code, empty if unset
+    color:
+      type: string
+      description: Hex colour of the user's avatar, e.g. #3a7d5c; empty for the default
     createdAt: { type: string, format: date-time }
 
 ProfileUpdate:
@@ -53,6 +57,7 @@ ProfileUpdate:
     timezone: { type: string }
     homeCountry: { type: string, description: Alpha-3 or empty }
     homeAirport: { type: string, description: IATA or empty }
+    color: { type: string, description: 'Hex colour like #3a7d5c, or empty' }
 
 Settings:
   type: object

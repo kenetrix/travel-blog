@@ -110,13 +110,8 @@ func TestAdminOperations(t *testing.T) {
 	}
 
 	users, err := a.Users(admin)
-	if err != nil || len(users) != 2 {
+	if err != nil || len(users) != 3 { // incl. the test fixture "local"
 		t.Fatalf("Users: %d %v", len(users), err)
-	}
-	for _, u := range users {
-		if u.ID == local {
-			t.Error("the local user is listed")
-		}
 	}
 
 	// The last administrator stays one; a second one can step down
@@ -137,9 +132,6 @@ func TestAdminOperations(t *testing.T) {
 	}
 	if _, err := a.SetRole(alice, domain.UserID("nobody"), domain.RoleUser); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("unknown user: %v", err)
-	}
-	if _, err := a.SetRole(alice, local, domain.RoleAdmin); !errors.Is(err, service.ErrInvalid) {
-		t.Errorf("local user: %v", err)
 	}
 
 	// Password reset: new password, old sessions gone, change required
@@ -189,5 +181,22 @@ func TestAdminOperations(t *testing.T) {
 	}
 	if _, _, err := a.Account(bob); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("deleted user: %v", err)
+	}
+}
+
+func TestEnsureDevAdmin(t *testing.T) {
+	e := newEnv(t)
+	id, err := e.accounts.EnsureDevAdmin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again, err := e.accounts.EnsureDevAdmin(); err != nil || again != id {
+		t.Fatalf("second call: %v %v", again, err)
+	}
+	if _, _, err := e.accounts.Login("admin", ""); err == nil {
+		t.Error("the dev admin can log in without a password")
+	}
+	if _, err := e.accounts.Users(id); err != nil {
+		t.Errorf("dev admin is no administrator: %v", err)
 	}
 }

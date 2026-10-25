@@ -19,7 +19,7 @@ watch(
     () => (view.value = store.settings.defaultView)
 )
 
-// Without a session (backend without -local-user) only the login page works
+// Without a session only the login page works
 watch(
     () => [store.authState, route.name],
     ([state, name]) => {
@@ -75,12 +75,39 @@ watchEffect(() => {
                 :to="{ name: 'profile' }"
                 :title="`Profile of ${store.profile.displayName}`"
                 :aria-label="`Profile of ${store.profile.displayName}`"
+                :style="
+                    store.profile.color
+                        ? { background: store.profile.color }
+                        : undefined
+                "
             >
                 {{
                     (store.profile.displayName || store.profile.username)
                         .charAt(0)
                         .toUpperCase()
                 }}
+            </RouterLink>
+            <RouterLink
+                v-if="store.isAdmin"
+                class="account avatar admin"
+                :to="{ name: 'admin' }"
+                title="Administration"
+                aria-label="Administration"
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" />
+                    <path d="M9 12l2 2 4-4" />
+                </svg>
             </RouterLink>
         </div>
 
@@ -183,6 +210,17 @@ watchEffect(() => {
 .avatar:hover {
     color: #fff;
     background: #2f6a4e;
+    filter: brightness(0.9);
+}
+
+.avatar.admin {
+    background: var(--line-faint);
+    color: var(--muted);
+}
+
+.avatar.admin:hover {
+    background: var(--raised);
+    color: var(--text);
 }
 
 .slide-enter-active,

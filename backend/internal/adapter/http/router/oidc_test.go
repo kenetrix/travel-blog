@@ -45,7 +45,7 @@ func newOIDCServer(t *testing.T, opts ...handler.Option) http.Handler {
 			http.Redirect(w, r, "https://provider.example/authorize", http.StatusFound)
 		})
 	}
-	return router.New(handler.New(travel, accounts, opts...), auth.Sessions(accounts, false), extra)
+	return router.New(handler.New(travel, accounts, opts...), auth.Sessions(accounts), extra)
 }
 
 func TestOIDCConfig(t *testing.T) {
@@ -124,7 +124,7 @@ func TestAdminOIDCConfigAPI(t *testing.T) {
 	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	svc := service.NewOIDCConfigService(accounts, sqlite.NewOIDCSettingsRepo(db), plainBox{}, &fakeRuntime{}, nil)
-	h := router.New(handler.New(travel, accounts, handler.WithOIDCConfig(svc)), auth.Sessions(accounts, false))
+	h := router.New(handler.New(travel, accounts, handler.WithOIDCConfig(svc)), auth.Sessions(accounts))
 
 	body := `{"issuer":"https://id.example.com","clientId":"travel","clientSecret":"topsecret","redirectUrl":"https://blog.example/api/auth/oidc/callback","name":"Pocket ID"}`
 	for _, tc := range []struct{ method, path string }{

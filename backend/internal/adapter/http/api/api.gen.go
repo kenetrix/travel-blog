@@ -393,11 +393,14 @@ type Problem struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	Bio         string    `json:"bio"`
+	Bio string `json:"bio"`
+
+	// Color Hex colour of the user's avatar, e.g.
+	Color       string    `json:"color"`
 	CreatedAt   time.Time `json:"createdAt"`
 	DisplayName string    `json:"displayName"`
 
-	// Email Missing for the local user
+	// Email Missing for accounts created without one
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FirstName string               `json:"firstName"`
 
@@ -424,7 +427,10 @@ type Profile struct {
 
 // ProfileUpdate defines model for ProfileUpdate.
 type ProfileUpdate struct {
-	Bio         *string `json:"bio,omitempty"`
+	Bio *string `json:"bio,omitempty"`
+
+	// Color Hex colour like #3a7d5c, or empty
+	Color       *string `json:"color,omitempty"`
 	DisplayName *string `json:"displayName,omitempty"`
 
 	// Email Empty removes the email
@@ -2917,20 +2923,6 @@ func (response DeleteAccount401ApplicationProblemPlusJSONResponse) VisitDeleteAc
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DeleteAccount409ApplicationProblemPlusJSONResponse Problem
-
-func (response DeleteAccount409ApplicationProblemPlusJSONResponse) VisitDeleteAccountResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }

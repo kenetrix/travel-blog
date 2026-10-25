@@ -76,6 +76,39 @@ func (s *AccountService) EnsureAdmin(file string) (created bool, err error) {
 	return true, nil
 }
 
+// EnsureDevAdmin returns the administrator "admin" for development, creating it without a
+// password; the caller runs requests without a session as this user. Never use it in production.
+func (s *AccountService) EnsureDevAdmin() (domain.UserID, error) {
+	u, err := s.users.GetByUsername("admin")
+	if err != nil {
+		return "", err
+	}
+	if u == nil {
+		u = &domain.User{
+			ID:   domain.UserID(uuid.NewString()),
+			Role: domain.RoleAdmin,
+			Profile: domain.Profile{
+				Username:    "admin",
+				DisplayName: "Administrator",
+				Language:    "en",
+				Timezone:    "UTC",
+				CreatedAt:   s.now().UTC(),
+			},
+		}
+		if err := s.users.Create(*u, ""); err != nil {
+			return "", err
+		}
+	} else if u.Role != domain.RoleAdmin || u.MustChangePassword {
+		if err := s.users.SetRole(u.ID, domain.RoleAdmin); err != nil {
+			return "", err
+		}
+		if err := s.users.SetMustChangePassword(u.ID, false); err != nil {
+			return "", err
+		}
+	}
+	return u.ID, nil
+}
+
 func (s *AccountService) RegistrationOpen() (bool, error) {
 	return s.settings.RegistrationOpen()
 }
@@ -91,12 +124,8 @@ func (s *AccountService) requireAdmin(actor domain.UserID) error {
 	return nil
 }
 
-// target returns a manageable account: it must exist and cannot be
-// the local user.
+// target returns the account to manage; it must exist.
 func (s *AccountService) target(id domain.UserID) (*domain.User, error) {
-	if id == domain.LocalUserID {
-		return nil, fmt.Errorf("%w: the local user cannot be managed", ErrInvalid)
-	}
 	u, err := s.users.Get(id)
 	if err != nil {
 		return nil, err

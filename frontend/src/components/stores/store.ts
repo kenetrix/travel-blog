@@ -40,10 +40,6 @@ const defaultSettings: Settings = {
     profileVisibility: 'private',
 }
 
-// The user requests act as when the backend runs with -local-user and there
-// is no session; it has no email and no password
-const LOCAL_USERNAME = 'local'
-
 export const useTravelStore = defineStore('travel', () => {
     // loading: first GET /travel pending; anonymous: no session (401)
     const authState = ref<'loading' | 'anonymous' | 'ready'>('loading')
@@ -53,9 +49,6 @@ export const useTravelStore = defineStore('travel', () => {
     const mustChangePassword = ref(false)
     const isAdmin = computed(() => role.value === 'admin')
     const settings = ref<Settings>({ ...defaultSettings })
-    const isLocalUser = computed(
-        () => profile.value?.username === LOCAL_USERNAME
-    )
 
     const visited = ref<Set<string>>(new Set())
     const wishlist = ref<Set<string>>(new Set())
@@ -217,8 +210,7 @@ export const useTravelStore = defineStore('travel', () => {
         }
     }
 
-    // Without a session the backend may fall back to the local user, so the
-    // next state comes from loading again
+    // Loading again moves the state to anonymous
     async function logout() {
         try {
             await api.POST('/auth/logout')
@@ -468,7 +460,6 @@ export const useTravelStore = defineStore('travel', () => {
         isAdmin,
         mustChangePassword,
         settings,
-        isLocalUser,
         visited,
         wishlist,
         toast,
