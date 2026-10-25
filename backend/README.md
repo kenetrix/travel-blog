@@ -22,6 +22,12 @@ Without `-local-user`, all routes except `/api/auth/*` and `/api/public/*` requi
 Swapping MapLibre for another map solution only affects the frontend,
 swapping SQLite for Postgres only affects internal/adapter/repository.
 
+## Database migrations
+
+Migrations in `migrations/` only go forward and are tracked by SQLite's `user_version`.
+Before pending migrations run on an existing database, a consistent copy is saved next to
+it as `<db>.bak-v<version>`; to roll back, stop the app and put that file back.
+
 ## Users and accounts
 
 All travel data belongs to exactly one user (`user_id` in every table, `domain.UserID`).
