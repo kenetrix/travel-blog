@@ -1,0 +1,45 @@
+name: Release
+
+# Builds the artifacts the Proxmox helper script installs: travel-blog-linux-<arch>.tar.gz
+# containing the static API binary (travel-blog-api) and the built frontend (web/)
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build and package
+        run: |
+          for arch in amd64 arm64; do
+            dir=$(mktemp -d)
+            (cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags="-s -w" -o "$dir/travel-blog-api" ./cmd/api)
+            cp -r frontend/dist "$dir/web"
+            tar -czf "travel-blog-linux-$arch.tar.gz" -C "$dir" travel-blog-api web
+          done
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Pushing an existing tag again (moved to a newer commit) replaces its release
+          gh release delete "$GITHUB_REF_NAME" --yes || true
+          gh release create "$GITHUB_REF_NAME" travel-blog-linux-*.tar.gz --generate-notes
