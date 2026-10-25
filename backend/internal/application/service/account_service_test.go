@@ -104,13 +104,12 @@ func TestUpdateProfile(t *testing.T) {
 		Language:    ptr("en-GB"),
 		Timezone:    ptr("Europe/Berlin"),
 		HomeCountry: ptr("DEU"),
-		HomeAirport: ptr("BER"),
 		DisplayName: ptr(""),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.FirstName != "Alice" || p.Timezone != "Europe/Berlin" || p.HomeAirport != "BER" || p.DisplayName != "Alice" || p.Username != "alice" {
+	if p.FirstName != "Alice" || p.Timezone != "Europe/Berlin" || p.DisplayName != "Alice" || p.Username != "alice" {
 		t.Errorf("profile = %+v", p)
 	}
 	if u, _, _ := a.Account(alice); u.Profile != p {
@@ -122,7 +121,6 @@ func TestUpdateProfile(t *testing.T) {
 		{Timezone: ptr("Local")},
 		{Language: ptr("german")},
 		{HomeCountry: ptr("de")},
-		{HomeAirport: ptr("Berlin")},
 		{Email: ptr("nope")},
 		{Username: ptr("a b")},
 	}

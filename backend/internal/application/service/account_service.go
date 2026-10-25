@@ -277,12 +277,6 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 		}
 		p.HomeCountry = *up.HomeCountry
 	}
-	if up.HomeAirport != nil {
-		if err := checkOptionalCode("homeAirport", *up.HomeAirport); err != nil {
-			return domain.Profile{}, err
-		}
-		p.HomeAirport = *up.HomeAirport
-	}
 	if up.Color != nil {
 		if *up.Color != "" && !colorPattern.MatchString(*up.Color) {
 			return domain.Profile{}, fmt.Errorf("%w: color must look like #3a7d5c", ErrInvalid)

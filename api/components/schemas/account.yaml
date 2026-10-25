@@ -9,7 +9,6 @@ Profile:
     - language
     - timezone
     - homeCountry
-    - homeAirport
     - color
     - createdAt
   properties:
@@ -36,9 +35,6 @@ Profile:
     homeCountry:
       type: string
       description: ISO 3166-1 alpha-3, empty if unset
-    homeAirport:
-      type: string
-      description: IATA code, empty if unset
     color:
       type: string
       description: Hex colour of the user's avatar, e.g. #3a7d5c; empty for the default
@@ -56,7 +52,6 @@ ProfileUpdate:
     language: { type: string }
     timezone: { type: string }
     homeCountry: { type: string, description: Alpha-3 or empty }
-    homeAirport: { type: string, description: IATA or empty }
     color: { type: string, description: 'Hex colour like #3a7d5c, or empty' }
 
 Settings:

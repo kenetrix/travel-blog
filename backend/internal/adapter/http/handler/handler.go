@@ -225,7 +225,6 @@ func toAPIProfile(p domain.Profile) api.Profile {
 		Language:    p.Language,
 		Timezone:    p.Timezone,
 		HomeCountry: p.HomeCountry,
-		HomeAirport: p.HomeAirport,
 		Color:       p.Color,
 		CreatedAt:   p.CreatedAt,
 	}

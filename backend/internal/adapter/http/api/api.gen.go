@@ -404,9 +404,6 @@ type Profile struct {
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FirstName string               `json:"firstName"`
 
-	// HomeAirport IATA code, empty if unset
-	HomeAirport string `json:"homeAirport"`
-
 	// HomeCountry ISO 3166-1 alpha-3, empty if unset
 	HomeCountry string `json:"homeCountry"`
 
@@ -436,9 +433,6 @@ type ProfileUpdate struct {
 	// Email Empty removes the email
 	Email     *string `json:"email,omitempty"`
 	FirstName *string `json:"firstName,omitempty"`
-
-	// HomeAirport IATA or empty
-	HomeAirport *string `json:"homeAirport,omitempty"`
 
 	// HomeCountry Alpha-3 or empty
 	HomeCountry *string `json:"homeCountry,omitempty"`

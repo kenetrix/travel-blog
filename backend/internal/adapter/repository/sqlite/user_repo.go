@@ -21,7 +21,7 @@ func NewUserRepo(db *sql.DB) *UserRepo {
 }
 
 const userColumns = `id, username, COALESCE(email, ''), first_name, last_name,
-	display_name, bio, language, timezone, home_country, home_airport, color, created_at,
+	display_name, bio, language, timezone, home_country, color, created_at,
 	role, must_change_password`
 
 func scanUser(row scanner) (*domain.User, error) {
@@ -30,7 +30,7 @@ func scanUser(row scanner) (*domain.User, error) {
 	p := &u.Profile
 	err := row.Scan(&u.ID, &p.Username, &p.Email, &p.FirstName, &p.LastName,
 		&p.DisplayName, &p.Bio, &p.Language, &p.Timezone, &p.HomeCountry,
-		&p.HomeAirport, &p.Color, &created, &u.Role, &u.MustChangePassword)
+		&p.Color, &created, &u.Role, &u.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -76,12 +76,12 @@ func insertUser(tx *sql.Tx, u domain.User, passwordHash string) error {
 	p := u.Profile
 	_, err := tx.Exec(`
 		INSERT INTO users (id, username, email, password_hash, first_name, last_name,
-			display_name, bio, language, timezone, home_country, home_airport, color, created_at,
+			display_name, bio, language, timezone, home_country, color, created_at,
 			role, must_change_password)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, u.ID, p.Username, nullIfEmpty(p.Email), nullIfEmpty(passwordHash), p.FirstName,
 		p.LastName, p.DisplayName, p.Bio, p.Language, p.Timezone, p.HomeCountry,
-		p.HomeAirport, p.Color, p.CreatedAt.UTC().Format(time.RFC3339Nano),
+		p.Color, p.CreatedAt.UTC().Format(time.RFC3339Nano),
 		cmpOr(u.Role, domain.RoleUser), u.MustChangePassword)
 	if err != nil {
 		return conflict(err)
@@ -157,10 +157,10 @@ func (r *UserRepo) UpdateProfile(id domain.UserID, p domain.Profile) error {
 	_, err := r.db.Exec(`
 		UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?,
 			display_name = ?, bio = ?, language = ?, timezone = ?, home_country = ?,
-			home_airport = ?, color = ?
+			color = ?
 		WHERE id = ?
 	`, p.Username, nullIfEmpty(p.Email), p.FirstName, p.LastName, p.DisplayName, p.Bio,
-		p.Language, p.Timezone, p.HomeCountry, p.HomeAirport, p.Color, id)
+		p.Language, p.Timezone, p.HomeCountry, p.Color, id)
 	return conflict(err)
 }
 

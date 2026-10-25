@@ -4,9 +4,8 @@ import { useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
+import ProfileHeader from './ProfileHeader.vue'
 import { vEnterNext } from '../ui/enterNext'
-import AirportSelect from '../flights/AirportSelect.vue'
-import { getAirport, type Airport } from '../flights/airports'
 import { Countries } from '../countries/countries'
 import { useTravelStore, type Settings } from '../stores/store'
 import { LANGUAGES, TIMEZONES } from './options'
@@ -16,7 +15,7 @@ const tab = ref('profile')
 const tabs = [
     { id: 'profile', label: 'Profile' },
     { id: 'preferences', label: 'Preferences' },
-    { id: 'account', label: 'Account' },
+    { id: 'security', label: 'Security' },
 ]
 const router = useRouter()
 
@@ -42,9 +41,7 @@ const form = ref({
     language: 'en',
     timezone: 'UTC',
     homeCountry: '',
-    color: '',
 })
-const homeAirport = ref<Airport | null>(null)
 const profileError = ref('')
 
 function reset() {
@@ -60,11 +57,15 @@ function reset() {
         language: p.language,
         timezone: p.timezone,
         homeCountry: p.homeCountry,
-        color: p.color,
     }
-    homeAirport.value = getAirport(p.homeAirport) ?? null
 }
-watch(() => store.profile, reset, { immediate: true })
+// Not on every profile change: the colour is saved on its own and must not
+// wipe what is typed into the form
+watch(
+    () => !!store.profile,
+    (loaded) => loaded && reset(),
+    { immediate: true }
+)
 
 // Keep a language or time zone set elsewhere selectable
 const languages = computed(() =>
@@ -80,17 +81,16 @@ const timezones = computed(() =>
         ? TIMEZONES
         : [form.value.timezone, ...TIMEZONES]
 )
-const DEFAULT_COLOR = '#3a7d5c'
 const countries = [...Countries].sort((a, b) => a.name.localeCompare(b.name))
 
 async function saveProfile() {
     profileError.value = ''
-    const failed = await store.updateProfile({
-        ...form.value,
-        homeAirport: homeAirport.value?.iata ?? '',
-    })
+    const failed = await store.updateProfile(form.value)
     if (failed) profileError.value = failed
-    else say('Profile saved')
+    else {
+        reset()
+        say('Profile saved')
+    }
 }
 
 // --- Settings ----------------------------------------------------------
@@ -148,9 +148,12 @@ async function deleteAccount() {
 
 <template>
     <PageWrapper
-        title="Profile"
+        title="Account"
         :subtitle="store.profile ? `@${store.profile.username}` : undefined"
     >
+        <template #actions>
+            <button class="logout" @click="logout">Log out</button>
+        </template>
         <p
             v-if="message"
             class="toast"
@@ -162,6 +165,7 @@ async function deleteAccount() {
         <TabBar v-if="store.profile" v-model="tab" :tabs="tabs" />
         <template v-if="store.profile">
             <template v-if="tab === 'profile'">
+                <ProfileHeader @say="say" />
                 <section class="panel">
                     <h2>About you</h2>
                     <form class="fields" @submit.prevent="saveProfile">
@@ -191,27 +195,6 @@ async function deleteAccount() {
                         <label for="email">Email</label>
                         <input id="email" v-model="form.email" type="email" />
 
-                        <label for="color">Profile colour</label>
-                        <div class="color">
-                            <input
-                                id="color"
-                                type="color"
-                                :value="form.color || DEFAULT_COLOR"
-                                @input="
-                                    form.color = (
-                                        $event.target as HTMLInputElement
-                                    ).value
-                                "
-                            />
-                            <button
-                                v-if="form.color"
-                                type="button"
-                                class="btn secondary"
-                                @click="form.color = ''"
-                            >
-                                Use default
-                            </button>
-                        </div>
                         <label for="bio">About me</label>
                         <textarea id="bio" v-model="form.bio" rows="3" />
                         <div class="row">
@@ -251,11 +234,6 @@ async function deleteAccount() {
                                 {{ c.name }}
                             </option>
                         </select>
-                        <label>Home airport</label>
-                        <AirportSelect
-                            v-model="homeAirport"
-                            placeholder="Search airport or IATA"
-                        />
                         <p v-if="profileError" class="error" role="alert">
                             {{ profileError }}
                         </p>
@@ -330,36 +308,6 @@ async function deleteAccount() {
                             <option value="private">🔒 Only me</option>
                             <option value="public">🌐 Public</option>
                         </select>
-                        <label for="profile-visibility">Public profile</label>
-                        <select
-                            id="profile-visibility"
-                            :value="store.settings.profileVisibility"
-                            @change="
-                                setSetting(
-                                    'profileVisibility',
-                                    ($event.target as HTMLSelectElement)
-                                        .value as Settings['profileVisibility']
-                                )
-                            "
-                        >
-                            <option value="private">Off</option>
-                            <option value="public">On</option>
-                        </select>
-                        <p class="note">
-                            <template
-                                v-if="
-                                    store.settings.profileVisibility ===
-                                    'public'
-                                "
-                            >
-                                Anyone can see your display name, bio, home
-                                country and everything marked 🌐 Public.
-                            </template>
-                            <template v-else>
-                                Nobody else can see anything, even items marked
-                                🌐 Public.
-                            </template>
-                        </p>
                     </div>
                 </section>
             </template>
@@ -396,14 +344,6 @@ async function deleteAccount() {
                         </button>
                     </form>
                 </section>
-                <section class="panel">
-                    <h2>Session</h2>
-                    <div class="actions">
-                        <button class="btn secondary" @click="logout">
-                            Log out
-                        </button>
-                    </div>
-                </section>
                 <section class="panel danger-zone">
                     <h2>Delete account</h2>
                     <p class="note">
@@ -434,3 +374,19 @@ async function deleteAccount() {
 </template>
 
 <style src="../ui/panel.css"></style>
+<style scoped>
+.logout {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    background: transparent;
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.logout:hover {
+    background: var(--chip);
+}
+</style>

@@ -41,6 +41,11 @@ watch(
     { immediate: true }
 )
 
+async function logout() {
+    await store.logout()
+    router.push({ name: 'home' })
+}
+
 // Theme colours are defined per data-theme in style.css
 watchEffect(() => {
     document.documentElement.dataset.theme = store.settings.theme
@@ -69,6 +74,10 @@ watchEffect(() => {
                     Flights
                 </button>
             </div>
+        </div>
+
+        <!-- Account, administration and log out -->
+        <div class="useractions">
             <RouterLink
                 v-if="store.authState === 'anonymous'"
                 class="account login"
@@ -79,9 +88,9 @@ watchEffect(() => {
             <RouterLink
                 v-if="store.profile"
                 class="account avatar"
-                :to="{ name: 'profile' }"
-                :title="`Profile of ${store.profile.displayName}`"
-                :aria-label="`Profile of ${store.profile.displayName}`"
+                :to="{ name: 'account' }"
+                :title="`Account of ${store.profile.displayName}`"
+                :aria-label="`Account of ${store.profile.displayName}`"
                 :style="
                     store.profile.color
                         ? { background: store.profile.color }
@@ -116,6 +125,28 @@ watchEffect(() => {
                     <path d="M9 12l2 2 4-4" />
                 </svg>
             </RouterLink>
+            <button
+                v-if="store.profile"
+                class="account avatar admin"
+                title="Log out"
+                aria-label="Log out"
+                @click="logout"
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4" />
+                    <path d="M16 8l4 4-4 4M20 12H9" />
+                </svg>
+            </button>
         </div>
 
         <!-- Country panel -->
@@ -163,6 +194,28 @@ watchEffect(() => {
     border-radius: 2rem;
     padding: 0.45rem 0.45rem 0.45rem 1.2rem;
     z-index: 10;
+}
+
+.useractions {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--panel);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    border-radius: 2rem;
+    padding: 0.45rem;
+    z-index: 10;
+}
+
+/* Below the centred bar, so the two never overlap on a phone */
+@media (max-width: 640px) {
+    .useractions {
+        top: 4.6rem;
+    }
 }
 
 .toggle-pill {
@@ -233,6 +286,8 @@ watchEffect(() => {
 }
 
 .avatar.admin {
+    border: none;
+    cursor: pointer;
     background: var(--line-faint);
     color: var(--muted);
 }

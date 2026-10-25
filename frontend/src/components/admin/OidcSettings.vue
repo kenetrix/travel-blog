@@ -14,7 +14,6 @@ const oidcForm = ref({
     issuer: '',
     clientId: '',
     clientSecret: '',
-    redirectUrl: '',
     name: '',
     scopes: '',
     disablePassword: false,
@@ -26,7 +25,7 @@ let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
 async function copyCallback() {
     try {
-        await navigator.clipboard.writeText(callbackUrl)
+        await navigator.clipboard.writeText(shownCallback.value)
     } catch {
         say('Could not copy; select the URL and copy it by hand', true)
         return
@@ -35,6 +34,26 @@ async function copyCallback() {
     clearTimeout(copiedTimer)
     copiedTimer = setTimeout(() => (copied.value = false), 2000)
 }
+// The callback the app answers on, built from the address the admin uses; with
+// environment variables the registered one is shown instead
+const shownCallback = computed(() =>
+    oidcReadonly.value && oidc.value?.redirectUrl
+        ? oidc.value.redirectUrl
+        : callbackUrl
+)
+const status = computed(() => {
+    const source =
+        oidc.value?.source === 'env' ? 'environment variables' : 'settings'
+    if (!oidc.value || oidc.value.source === 'none') {
+        return { kind: 'off', text: 'Not configured' }
+    }
+    return oidc.value.enabled
+        ? { kind: 'ok', text: `Active: the provider answers (from ${source})` }
+        : {
+              kind: 'bad',
+              text: `Not working: the provider cannot be reached (from ${source})`,
+          }
+})
 const oidcReadonly = computed(() => oidc.value?.source === 'env')
 
 function applyOidc(config: OidcConfig) {
@@ -43,7 +62,6 @@ function applyOidc(config: OidcConfig) {
         issuer: config.issuer,
         clientId: config.clientId,
         clientSecret: '',
-        redirectUrl: config.redirectUrl,
         name: config.name,
         scopes: config.scopes,
         disablePassword: config.disablePassword,
@@ -56,7 +74,7 @@ function oidcBody() {
         issuer: f.issuer.trim(),
         clientId: f.clientId.trim(),
         clientSecret: f.clientSecret || undefined,
-        redirectUrl: f.redirectUrl.trim() || callbackUrl,
+        redirectUrl: callbackUrl,
         name: f.name.trim() || undefined,
         scopes: f.scopes.trim() || undefined,
         disablePassword: f.disablePassword,
@@ -123,7 +141,16 @@ onMounted(async () => {
 
 <template>
     <section v-if="oidc" class="panel">
-        <h2>OpenID Connect</h2>
+        <h2>
+            OpenID Connect
+            <span
+                class="light"
+                :class="status.kind"
+                role="img"
+                :title="status.text"
+                :aria-label="status.text"
+            />
+        </h2>
         <p v-if="oidcReadonly" class="note">
             Set by environment variables (OIDC_*) on the server. Remove them
             there to change it here.
@@ -133,23 +160,14 @@ onMounted(async () => {
             Register this callback URL there:
         </p>
         <button
-            v-if="!oidcReadonly"
             type="button"
             class="callback"
             title="Copy to clipboard"
             @click="copyCallback"
         >
-            <code>{{ callbackUrl }}</code>
+            <code>{{ shownCallback }}</code>
             <span class="copy">{{ copied ? 'Copied' : 'Copy' }}</span>
         </button>
-        <p v-if="oidc.source !== 'none'" class="note">
-            Status:
-            {{
-                oidc.enabled
-                    ? 'active'
-                    : 'configured, but the provider cannot be reached'
-            }}
-        </p>
         <form class="fields" @submit.prevent="saveOidc">
             <label for="oidc-issuer">Issuer URL</label>
             <input
@@ -180,14 +198,6 @@ onMounted(async () => {
                 "
                 :disabled="oidcReadonly"
                 :required="!oidc.secretSet"
-            />
-            <label for="oidc-redirect">Callback URL</label>
-            <input
-                id="oidc-redirect"
-                v-model="oidcForm.redirectUrl"
-                type="text"
-                :placeholder="callbackUrl"
-                :disabled="oidcReadonly"
             />
             <label for="oidc-name">Button text (provider name)</label>
             <input
@@ -246,6 +256,26 @@ onMounted(async () => {
 
 <style src="../ui/panel.css"></style>
 <style scoped>
+.light {
+    display: inline-block;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-left: 0.3rem;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--muted);
+}
+
+.light.ok {
+    background: #2e8b57;
+    box-shadow: 0 0 0 3px #2e8b5733;
+}
+
+.light.bad {
+    background: #c0392b;
+    box-shadow: 0 0 0 3px #c0392b33;
+}
+
 .callback {
     display: flex;
     align-items: center;

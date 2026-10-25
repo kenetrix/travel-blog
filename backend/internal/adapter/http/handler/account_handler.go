@@ -136,7 +136,6 @@ func (h *Handler) UpdateProfile(ctx context.Context, req api.UpdateProfileReques
 		Language:    in.Language,
 		Timezone:    in.Timezone,
 		HomeCountry: in.HomeCountry,
-		HomeAirport: in.HomeAirport,
 		Color:       in.Color,
 	}
 	up.Email = in.Email

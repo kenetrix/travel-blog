@@ -15,7 +15,6 @@ type Profile struct {
 	Language    string // BCP 47, e.g. "de" or "en-US"
 	Timezone    string // IANA, e.g. "Europe/Berlin"
 	HomeCountry string // ISO 3166 alpha-3 or empty
-	HomeAirport string // IATA or empty
 	Color       string // #rrggbb or empty
 	CreatedAt   time.Time
 }
@@ -46,7 +45,6 @@ type ProfileUpdate struct {
 	Language    *string
 	Timezone    *string
 	HomeCountry *string
-	HomeAirport *string
 	Color       *string
 }
 
