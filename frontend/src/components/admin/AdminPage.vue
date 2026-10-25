@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
+import TabBar from '../ui/TabBar.vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
 
@@ -9,6 +10,12 @@ type AdminUser = Schemas['AdminUser']
 type OidcConfig = Schemas['OidcAdminConfig']
 
 const store = useTravelStore()
+const tab = ref('users')
+const tabs = computed(() => [
+    { id: 'users', label: `Users (${users.value.length})` },
+    { id: 'registration', label: 'Registration' },
+    { id: 'sso', label: 'Single sign-on' },
+])
 
 const users = ref<AdminUser[]>([])
 const registrationOpen = ref(true)
@@ -219,226 +226,246 @@ async function deleteUser() {
         title="Administration"
         subtitle="Users, registration and single sign-on"
     >
-        <p v-if="!store.isAdmin && store.authState === 'ready'" class="error">
+        <p
+            v-if="!store.isAdmin && store.authState === 'ready'"
+            class="page-error"
+        >
             Only administrators can open this page.
         </p>
         <template v-else>
             <p
                 v-if="message"
-                class="message"
+                class="toast"
                 :class="{ error: message.error }"
                 role="status"
             >
                 {{ message.text }}
             </p>
 
-            <section class="block">
-                <h2>Registration</h2>
-                <label class="check">
-                    <input
-                        type="checkbox"
-                        :checked="registrationOpen"
-                        :disabled="!loaded"
-                        @change="
-                            setRegistration(
-                                ($event.target as HTMLInputElement).checked
-                            )
-                        "
-                    />
-                    Let visitors create their own account
-                </label>
-                <p class="note">
-                    When closed, only administrators can add people, and only
-                    existing accounts can log in.
-                </p>
-            </section>
-
-            <section v-if="oidc" class="block">
-                <h2>Single sign-on (OpenID Connect)</h2>
-                <p v-if="oidcReadonly" class="note">
-                    Set by environment variables (OIDC_*) on the server. Remove
-                    them there to change it here.
-                </p>
-                <p v-else class="note">
-                    Works with any OpenID Connect provider, for example Pocket
-                    ID. Register
-                    <code>{{ callbackUrl }}</code> as the callback URL there.
-                </p>
-                <p v-if="oidc.source !== 'none'" class="note">
-                    Status:
-                    {{
-                        oidc.enabled
-                            ? 'active'
-                            : 'configured, but the provider cannot be reached'
-                    }}
-                </p>
-                <form class="oidc" @submit.prevent="saveOidc">
-                    <label for="oidc-issuer">Issuer URL</label>
-                    <input
-                        id="oidc-issuer"
-                        v-model="oidcForm.issuer"
-                        type="text"
-                        placeholder="https://id.example.com"
-                        :disabled="oidcReadonly"
-                        required
-                    />
-                    <label for="oidc-client">Client ID</label>
-                    <input
-                        id="oidc-client"
-                        v-model="oidcForm.clientId"
-                        type="text"
-                        autocomplete="off"
-                        :disabled="oidcReadonly"
-                        required
-                    />
-                    <label for="oidc-secret">Client secret</label>
-                    <input
-                        id="oidc-secret"
-                        v-model="oidcForm.clientSecret"
-                        type="password"
-                        autocomplete="new-password"
-                        :placeholder="
-                            oidc.secretSet ? 'Set. Leave empty to keep it' : ''
-                        "
-                        :disabled="oidcReadonly"
-                        :required="!oidc.secretSet"
-                    />
-                    <label for="oidc-redirect">Callback URL</label>
-                    <input
-                        id="oidc-redirect"
-                        v-model="oidcForm.redirectUrl"
-                        type="text"
-                        :placeholder="callbackUrl"
-                        :disabled="oidcReadonly"
-                    />
-                    <label for="oidc-name">Button text (provider name)</label>
-                    <input
-                        id="oidc-name"
-                        v-model="oidcForm.name"
-                        type="text"
-                        maxlength="40"
-                        placeholder="SSO"
-                        :disabled="oidcReadonly"
-                    />
-                    <label for="oidc-scopes">Scopes</label>
-                    <input
-                        id="oidc-scopes"
-                        v-model="oidcForm.scopes"
-                        type="text"
-                        placeholder="openid profile email"
-                        :disabled="oidcReadonly"
-                    />
+            <TabBar v-model="tab" :tabs="tabs" />
+            <template v-if="tab === 'users'">
+                <section class="panel">
+                    <h2>Users</h2>
+                    <ul class="users">
+                        <li v-for="user in users" :key="user.id">
+                            <div class="row">
+                                <div class="who">
+                                    <strong>@{{ user.username }}</strong>
+                                    <span class="muted">
+                                        {{ user.displayName }}
+                                        <template v-if="user.email">
+                                            · {{ user.email }}
+                                        </template>
+                                    </span>
+                                    <span
+                                        v-if="user.mustChangePassword"
+                                        class="tag"
+                                    >
+                                        must change password
+                                    </span>
+                                </div>
+                                <select
+                                    :value="user.role"
+                                    :aria-label="`Role of ${user.username}`"
+                                    @change="
+                                        setRole(
+                                            user,
+                                            ($event.target as HTMLSelectElement)
+                                                .value as AdminUser['role']
+                                        )
+                                    "
+                                >
+                                    <option value="user">User</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                                <div
+                                    v-if="
+                                        user.username !==
+                                        store.profile?.username
+                                    "
+                                    class="actions"
+                                >
+                                    <button
+                                        type="button"
+                                        class="btn secondary"
+                                        @click="startReset(user)"
+                                    >
+                                        Reset password
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn danger"
+                                        @click="toDelete = user"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            <form
+                                v-if="resetting === user.id"
+                                class="reset"
+                                @submit.prevent="resetPassword(user)"
+                            >
+                                <input
+                                    v-model="newPassword"
+                                    type="text"
+                                    minlength="10"
+                                    maxlength="72"
+                                    autocomplete="off"
+                                    placeholder="Temporary password, at least 10 characters"
+                                    :aria-label="`Temporary password for ${user.username}`"
+                                    required
+                                />
+                                <button type="submit" class="btn">Set</button>
+                            </form>
+                        </li>
+                    </ul>
+                </section>
+            </template>
+            <template v-else-if="tab === 'registration'">
+                <section class="panel">
+                    <h2>Registration</h2>
                     <label class="check">
                         <input
-                            v-model="oidcForm.disablePassword"
                             type="checkbox"
-                            :disabled="oidcReadonly"
+                            :checked="registrationOpen"
+                            :disabled="!loaded"
+                            @change="
+                                setRegistration(
+                                    ($event.target as HTMLInputElement).checked
+                                )
+                            "
                         />
-                        Turn off password login and registration
+                        Let visitors create their own account
                     </label>
                     <p class="note">
-                        Saving checks that the provider can be reached first, so
-                        you cannot lock yourself out.
+                        When closed, only administrators can add people, and
+                        only existing accounts can log in.
                     </p>
-                    <div v-if="!oidcReadonly" class="actions">
-                        <button type="submit" class="btn" :disabled="oidcBusy">
-                            Save
-                        </button>
-                        <button
-                            type="button"
-                            class="btn secondary"
-                            :disabled="oidcBusy"
-                            @click="testOidc"
+                </section>
+            </template>
+            <template v-else>
+                <section v-if="oidc" class="panel">
+                    <h2>OpenID Connect</h2>
+                    <p v-if="oidcReadonly" class="note">
+                        Set by environment variables (OIDC_*) on the server.
+                        Remove them there to change it here.
+                    </p>
+                    <p v-else class="note">
+                        Works with any OpenID Connect provider, for example
+                        Pocket ID. Register
+                        <code>{{ callbackUrl }}</code> as the callback URL
+                        there.
+                    </p>
+                    <p v-if="oidc.source !== 'none'" class="note">
+                        Status:
+                        {{
+                            oidc.enabled
+                                ? 'active'
+                                : 'configured, but the provider cannot be reached'
+                        }}
+                    </p>
+                    <form class="fields" @submit.prevent="saveOidc">
+                        <label for="oidc-issuer">Issuer URL</label>
+                        <input
+                            id="oidc-issuer"
+                            v-model="oidcForm.issuer"
+                            type="text"
+                            placeholder="https://id.example.com"
+                            :disabled="oidcReadonly"
+                            required
+                        />
+                        <label for="oidc-client">Client ID</label>
+                        <input
+                            id="oidc-client"
+                            v-model="oidcForm.clientId"
+                            type="text"
+                            autocomplete="off"
+                            :disabled="oidcReadonly"
+                            required
+                        />
+                        <label for="oidc-secret">Client secret</label>
+                        <input
+                            id="oidc-secret"
+                            v-model="oidcForm.clientSecret"
+                            type="password"
+                            autocomplete="new-password"
+                            :placeholder="
+                                oidc.secretSet
+                                    ? 'Set. Leave empty to keep it'
+                                    : ''
+                            "
+                            :disabled="oidcReadonly"
+                            :required="!oidc.secretSet"
+                        />
+                        <label for="oidc-redirect">Callback URL</label>
+                        <input
+                            id="oidc-redirect"
+                            v-model="oidcForm.redirectUrl"
+                            type="text"
+                            :placeholder="callbackUrl"
+                            :disabled="oidcReadonly"
+                        />
+                        <label for="oidc-name"
+                            >Button text (provider name)</label
                         >
-                            Test
-                        </button>
-                        <button
-                            v-if="oidc.source === 'settings'"
-                            type="button"
-                            class="btn danger"
-                            :disabled="oidcBusy"
-                            @click="removeOidc"
-                        >
-                            Remove
-                        </button>
-                    </div>
-                </form>
-            </section>
-
-            <section class="block">
-                <h2>Users ({{ users.length }})</h2>
-                <ul class="users">
-                    <li v-for="user in users" :key="user.id">
-                        <div class="row">
-                            <div class="who">
-                                <strong>@{{ user.username }}</strong>
-                                <span class="muted">
-                                    {{ user.displayName }}
-                                    <template v-if="user.email">
-                                        · {{ user.email }}
-                                    </template>
-                                </span>
-                                <span
-                                    v-if="user.mustChangePassword"
-                                    class="tag"
-                                >
-                                    must change password
-                                </span>
-                            </div>
-                            <select
-                                :value="user.role"
-                                :aria-label="`Role of ${user.username}`"
-                                @change="
-                                    setRole(
-                                        user,
-                                        ($event.target as HTMLSelectElement)
-                                            .value as AdminUser['role']
-                                    )
-                                "
-                            >
-                                <option value="user">User</option>
-                                <option value="admin">Administrator</option>
-                            </select>
-                            <div
-                                v-if="user.username !== store.profile?.username"
-                                class="actions"
-                            >
-                                <button
-                                    type="button"
-                                    class="btn secondary"
-                                    @click="startReset(user)"
-                                >
-                                    Reset password
-                                </button>
-                                <button
-                                    type="button"
-                                    class="btn danger"
-                                    @click="toDelete = user"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        <form
-                            v-if="resetting === user.id"
-                            class="reset"
-                            @submit.prevent="resetPassword(user)"
-                        >
+                        <input
+                            id="oidc-name"
+                            v-model="oidcForm.name"
+                            type="text"
+                            maxlength="40"
+                            placeholder="SSO"
+                            :disabled="oidcReadonly"
+                        />
+                        <label for="oidc-scopes">Scopes</label>
+                        <input
+                            id="oidc-scopes"
+                            v-model="oidcForm.scopes"
+                            type="text"
+                            placeholder="openid profile email"
+                            :disabled="oidcReadonly"
+                        />
+                        <label class="check">
                             <input
-                                v-model="newPassword"
-                                type="text"
-                                minlength="10"
-                                maxlength="72"
-                                autocomplete="off"
-                                placeholder="Temporary password, at least 10 characters"
-                                :aria-label="`Temporary password for ${user.username}`"
-                                required
+                                v-model="oidcForm.disablePassword"
+                                type="checkbox"
+                                :disabled="oidcReadonly"
                             />
-                            <button type="submit" class="btn">Set</button>
-                        </form>
-                    </li>
-                </ul>
-            </section>
+                            Turn off password login and registration
+                        </label>
+                        <p class="note">
+                            Saving checks that the provider can be reached
+                            first, so you cannot lock yourself out.
+                        </p>
+                        <div v-if="!oidcReadonly" class="actions">
+                            <button
+                                type="submit"
+                                class="btn"
+                                :disabled="oidcBusy"
+                            >
+                                Save
+                            </button>
+                            <button
+                                type="button"
+                                class="btn secondary"
+                                :disabled="oidcBusy"
+                                @click="testOidc"
+                            >
+                                Test
+                            </button>
+                            <button
+                                v-if="oidc.source === 'settings'"
+                                type="button"
+                                class="btn danger"
+                                :disabled="oidcBusy"
+                                @click="removeOidc"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </template>
         </template>
 
         <ConfirmModal
@@ -452,51 +479,8 @@ async function deleteUser() {
     </PageWrapper>
 </template>
 
+<style src="../ui/panel.css"></style>
 <style scoped>
-.message {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    max-width: 800px;
-    margin: 0 auto 1rem;
-    padding: 0.55rem 0.8rem;
-    border-radius: 0.5rem;
-    background: var(--chip);
-    font-size: 0.8rem;
-}
-
-.message.error,
-.error {
-    color: #c0392b;
-}
-
-.block {
-    max-width: 800px;
-    margin: 0 auto 1.6rem;
-}
-
-h2 {
-    margin-bottom: 0.6rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.check {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-}
-
-.note {
-    margin: 0.4rem 0 0;
-    font-size: 0.75rem;
-    color: var(--muted);
-}
-
 .users {
     list-style: none;
     margin: 0;
@@ -504,12 +488,20 @@ h2 {
 }
 
 .users li {
-    padding: 0.7rem 0;
+    padding: 0.8rem 0;
     border-bottom: 1px solid var(--line);
 }
 
-.row {
-    display: flex;
+.users li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.users li:first-child {
+    padding-top: 0;
+}
+
+.panel .users .row {
     flex-wrap: wrap;
     align-items: center;
     gap: 0.6rem 1rem;
@@ -539,40 +531,12 @@ h2 {
     color: var(--muted);
 }
 
-.oidc {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    max-width: 420px;
-    margin-top: 0.6rem;
+.panel .users select {
+    width: auto;
 }
 
-.oidc label:not(.check) {
-    margin-top: 0.3rem;
-    font-size: 0.75rem;
-    color: var(--muted);
-}
-
-.oidc .actions {
-    margin-top: 0.6rem;
-}
-
-select,
-input[type='text'],
-input[type='password'] {
-    box-sizing: border-box;
-    padding: 0.4rem 0.55rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 0.5rem;
-    background: var(--raised);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.8rem;
-}
-
-.actions {
-    display: flex;
-    gap: 0.4rem;
+.panel .users .actions {
+    margin-top: 0;
 }
 
 .reset {
@@ -584,27 +548,5 @@ input[type='password'] {
 .reset input {
     flex: 1;
     min-width: 0;
-}
-
-.btn {
-    padding: 0.4rem 0.8rem;
-    border: none;
-    border-radius: 0.5rem;
-    background: #3a7d5c;
-    color: #fff;
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.btn.secondary {
-    border: 1px solid var(--line-strong);
-    background: var(--raised);
-    color: var(--text);
-}
-
-.btn.danger {
-    background: #c0392b;
 }
 </style>

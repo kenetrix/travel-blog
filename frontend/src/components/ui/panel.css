@@ -1,0 +1,155 @@
+/* Shared by the profile and administration pages */
+.panel {
+    max-width: 720px;
+    margin: 0 auto 1.2rem;
+    padding: 1.2rem 1.3rem;
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    background: var(--raised);
+}
+
+.panel h2 {
+    margin: 0 0 0.8rem;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+}
+
+.panel .fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.panel label:not(.check) {
+    margin-top: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.panel .check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.panel input:not([type='checkbox']),
+.panel select,
+.panel textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    background: var(--page);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.panel .color {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.panel input[type='color'] {
+    width: 3rem;
+    height: 2.1rem;
+    padding: 0.15rem;
+    cursor: pointer;
+}
+
+.panel textarea {
+    resize: vertical;
+}
+
+.panel .row {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.panel .row > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.panel .note {
+    margin: 0.4rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--muted);
+}
+
+.panel .error,
+.page-error {
+    margin: 0.4rem 0 0;
+    font-size: 0.78rem;
+    color: #c0392b;
+}
+
+.panel .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+}
+
+.panel .btn {
+    display: inline-block;
+    box-sizing: border-box;
+    padding: 0.5rem 0.9rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: #3a7d5c;
+    color: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.panel .btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.panel .btn.secondary {
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--text);
+}
+
+.panel .btn.danger {
+    background: #c0392b;
+    color: #fff;
+}
+
+.panel.danger-zone {
+    border-color: #c0392b66;
+}
+
+.toast {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto 1rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 0.5rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    font-size: 0.8rem;
+}
+
+.toast.error {
+    background: #c0392b;
+    color: #fff;
+}

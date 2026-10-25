@@ -55,7 +55,7 @@ onMounted(async () => {
     passwordLogin.value = config.passwordLogin || !config.enabled
 })
 
-// The local user can still browse the map; anonymous visitors cannot
+// Logged-in users can still browse the map; anonymous visitors cannot
 const closable = computed(() => store.authState !== 'anonymous')
 
 const title = computed(() => {
