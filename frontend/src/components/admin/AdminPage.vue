@@ -3,115 +3,23 @@ import { computed, ref, watch } from 'vue'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
+import OidcSettings from './OidcSettings.vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
 
 type AdminUser = Schemas['AdminUser']
-type OidcConfig = Schemas['OidcAdminConfig']
 
 const store = useTravelStore()
 const tab = ref('users')
 const tabs = computed(() => [
     { id: 'users', label: `Users (${users.value.length})` },
     { id: 'registration', label: 'Registration' },
-    { id: 'sso', label: 'Single sign-on' },
 ])
 
 const users = ref<AdminUser[]>([])
 const registrationOpen = ref(true)
 const loaded = ref(false)
 const message = ref<{ text: string; error: boolean } | null>(null)
-
-// Single sign-on: the form mirrors what the server has; the secret is never
-// sent back, so its field only ever holds a replacement
-const oidc = ref<OidcConfig | null>(null)
-const oidcForm = ref({
-    issuer: '',
-    clientId: '',
-    clientSecret: '',
-    redirectUrl: '',
-    name: '',
-    scopes: '',
-    disablePassword: false,
-})
-const oidcBusy = ref(false)
-const callbackUrl = `${window.location.origin}/api/auth/oidc/callback`
-const oidcReadonly = computed(() => oidc.value?.source === 'env')
-
-function applyOidc(config: OidcConfig) {
-    oidc.value = config
-    oidcForm.value = {
-        issuer: config.issuer,
-        clientId: config.clientId,
-        clientSecret: '',
-        redirectUrl: config.redirectUrl,
-        name: config.name,
-        scopes: config.scopes,
-        disablePassword: config.disablePassword,
-    }
-}
-
-function oidcBody() {
-    const f = oidcForm.value
-    return {
-        issuer: f.issuer.trim(),
-        clientId: f.clientId.trim(),
-        clientSecret: f.clientSecret || undefined,
-        redirectUrl: f.redirectUrl.trim() || callbackUrl,
-        name: f.name.trim() || undefined,
-        scopes: f.scopes.trim() || undefined,
-        disablePassword: f.disablePassword,
-    }
-}
-
-async function reloadOidc() {
-    const { data, error } = await api.GET('/admin/oidc')
-    if (error || !data) throw error
-    applyOidc(data)
-}
-
-async function testOidc() {
-    oidcBusy.value = true
-    const { error } = await api.POST('/admin/oidc/test', { body: oidcBody() })
-    oidcBusy.value = false
-    if (error) {
-        say(problemMessage(error, 'The provider could not be reached'), true)
-        return
-    }
-    say('The provider answered')
-}
-
-async function saveOidc() {
-    oidcBusy.value = true
-    const { error } = await api.PUT('/admin/oidc', { body: oidcBody() })
-    oidcBusy.value = false
-    if (error) {
-        say(problemMessage(error, 'Could not save the configuration'), true)
-        return
-    }
-    try {
-        await reloadOidc()
-        say('Single sign-on saved and active')
-    } catch (e) {
-        say(problemMessage(e, 'Saved, but could not reload'), true)
-    }
-}
-
-async function removeOidc() {
-    oidcBusy.value = true
-    const { error } = await api.DELETE('/admin/oidc')
-    oidcBusy.value = false
-    if (error) {
-        say(problemMessage(error, 'Could not remove the configuration'), true)
-        return
-    }
-    try {
-        await reloadOidc()
-        say('Single sign-on is off')
-    } catch (e) {
-        say(problemMessage(e, 'Removed, but could not reload'), true)
-    }
-}
 
 // User with an open password form, and the password typed into it
 const resetting = ref<string | null>(null)
@@ -124,15 +32,12 @@ function say(text: string, error = false) {
 
 async function load() {
     try {
-        const [list, settings, oidcConfig] = await Promise.all([
+        const [list, settings] = await Promise.all([
             api.GET('/admin/users'),
             api.GET('/admin/settings'),
-            api.GET('/admin/oidc'),
         ])
         if (list.error || !list.data) throw list.error
         if (settings.error || !settings.data) throw settings.error
-        if (oidcConfig.error || !oidcConfig.data) throw oidcConfig.error
-        applyOidc(oidcConfig.data)
         users.value = list.data
         registrationOpen.value = settings.data.registrationOpen
         loaded.value = true
@@ -322,7 +227,7 @@ async function deleteUser() {
                     </ul>
                 </section>
             </template>
-            <template v-else-if="tab === 'registration'">
+            <template v-else>
                 <section class="panel">
                     <h2>Registration</h2>
                     <label class="check">
@@ -343,128 +248,7 @@ async function deleteUser() {
                         only existing accounts can log in.
                     </p>
                 </section>
-            </template>
-            <template v-else>
-                <section v-if="oidc" class="panel">
-                    <h2>OpenID Connect</h2>
-                    <p v-if="oidcReadonly" class="note">
-                        Set by environment variables (OIDC_*) on the server.
-                        Remove them there to change it here.
-                    </p>
-                    <p v-else class="note">
-                        Works with any OpenID Connect provider, for example
-                        Pocket ID. Register
-                        <code>{{ callbackUrl }}</code> as the callback URL
-                        there.
-                    </p>
-                    <p v-if="oidc.source !== 'none'" class="note">
-                        Status:
-                        {{
-                            oidc.enabled
-                                ? 'active'
-                                : 'configured, but the provider cannot be reached'
-                        }}
-                    </p>
-                    <form class="fields" @submit.prevent="saveOidc">
-                        <label for="oidc-issuer">Issuer URL</label>
-                        <input
-                            id="oidc-issuer"
-                            v-model="oidcForm.issuer"
-                            type="text"
-                            placeholder="https://id.example.com"
-                            :disabled="oidcReadonly"
-                            required
-                        />
-                        <label for="oidc-client">Client ID</label>
-                        <input
-                            id="oidc-client"
-                            v-model="oidcForm.clientId"
-                            type="text"
-                            autocomplete="off"
-                            :disabled="oidcReadonly"
-                            required
-                        />
-                        <label for="oidc-secret">Client secret</label>
-                        <input
-                            id="oidc-secret"
-                            v-model="oidcForm.clientSecret"
-                            type="password"
-                            autocomplete="new-password"
-                            :placeholder="
-                                oidc.secretSet
-                                    ? 'Set. Leave empty to keep it'
-                                    : ''
-                            "
-                            :disabled="oidcReadonly"
-                            :required="!oidc.secretSet"
-                        />
-                        <label for="oidc-redirect">Callback URL</label>
-                        <input
-                            id="oidc-redirect"
-                            v-model="oidcForm.redirectUrl"
-                            type="text"
-                            :placeholder="callbackUrl"
-                            :disabled="oidcReadonly"
-                        />
-                        <label for="oidc-name"
-                            >Button text (provider name)</label
-                        >
-                        <input
-                            id="oidc-name"
-                            v-model="oidcForm.name"
-                            type="text"
-                            maxlength="40"
-                            placeholder="SSO"
-                            :disabled="oidcReadonly"
-                        />
-                        <label for="oidc-scopes">Scopes</label>
-                        <input
-                            id="oidc-scopes"
-                            v-model="oidcForm.scopes"
-                            type="text"
-                            placeholder="openid profile email"
-                            :disabled="oidcReadonly"
-                        />
-                        <label class="check">
-                            <input
-                                v-model="oidcForm.disablePassword"
-                                type="checkbox"
-                                :disabled="oidcReadonly"
-                            />
-                            Turn off password login and registration
-                        </label>
-                        <p class="note">
-                            Saving checks that the provider can be reached
-                            first, so you cannot lock yourself out.
-                        </p>
-                        <div v-if="!oidcReadonly" class="actions">
-                            <button
-                                type="submit"
-                                class="btn"
-                                :disabled="oidcBusy"
-                            >
-                                Save
-                            </button>
-                            <button
-                                type="button"
-                                class="btn secondary"
-                                :disabled="oidcBusy"
-                                @click="testOidc"
-                            >
-                                Test
-                            </button>
-                            <button
-                                v-if="oidc.source === 'settings'"
-                                type="button"
-                                class="btn danger"
-                                :disabled="oidcBusy"
-                                @click="removeOidc"
-                            >
-                                Remove
-                            </button>
-                        </div>
-                    </form>
-                </section>
+                <OidcSettings @say="say" />
             </template>
         </template>
 
