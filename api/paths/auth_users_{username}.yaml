@@ -1,0 +1,20 @@
+get:
+  tags: [account]
+  operationId: checkUsername
+  summary: Whether a username is taken
+  description: |
+    Lets the login page choose between logging in and registering. Usernames
+    are public handles, so this reveals nothing the public profile URL does not.
+  security: []
+  parameters:
+    - name: username
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    '200':
+      description: Whether the username exists
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/UsernameCheck' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }

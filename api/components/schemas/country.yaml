@@ -1,0 +1,58 @@
+CountryStatus:
+  type: string
+  description: '`none` is only valid as input and removes the entry'
+  enum: [visited, wishlist, none]
+
+CountryDetails:
+  type: object
+  required: [food, sightseeing, notes, rating, tags]
+  properties:
+    food: { type: string }
+    sightseeing: { type: string }
+    notes: { type: string }
+    rating:
+      type: integer
+      minimum: 0
+      maximum: 5
+      description: 0 = unrated
+    tags:
+      type: array
+      items: { type: string }
+
+CountryEntryInput:
+  type: object
+  required: [status, details]
+  properties:
+    status: { $ref: '#/CountryStatus' }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    details: { $ref: '#/CountryDetails' }
+
+CountryEntry:
+  type: object
+  required: [iso, status, visibility, details]
+  properties:
+    iso: { type: string, description: ISO 3166-1 alpha-3, example: DEU }
+    status:
+      type: string
+      enum: [visited, wishlist]
+    visibility: { $ref: './common.yaml#/Visibility' }
+    details: { $ref: '#/CountryDetails' }
+
+CountrySummary:
+  type: object
+  description: A country entry without its long texts; `GET /countries/{iso}` has them
+  required: [iso, status, visibility, rating, tags]
+  properties:
+    iso: { type: string, description: ISO 3166-1 alpha-3, example: DEU }
+    status:
+      type: string
+      enum: [visited, wishlist]
+    visibility: { $ref: './common.yaml#/Visibility' }
+    rating:
+      type: integer
+      minimum: 0
+      maximum: 5
+      description: 0 = unrated
+    tags:
+      type: array
+      items: { type: string }

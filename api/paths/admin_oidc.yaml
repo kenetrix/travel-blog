@@ -1,0 +1,45 @@
+get:
+  tags: [admin]
+  operationId: getOidcAdminConfig
+  summary: OpenID Connect configuration of the installation
+  description: |
+    Never contains the client secret, only whether one is set. `source` says
+    where the effective configuration comes from: `env` (OIDC_* variables,
+    read-only here), `settings` (saved on this page) or `none`.
+  responses:
+    '200':
+      description: The configuration
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/admin.yaml#/OidcAdminConfig' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+put:
+  tags: [admin]
+  operationId: saveOidcAdminConfig
+  summary: Save the OpenID Connect configuration and apply it without restart
+  description: |
+    Succeeds only if the provider's discovery works with this configuration,
+    so a broken setting (or turning off password login while the provider is
+    unreachable) cannot lock everybody out. An empty `clientSecret` keeps the
+    saved one.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/admin.yaml#/OidcAdminInput' }
+  responses:
+    '204': { description: Saved and active }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+    '409': { $ref: '../components/responses.yaml#/Conflict' }
+delete:
+  tags: [admin]
+  operationId: deleteOidcAdminConfig
+  summary: Remove the saved configuration and turn OpenID Connect off
+  responses:
+    '204': { description: Removed }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+    '409': { $ref: '../components/responses.yaml#/Conflict' }

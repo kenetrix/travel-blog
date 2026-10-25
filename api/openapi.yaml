@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Travel Blog API
+  version: 0.3.0
+  description: |
+    Single source of truth for the contract between `backend/` and `frontend/`.
+    Go server code and TypeScript types are generated from this file and the
+    files it references (see `api/README.md`).
+
+    Accounts: users register and log in with email and password and get a
+    session cookie (`session`, HttpOnly). All data belongs to the user of the
+    request; no endpoint takes a user ID. Without a session, protected
+    endpoints answer 401 - unless the backend runs with `-local-user`
+    (development), which maps such requests to the local user.
+
+    Visibility: country entries, flights and locations are `private` or
+    `public`. New ones get the user's default visibility. Public data of a
+    user with a public profile can be read by anyone via `/public/{username}`.
+
+    Designed for minimal traffic:
+    - the server stores only the user's data (account, profile, settings,
+      country entries, flights) and enforces the rules on it (validation,
+      normalization, duplicate routes, flight → visited promotion)
+    - reference data (countries, facts, bounds, airports) lives only in the
+      client, together with search and derived values (distances, stats,
+      tags); the server checks codes by format, not against a country or
+      airport list
+    - the client loads `GET /user`, `GET /countries` and `GET /flights` in
+      parallel at start (each cacheable with its own `ETag`; country texts
+      are left out and fetched per country via `GET /countries/{iso}`) and
+      applies its writes locally; write responses carry only what the
+      client cannot know plus the new `ETag` of the changed resource
+servers:
+  - url: http://localhost:8080/api
+tags:
+  - name: countries
+  - name: flights
+  - name: account
+  - name: public
+  - name: admin
+
+security:
+  - sessionCookie: []
+
+paths:
+  /countries: { $ref: './paths/countries.yaml' }
+  /countries/{iso}: { $ref: './paths/countries_{iso}.yaml' }
+
+  /flights: { $ref: './paths/flights.yaml' }
+  /flights/{id}: { $ref: './paths/flights_{id}.yaml' }
+
+  /auth/register: { $ref: './paths/auth_register.yaml' }
+  /auth/login: { $ref: './paths/auth_login.yaml' }
+  /auth/users/{username}: { $ref: './paths/auth_users_{username}.yaml' }
+  /auth/logout: { $ref: './paths/auth_logout.yaml' }
+  /auth/oidc/config: { $ref: './paths/auth_oidc_config.yaml' }
+
+  /user: { $ref: './paths/user.yaml' }
+  /user/profile: { $ref: './paths/user_profile.yaml' }
+  /user/settings: { $ref: './paths/user_settings.yaml' }
+  /user/password: { $ref: './paths/user_password.yaml' }
+
+  /public/{username}: { $ref: './paths/public_{username}.yaml' }
+
+  /admin/users: { $ref: './paths/admin_users.yaml' }
+  /admin/users/{id}: { $ref: './paths/admin_users_{id}.yaml' }
+  /admin/users/{id}/password: { $ref: './paths/admin_users_{id}_password.yaml' }
+  /admin/settings: { $ref: './paths/admin_settings.yaml' }
+  /admin/oidc: { $ref: './paths/admin_oidc.yaml' }
+  /admin/oidc/test: { $ref: './paths/admin_oidc_test.yaml' }
+
+# Every component is registered here under its name, so the bundled contract
+# keeps the same component (and generated type) names.
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+
+  parameters:
+    Iso: { $ref: './components/parameters.yaml#/Iso' }
+    IfNoneMatch: { $ref: './components/parameters.yaml#/IfNoneMatch' }
+
+  headers:
+    ETag: { $ref: './components/headers.yaml#/ETag' }
+    SessionCookie: { $ref: './components/headers.yaml#/SessionCookie' }
+
+  responses:
+    NotFound: { $ref: './components/responses.yaml#/NotFound' }
+    BadRequest: { $ref: './components/responses.yaml#/BadRequest' }
+    Unauthorized: { $ref: './components/responses.yaml#/Unauthorized' }
+    Conflict: { $ref: './components/responses.yaml#/Conflict' }
+    Forbidden: { $ref: './components/responses.yaml#/Forbidden' }
+
+  schemas:
+    Problem: { $ref: './components/schemas/common.yaml#/Problem' }
+    Visibility: { $ref: './components/schemas/common.yaml#/Visibility' }
+
+    CountryStatus: { $ref: './components/schemas/country.yaml#/CountryStatus' }
+    CountryDetails: { $ref: './components/schemas/country.yaml#/CountryDetails' }
+    CountryEntryInput: { $ref: './components/schemas/country.yaml#/CountryEntryInput' }
+    CountryEntry: { $ref: './components/schemas/country.yaml#/CountryEntry' }
+
+    FlightInput: { $ref: './components/schemas/flight.yaml#/FlightInput' }
+    FlightUpdate: { $ref: './components/schemas/flight.yaml#/FlightUpdate' }
+    Flight: { $ref: './components/schemas/flight.yaml#/Flight' }
+    FlightCreated: { $ref: './components/schemas/flight.yaml#/FlightCreated' }
+
+    Profile: { $ref: './components/schemas/account.yaml#/Profile' }
+    ProfileUpdate: { $ref: './components/schemas/account.yaml#/ProfileUpdate' }
+    Settings: { $ref: './components/schemas/account.yaml#/Settings' }
+    Role: { $ref: './components/schemas/account.yaml#/Role' }
+    Account: { $ref: './components/schemas/account.yaml#/Account' }
+    RegisterInput: { $ref: './components/schemas/account.yaml#/RegisterInput' }
+    LoginInput: { $ref: './components/schemas/account.yaml#/LoginInput' }
+    UsernameCheck: { $ref: './components/schemas/account.yaml#/UsernameCheck' }
+    PasswordChange: { $ref: './components/schemas/account.yaml#/PasswordChange' }
+
+    AdminUser: { $ref: './components/schemas/admin.yaml#/AdminUser' }
+    AdminUserUpdate: { $ref: './components/schemas/admin.yaml#/AdminUserUpdate' }
+    PasswordReset: { $ref: './components/schemas/admin.yaml#/PasswordReset' }
+    AdminSettings: { $ref: './components/schemas/admin.yaml#/AdminSettings' }
+
+    PublicProfile: { $ref: './components/schemas/travel.yaml#/PublicProfile' }
+    PublicTravel: { $ref: './components/schemas/travel.yaml#/PublicTravel' }

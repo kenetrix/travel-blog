@@ -1,0 +1,22 @@
+PublicProfile:
+  type: object
+  required: [username, displayName, bio, homeCountry]
+  properties:
+    username: { type: string }
+    displayName: { type: string }
+    bio: { type: string }
+    homeCountry: { type: string }
+
+PublicTravel:
+  type: object
+  required: [profile, entries, flights]
+  properties:
+    profile: { $ref: '#/PublicProfile' }
+    entries:
+      type: array
+      description: Public country entries
+      items: { $ref: './country.yaml#/CountryEntry' }
+    flights:
+      type: array
+      description: Public flights, oldest first
+      items: { $ref: './flight.yaml#/Flight' }

@@ -1,0 +1,34 @@
+get:
+  tags: [account]
+  operationId: getAccount
+  summary: Profile, settings and role of the user
+  parameters:
+    - $ref: '../components/parameters.yaml#/IfNoneMatch'
+  responses:
+    '200':
+      description: The account
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/Account' }
+    '304':
+      description: The client's copy is current
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+delete:
+  tags: [account]
+  operationId: deleteAccount
+  summary: Delete the account with all data and photos
+  responses:
+    '204':
+      description: Deleted and logged out
+      headers:
+        Set-Cookie: { $ref: '../components/headers.yaml#/SessionCookie' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '409':
+      description: The local user cannot be deleted
+      content:
+        application/problem+json:
+          schema: { $ref: '../components/schemas/common.yaml#/Problem' }

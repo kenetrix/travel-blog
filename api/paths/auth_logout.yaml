@@ -1,0 +1,11 @@
+post:
+  tags: [account]
+  operationId: logout
+  summary: End the current session
+  description: Succeeds without a session, too.
+  security: []
+  responses:
+    '204':
+      description: Logged out
+      headers:
+        Set-Cookie: { $ref: '../components/headers.yaml#/SessionCookie' }

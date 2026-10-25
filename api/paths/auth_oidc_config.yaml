@@ -1,0 +1,21 @@
+get:
+  tags: [account]
+  operationId: oidcConfig
+  summary: Whether login with an OpenID Connect provider is available
+  description: |
+    The login page shows the provider button when `enabled` is true and hides
+    the password form when `passwordLogin` is false.
+
+    The flow itself is plain browser navigation, not JSON, so it is not part
+    of this contract: `GET /api/auth/oidc/login[?next=/path]` redirects (302)
+    to the provider and `GET /api/auth/oidc/callback` is the provider's
+    redirect target. The callback sets the `session` cookie and redirects to
+    `next`, or to `/login?error=<code>` with `oidc_failed`,
+    `registration_closed` or `email_unverified`.
+  security: []
+  responses:
+    '200':
+      description: OIDC availability
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/OidcConfig' }

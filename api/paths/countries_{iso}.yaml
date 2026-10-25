@@ -1,0 +1,41 @@
+parameters:
+  - $ref: '../components/parameters.yaml#/Iso'
+get:
+  tags: [countries]
+  operationId: getCountry
+  summary: The full entry of a country, including its texts
+  responses:
+    '200':
+      description: The entry
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/country.yaml#/CountryEntry' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }
+put:
+  tags: [countries]
+  operationId: saveCountry
+  summary: Set status, visibility and details of a country
+  description: |
+    Replaces the user's entry. Tags are trimmed, lowercased and
+    deduplicated. Without `visibility`, an existing entry keeps its own and
+    a new one gets the user's default. Status `none` removes the entry.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/country.yaml#/CountryEntryInput' }
+  responses:
+    '200':
+      description: The saved entry, as normalized by the server
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/country.yaml#/CountryEntry' }
+    '204':
+      description: The entry was removed
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }

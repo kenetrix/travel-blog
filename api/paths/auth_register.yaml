@@ -1,0 +1,21 @@
+post:
+  tags: [account]
+  operationId: register
+  summary: Create an account and log in
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/account.yaml#/RegisterInput' }
+  responses:
+    '201':
+      description: Created and logged in
+      headers:
+        Set-Cookie: { $ref: '../components/headers.yaml#/SessionCookie' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/Account' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+    '409': { $ref: '../components/responses.yaml#/Conflict' }

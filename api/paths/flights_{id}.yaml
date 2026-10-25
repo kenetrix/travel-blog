@@ -1,0 +1,34 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema: { type: string, format: uuid }
+patch:
+  tags: [flights]
+  operationId: updateFlight
+  summary: Change the visibility of a flight
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/flight.yaml#/FlightUpdate' }
+  responses:
+    '204':
+      description: Updated
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }
+delete:
+  tags: [flights]
+  operationId: deleteFlight
+  summary: Remove a flight
+  description: Countries marked visited by the flight stay visited.
+  responses:
+    '204':
+      description: Deleted
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }

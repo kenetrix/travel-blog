@@ -1,0 +1,15 @@
+post:
+  tags: [admin]
+  operationId: testOidcAdminConfig
+  summary: Check that the provider can be reached with this configuration
+  description: Runs the discovery only; nothing is saved.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/admin.yaml#/OidcAdminInput' }
+  responses:
+    '204': { description: The provider answered }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }

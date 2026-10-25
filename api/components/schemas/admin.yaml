@@ -1,0 +1,64 @@
+AdminUser:
+  type: object
+  required: [id, username, displayName, role, mustChangePassword, createdAt]
+  properties:
+    id: { type: string }
+    username: { type: string }
+    displayName: { type: string }
+    email: { type: string }
+    role: { $ref: './account.yaml#/Role' }
+    mustChangePassword: { type: boolean }
+    createdAt: { type: string, format: date-time }
+
+AdminUserUpdate:
+  type: object
+  required: [role]
+  properties:
+    role: { $ref: './account.yaml#/Role' }
+
+PasswordReset:
+  type: object
+  required: [newPassword]
+  properties:
+    newPassword:
+      type: string
+      minLength: 10
+      maxLength: 72
+
+AdminSettings:
+  type: object
+  required: [registrationOpen]
+  properties:
+    registrationOpen:
+      type: boolean
+      description: Whether visitors may create accounts themselves
+
+OidcAdminConfig:
+  type: object
+  required: [source, enabled, issuer, clientId, secretSet, redirectUrl, name, scopes, disablePassword]
+  properties:
+    source:
+      type: string
+      enum: [none, env, settings]
+    enabled: { type: boolean, description: Whether login works right now }
+    issuer: { type: string }
+    clientId: { type: string }
+    secretSet: { type: boolean }
+    redirectUrl: { type: string }
+    name: { type: string }
+    scopes: { type: string, description: Space-separated }
+    disablePassword: { type: boolean }
+
+OidcAdminInput:
+  type: object
+  required: [issuer, clientId, redirectUrl]
+  properties:
+    issuer: { type: string }
+    clientId: { type: string }
+    clientSecret:
+      type: string
+      description: Empty or missing keeps the saved secret
+    redirectUrl: { type: string }
+    name: { type: string, maxLength: 40 }
+    scopes: { type: string, description: Space-separated, default is "openid profile email" }
+    disablePassword: { type: boolean }

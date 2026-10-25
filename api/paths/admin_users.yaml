@@ -1,0 +1,14 @@
+get:
+  tags: [admin]
+  operationId: listUsers
+  summary: All accounts
+  responses:
+    '200':
+      description: The accounts, oldest first
+      content:
+        application/json:
+          schema:
+            type: array
+            items: { $ref: '../components/schemas/admin.yaml#/AdminUser' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }

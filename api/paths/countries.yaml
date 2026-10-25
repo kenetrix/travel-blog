@@ -1,0 +1,21 @@
+get:
+  tags: [countries]
+  operationId: listCountries
+  summary: The user's countries without their long texts
+  parameters:
+    - $ref: '../components/parameters.yaml#/IfNoneMatch'
+  responses:
+    '200':
+      description: Entries with status visited or wishlist, ordered by code
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: 
+            type: array
+            items: { $ref: '../components/schemas/country.yaml#/CountrySummary' }
+    '304':
+      description: The client's copy is current
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }

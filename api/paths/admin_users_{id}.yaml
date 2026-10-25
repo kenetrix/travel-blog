@@ -1,0 +1,36 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema: { type: string }
+patch:
+  tags: [admin]
+  operationId: updateUser
+  summary: Change the role of an account
+  description: There always has to be at least one administrator.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/admin.yaml#/AdminUserUpdate' }
+  responses:
+    '200':
+      description: Updated
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/admin.yaml#/AdminUser' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }
+    '409': { $ref: '../components/responses.yaml#/Conflict' }
+delete:
+  tags: [admin]
+  operationId: deleteUser
+  summary: Delete another account with all its data and photos
+  responses:
+    '204': { description: Deleted }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }

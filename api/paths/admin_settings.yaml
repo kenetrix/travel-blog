@@ -1,0 +1,26 @@
+get:
+  tags: [admin]
+  operationId: getAdminSettings
+  summary: Settings of the whole installation
+  responses:
+    '200':
+      description: The settings
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/admin.yaml#/AdminSettings' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }
+put:
+  tags: [admin]
+  operationId: saveAdminSettings
+  summary: Change the settings of the whole installation
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/admin.yaml#/AdminSettings' }
+  responses:
+    '204': { description: Saved }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }

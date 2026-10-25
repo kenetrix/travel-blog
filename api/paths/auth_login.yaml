@@ -1,0 +1,22 @@
+post:
+  tags: [account]
+  operationId: login
+  summary: Log in with username and password
+  description: Forbidden when password login is disabled in favor of OpenID Connect.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/account.yaml#/LoginInput' }
+  responses:
+    '200':
+      description: Logged in
+      headers:
+        Set-Cookie: { $ref: '../components/headers.yaml#/SessionCookie' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/Account' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '403': { $ref: '../components/responses.yaml#/Forbidden' }

@@ -1,0 +1,55 @@
+get:
+  tags: [flights]
+  operationId: listFlights
+  summary: The user's flights
+  parameters:
+    - $ref: '../components/parameters.yaml#/IfNoneMatch'
+  responses:
+    '200':
+      description: Oldest first
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: 
+            type: array
+            items: { $ref: '../components/schemas/flight.yaml#/Flight' }
+    '304':
+      description: The client's copy is current
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+post:
+  tags: [flights]
+  operationId: createFlight
+  summary: Add a flight
+  description: |
+    Flying to or from a country marks it as visited (a wishlist entry is
+    promoted). The client resolves the airports' countries and sends
+    them along; the response lists the countries that changed. Without
+    `visibility`, the flight gets the user's default.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/flight.yaml#/FlightInput' }
+  responses:
+    '201':
+      description: Created
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/flight.yaml#/FlightCreated' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '409':
+      description: The same route already exists
+      content:
+        application/problem+json:
+          schema: { $ref: '../components/schemas/common.yaml#/Problem' }
+    '422':
+      description: Departure and arrival are the same airport
+      content:
+        application/problem+json:
+          schema: { $ref: '../components/schemas/common.yaml#/Problem' }

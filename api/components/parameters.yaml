@@ -1,0 +1,12 @@
+Iso:
+  name: iso
+  in: path
+  required: true
+  description: ISO 3166-1 alpha-3 code
+  schema: { type: string, pattern: '^[A-Z]{3}$', example: DEU }
+
+IfNoneMatch:
+  name: If-None-Match
+  in: header
+  description: ETag of the client's cached copy
+  schema: { type: string }

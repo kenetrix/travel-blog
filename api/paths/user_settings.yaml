@@ -1,0 +1,16 @@
+put:
+  tags: [account]
+  operationId: saveSettings
+  summary: Replace the settings
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/account.yaml#/Settings' }
+  responses:
+    '204':
+      description: Saved
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }

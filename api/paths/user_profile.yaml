@@ -1,0 +1,21 @@
+patch:
+  tags: [account]
+  operationId: updateProfile
+  summary: Change profile fields
+  description: Only the fields sent are changed.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/account.yaml#/ProfileUpdate' }
+  responses:
+    '200':
+      description: The updated profile, as normalized by the server
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/account.yaml#/Profile' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '409': { $ref: '../components/responses.yaml#/Conflict' }

@@ -1,0 +1,43 @@
+FlightInput:
+  type: object
+  required: [from, to, countries]
+  properties:
+    from: { type: string, pattern: '^[A-Z]{3}$', description: IATA code }
+    to: { type: string, pattern: '^[A-Z]{3}$', description: IATA code }
+    countries:
+      type: array
+      description: |
+        Alpha-3 codes of the departure and arrival countries, resolved by
+        the client; these are marked visited. Empty if unknown.
+      maxItems: 2
+      items: { type: string, pattern: '^[A-Z]{3}$', example: DEU }
+    visibility: { $ref: './common.yaml#/Visibility' }
+
+FlightUpdate:
+  type: object
+  required: [visibility]
+  properties:
+    visibility: { $ref: './common.yaml#/Visibility' }
+
+Flight:
+  type: object
+  description: Airports are resolved by the client from its reference data
+  required: [id, from, to, visibility, createdAt]
+  properties:
+    id: { type: string, format: uuid }
+    from: { type: string, description: IATA code, example: BER }
+    to: { type: string, description: IATA code, example: HND }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    createdAt: { type: string, format: date-time }
+
+FlightCreated:
+  type: object
+  required: [id, visibility, createdAt, countriesUpdated]
+  properties:
+    id: { type: string, format: uuid }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    createdAt: { type: string, format: date-time }
+    countriesUpdated:
+      type: array
+      description: Alpha-3 codes newly marked visited by this flight
+      items: { type: string }

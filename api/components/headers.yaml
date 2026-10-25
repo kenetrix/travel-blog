@@ -1,0 +1,6 @@
+ETag:
+  description: Version of the changed resource after this request
+  schema: { type: string }
+SessionCookie:
+  description: Sets or clears the `session` cookie (HttpOnly, Secure, SameSite=Lax)
+  schema: { type: string }

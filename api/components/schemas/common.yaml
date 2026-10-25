@@ -1,0 +1,12 @@
+Problem:
+  description: RFC 9457 problem details
+  type: object
+  required: [title, status]
+  properties:
+    title: { type: string }
+    status: { type: integer }
+    detail: { type: string }
+
+Visibility:
+  type: string
+  enum: [private, public]

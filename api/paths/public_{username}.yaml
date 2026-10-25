@@ -1,0 +1,18 @@
+get:
+  tags: [public]
+  operationId: getPublicTravel
+  summary: Public profile and public data of a user
+  description: 404 unless the user's profile is public.
+  security: []
+  parameters:
+    - name: username
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    '200':
+      description: The public view
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/travel.yaml#/PublicTravel' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }

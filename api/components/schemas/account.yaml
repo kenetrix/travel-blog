@@ -1,0 +1,152 @@
+Profile:
+  type: object
+  required:
+    - username
+    - firstName
+    - lastName
+    - displayName
+    - bio
+    - language
+    - timezone
+    - homeCountry
+    - homeAirport
+    - createdAt
+  properties:
+    username:
+      type: string
+      description: Public handle, lowercase
+      pattern: '^[a-z0-9_]{3,30}$'
+    email:
+      type: string
+      format: email
+      description: Missing for the local user
+    firstName: { type: string }
+    lastName: { type: string }
+    displayName: { type: string }
+    bio: { type: string }
+    language:
+      type: string
+      description: BCP 47 language tag
+      example: de
+    timezone:
+      type: string
+      description: IANA time zone
+      example: Europe/Berlin
+    homeCountry:
+      type: string
+      description: ISO 3166-1 alpha-3, empty if unset
+    homeAirport:
+      type: string
+      description: IATA code, empty if unset
+    createdAt: { type: string, format: date-time }
+
+ProfileUpdate:
+  type: object
+  properties:
+    username: { type: string, pattern: '^[a-z0-9_]{3,30}$' }
+    email: { type: string, description: Empty removes the email }
+    firstName: { type: string, maxLength: 100 }
+    lastName: { type: string, maxLength: 100 }
+    displayName: { type: string, maxLength: 100 }
+    bio: { type: string, maxLength: 2000 }
+    language: { type: string }
+    timezone: { type: string }
+    homeCountry: { type: string, description: Alpha-3 or empty }
+    homeAirport: { type: string, description: IATA or empty }
+
+Settings:
+  type: object
+  required:
+    - distanceUnit
+    - theme
+    - defaultView
+    - defaultVisibility
+    - profileVisibility
+  properties:
+    distanceUnit:
+      type: string
+      enum: [km, mi]
+    theme:
+      type: string
+      enum: [system, light, dark]
+    defaultView:
+      type: string
+      enum: [countries, flights]
+    defaultVisibility: { $ref: './common.yaml#/Visibility' }
+    profileVisibility: { $ref: './common.yaml#/Visibility' }
+
+Role:
+  type: string
+  enum: [user, admin]
+
+Account:
+  type: object
+  required: [profile, settings, role, mustChangePassword]
+  properties:
+    profile: { $ref: '#/Profile' }
+    settings: { $ref: '#/Settings' }
+    role: { $ref: '#/Role' }
+    mustChangePassword:
+      type: boolean
+      description: |
+        The password was generated or set by an administrator. Until the user
+        changes it, only the account itself and logout are available.
+
+RegisterInput:
+  type: object
+  required: [username, password]
+  properties:
+    email:
+      type: string
+      format: email
+      description: Optional; the account is identified by its username
+    username: { type: string, pattern: '^[a-z0-9_]{3,30}$' }
+    password:
+      type: string
+      minLength: 10
+      maxLength: 72
+    firstName: { type: string }
+    lastName: { type: string }
+    language: { type: string, description: 'BCP 47, defaults to en' }
+
+LoginInput:
+  type: object
+  required: [username, password]
+  properties:
+    username: { type: string }
+    password: { type: string }
+
+UsernameCheck:
+  type: object
+  required: [exists, registrationOpen]
+  properties:
+    exists:
+      type: boolean
+      description: Whether an account with this username exists
+    registrationOpen:
+      type: boolean
+      description: Whether new accounts may be registered
+
+PasswordChange:
+  type: object
+  required: [currentPassword, newPassword]
+  properties:
+    currentPassword: { type: string }
+    newPassword:
+      type: string
+      minLength: 10
+      maxLength: 72
+
+OidcConfig:
+  type: object
+  required: [enabled, name, passwordLogin]
+  properties:
+    enabled:
+      type: boolean
+      description: Whether login with the configured provider works
+    name:
+      type: string
+      description: Provider name for the login button; empty when not enabled
+    passwordLogin:
+      type: boolean
+      description: Whether username/password login and registration are allowed

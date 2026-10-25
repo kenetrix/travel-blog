@@ -1,0 +1,25 @@
+NotFound:
+  description: Resource not found
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/Problem' }
+BadRequest:
+  description: Invalid input
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/Problem' }
+Unauthorized:
+  description: No valid session, or wrong email or password
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/Problem' }
+Conflict:
+  description: Email or username already taken
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/Problem' }
+Forbidden:
+  description: Not allowed for this user, or registration is closed
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/Problem' }
