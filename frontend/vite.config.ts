@@ -38,10 +38,13 @@ export default defineConfig({
         vue(),
         VitePWA({
             registerType: 'autoUpdate',
+            // Browser navigations to /api (e.g. the OIDC login redirect) must reach the server,
+            // not get the cached app shell
+            workbox: { navigateFallbackDenylist: [/^\/api\//] },
             manifest: {
                 name: 'Travel Blog',
                 short_name: 'TravelBlog',
-                description: 'Reise-Tracker',
+                description: 'Travel tracker',
                 theme_color: '#1e293b',
                 background_color: '#ffffff',
                 display: 'standalone',
