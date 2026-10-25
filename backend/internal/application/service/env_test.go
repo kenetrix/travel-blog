@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/repository/sqlite"
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
@@ -19,6 +20,8 @@ const local = domain.UserID("local")
 // env wires all services on a fresh database and an empty photo folder.
 type env struct {
 	db        *sql.DB
+	configDB  *sql.DB
+	settings  *sqlite.SettingsRepo
 	photoDir  string
 	accounts  *service.AccountService
 	travel    *service.TravelService
@@ -34,6 +37,12 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { configDB.Close() })
+	settings := sqlite.NewSettingsRepo(configDB)
 	photoDir := filepath.Join(dir, "photos")
 	files, err := storage.NewLocalStorage(photoDir)
 	if err != nil {
@@ -52,8 +61,10 @@ func newEnv(t *testing.T) *env {
 	}
 	return &env{
 		db:        db,
+		configDB:  configDB,
+		settings:  settings,
 		photoDir:  photoDir,
-		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db)),
+		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings),
 		travel:    service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users),
 		locations: service.NewLocationService(locationRepo, photoRepo, files, users),
 		photos:    service.NewPhotoService(locationRepo, photoRepo, files),

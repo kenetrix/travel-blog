@@ -98,16 +98,11 @@ type AppSettingsRepository interface {
 	SetRegistrationOpen(open bool) error
 }
 
-// OIDCSettingsRepository stores the admin-area OIDC configuration as key/value;
-// the secret is already encrypted.
+// OIDCSettingsRepository stores the admin-area OIDC configuration as key/value in the
+// configuration database.
 type OIDCSettingsRepository interface {
 	// All returns the stored values (empty if nothing is stored).
 	All() (map[string]string, error)
 	Replace(values map[string]string) error
 	Clear() error
-}
-
-type SecretBox interface {
-	Encrypt(plain string) (string, error)
-	Decrypt(sealed string) (string, error)
 }

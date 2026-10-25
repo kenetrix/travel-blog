@@ -91,7 +91,7 @@ func TestOIDCUnverifiedEmailIsNotStored(t *testing.T) {
 
 func TestOIDCRegistrationClosed(t *testing.T) {
 	e := newEnv(t)
-	if _, err := e.db.Exec(`UPDATE app_settings SET value = 'false' WHERE key = 'registration_open'`); err != nil {
+	if _, err := e.configDB.Exec(`UPDATE settings SET value = 'false' WHERE key = 'registration_open'`); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := e.accounts.LoginOIDC(claims("s1", "ada", "", false)); !errors.Is(err, service.ErrForbidden) {
@@ -100,7 +100,7 @@ func TestOIDCRegistrationClosed(t *testing.T) {
 	// A known identity still logs in
 	e2 := newEnv(t)
 	id, _, _ := e2.accounts.LoginOIDC(claims("s1", "ada", "", false))
-	if _, err := e2.db.Exec(`UPDATE app_settings SET value = 'false' WHERE key = 'registration_open'`); err != nil {
+	if _, err := e2.configDB.Exec(`UPDATE settings SET value = 'false' WHERE key = 'registration_open'`); err != nil {
 		t.Fatal(err)
 	}
 	if id2, _, err := e2.accounts.LoginOIDC(claims("s1", "ada", "", false)); err != nil || id2 != id {

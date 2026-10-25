@@ -38,10 +38,3 @@ CREATE TABLE sessions (
 	expires_at TEXT NOT NULL -- RFC 3339
 );
 CREATE INDEX sessions_user ON sessions (user_id);
-
--- Settings of the whole installation (key/value)
-CREATE TABLE app_settings (
-	key TEXT PRIMARY KEY,
-	value TEXT NOT NULL
-);
-INSERT INTO app_settings (key, value) VALUES ('registration_open', 'true');

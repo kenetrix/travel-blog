@@ -31,15 +31,14 @@ const (
 type OIDCConfigService struct {
 	accounts *AccountService
 	repo     port.OIDCSettingsRepository
-	box      port.SecretBox
 	runtime  OIDCRuntime
 	env      *domain.OIDCConfig
 }
 
 // NewOIDCConfigService: env is the configuration from the environment
 // variables, or nil if they are incomplete.
-func NewOIDCConfigService(accounts *AccountService, repo port.OIDCSettingsRepository, box port.SecretBox, runtime OIDCRuntime, env *domain.OIDCConfig) *OIDCConfigService {
-	return &OIDCConfigService{accounts: accounts, repo: repo, box: box, runtime: runtime, env: env}
+func NewOIDCConfigService(accounts *AccountService, repo port.OIDCSettingsRepository, runtime OIDCRuntime, env *domain.OIDCConfig) *OIDCConfigService {
+	return &OIDCConfigService{accounts: accounts, repo: repo, runtime: runtime, env: env}
 }
 
 type OIDCConfigView struct {
@@ -99,11 +98,10 @@ func (s *OIDCConfigService) stored(withSecret bool) (cfg domain.OIDCConfig, set 
 		Name: v[keyName], Scopes: strings.Fields(v[keyScopes]),
 		DisablePassword: v[keyDisablePassword] == "true",
 	}
-	if sealed := v[keyClientSecret]; sealed != "" {
-		if !withSecret {
-			cfg.ClientSecret = "set"
-		} else if cfg.ClientSecret, err = s.box.Decrypt(sealed); err != nil {
-			return cfg, true, err
+	if secret := v[keyClientSecret]; secret != "" {
+		cfg.ClientSecret = "set"
+		if withSecret {
+			cfg.ClientSecret = secret
 		}
 	}
 	return cfg, true, nil
@@ -199,12 +197,8 @@ func (s *OIDCConfigService) Save(actor domain.UserID, in OIDCConfigInput) error 
 	if err := s.runtime.Reload(cfg); err != nil {
 		return fmt.Errorf("%w: the provider cannot be reached: %v", ErrInvalid, err)
 	}
-	sealed, err := s.box.Encrypt(cfg.ClientSecret)
-	if err != nil {
-		return err
-	}
 	return s.repo.Replace(map[string]string{
-		keyIssuer: cfg.Issuer, keyClientID: cfg.ClientID, keyClientSecret: sealed,
+		keyIssuer: cfg.Issuer, keyClientID: cfg.ClientID, keyClientSecret: cfg.ClientSecret,
 		keyRedirectURL: cfg.RedirectURL, keyName: cfg.Name, keyScopes: strings.Join(cfg.Scopes, " "),
 		keyDisablePassword: fmt.Sprint(cfg.DisablePassword),
 	})

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/http/auth"
 	"travel-blog/backend/internal/adapter/http/handler"
 	"travel-blog/backend/internal/adapter/http/router"
@@ -32,6 +33,12 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { configDB.Close() })
+	settings := sqlite.NewSettingsRepo(configDB)
 	files, err := storage.NewLocalStorage(filepath.Join(dir, "photos"))
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +46,7 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 	t.Cleanup(func() { files.Close() })
 
 	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	return router.New(handler.New(travel, accounts), auth.Sessions(accounts)), accounts
 }

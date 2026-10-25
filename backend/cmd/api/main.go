@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
+	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/http/auth"
 	"travel-blog/backend/internal/adapter/http/handler"
 	"travel-blog/backend/internal/adapter/http/oidc"
 	"travel-blog/backend/internal/adapter/http/router"
 	"travel-blog/backend/internal/adapter/repository/sqlite"
-	"travel-blog/backend/internal/adapter/secretbox"
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
 	"travel-blog/backend/internal/domain"
@@ -30,6 +30,14 @@ func main() {
 	}
 	defer db.Close()
 
+	// Settings of the installation live apart from the travel data
+	configDB, err := sqlite.NewDB("./data/config.db", configmigrations.FS)
+	if err != nil {
+		log.Fatalf("config db init failed: %v", err)
+	}
+	defer configDB.Close()
+	settings := sqlite.NewSettingsRepo(configDB)
+
 	files, err := storage.NewLocalStorage("./data/photos")
 	if err != nil {
 		log.Fatalf("photo storage: %v", err)
@@ -37,7 +45,7 @@ func main() {
 	defer files.Close()
 
 	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, sqlite.NewAppSettingsRepo(db))
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 
 	// On first start (or after an update without administrator) the installation
@@ -68,8 +76,7 @@ func main() {
 		fromEnv = &envCfg
 	}
 	provider := oidc.New(oidc.Config{}, accounts)
-	oidcConfig := service.NewOIDCConfigService(accounts, sqlite.NewOIDCSettingsRepo(db),
-		secretbox.New("./data/secret.key"), provider, fromEnv)
+	oidcConfig := service.NewOIDCConfigService(accounts, settings, provider, fromEnv)
 	if cfg, ok, err := oidcConfig.Effective(); err != nil {
 		log.Printf("oidc: saved configuration unusable, login disabled: %v", err)
 	} else if ok {
