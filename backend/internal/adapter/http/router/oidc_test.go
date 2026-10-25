@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"travel-blog/backend/configmigrations"
 	"travel-blog/backend/internal/adapter/http/auth"
 	"travel-blog/backend/internal/adapter/http/handler"
 	"travel-blog/backend/internal/adapter/http/router"
@@ -16,7 +15,8 @@ import (
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
 	"travel-blog/backend/internal/domain"
-	"travel-blog/backend/migrations"
+	configmigrations "travel-blog/backend/migrations/config"
+	migrations "travel-blog/backend/migrations/data"
 )
 
 type fakeOIDC struct{ enabled, password bool }

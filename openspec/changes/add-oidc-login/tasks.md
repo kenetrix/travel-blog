@@ -2,7 +2,7 @@
 
 ## 1. Data model and domain
 
-- [x] 1.1 Migration `backend/migrations/001_init/04_oidc.sql`: table `oidc_identities (issuer, subject, user_id, created_at)`, primary key `(issuer, subject)`
+- [x] 1.1 Migration `backend/migrations/data/001_init/04_oidc.sql`: table `oidc_identities (issuer, subject, user_id, created_at)`, primary key `(issuer, subject)`
 - [x] 1.2 `port.UserRepository` and `sqlite/user_repo.go`: `GetByIdentity`, `LinkIdentity`, `GetByEmail`, `Create` with an empty password hash
 - [x] 1.3 Repository tests (linking, uniqueness, cascade when the user is deleted), via service tests with a real SQLite database
 

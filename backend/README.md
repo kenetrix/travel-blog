@@ -27,14 +27,14 @@ swapping SQLite for Postgres only affects internal/adapter/repository.
 
 ## Database migrations
 
-Migrations in `migrations/` only go forward and are tracked by SQLite's `user_version`.
+Migrations in `migrations/data/` only go forward and are tracked by SQLite's `user_version`.
 Each top-level `.sql` file or folder is one migration, in name order. The folder `001_init/` is
 schema version 1, split by area (accounts, travel data, photos, OIDC). While v0.1.0 is the only
 release, change it in place and recreate the test database; after the first production release,
 add `002_<name>.sql`, `003_...` as usual and never edit older ones.
 
 Settings of the installation (registration, single sign-on) live in a second database,
-`data/config.db`, with its own migrations in `configmigrations/` under the same rules.
+`data/config.db`, with its own migrations in `migrations/config/` under the same rules.
 Before pending migrations run on an existing database, a consistent copy is saved next to
 it as `<db>.bak-v<version>`; to roll back, stop the app and put that file back.
 

@@ -261,7 +261,7 @@ travel-blog/
 │   │   ├── domain/           business models
 │   │   ├── application/      ports and services (use cases)
 │   │   └── adapter/          http, sqlite repository, file storage
-│   └── migrations/           SQL schema
+│   └── migrations/           SQL schema: data/ and config/
 ├── frontend/               🎨 Vue 3 + TypeScript app
 │   ├── generated/            types generated from the contract
 │   └── src/components/       worldmap, countries, flights, account, …
