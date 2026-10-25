@@ -533,8 +533,6 @@ export interface components {
             timezone: string
             /** @description ISO 3166-1 alpha-3, empty if unset */
             homeCountry: string
-            /** @description IATA code, empty if unset */
-            homeAirport: string
             /** @description Hex colour of the user's avatar, e.g. */
             color: string
             /** Format: date-time */
@@ -552,8 +550,6 @@ export interface components {
             timezone?: string
             /** @description Alpha-3 or empty */
             homeCountry?: string
-            /** @description IATA or empty */
-            homeAirport?: string
             /** @description Hex colour like #3a7d5c, or empty */
             color?: string
         }

@@ -11,7 +11,6 @@ CREATE TABLE users (
 	language TEXT NOT NULL DEFAULT 'en', -- BCP 47, e.g. 'de' or 'en-US'
 	timezone TEXT NOT NULL DEFAULT 'UTC', -- IANA, e.g. 'Europe/Berlin'
 	home_country TEXT NOT NULL DEFAULT '', -- ISO 3166 alpha-3
-	home_airport TEXT NOT NULL DEFAULT '', -- IATA
 	color TEXT NOT NULL DEFAULT '', -- avatar colour as #rrggbb; empty: default
 	created_at TEXT NOT NULL, -- RFC 3339
 	role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
