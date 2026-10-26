@@ -10,7 +10,7 @@
         "preview": "vite preview",
         "type-check": "vue-tsc --noEmit",
         "lint": "npx prettier . --write",
-        "generate:icons": "pwa-assets-generator",
+        "generate:icons": "pwa-assets-generator && pwa-assets-generator -c pwa-assets.favicon.config.ts",
         "generate:api": "openapi-typescript ../api/openapi.yaml -o generated/schema.gen.ts && prettier --write generated/schema.gen.ts"
     },
     "dependencies": {

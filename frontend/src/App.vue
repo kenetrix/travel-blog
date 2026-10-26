@@ -79,7 +79,7 @@ watchEffect(() => {
                 <span class="logo">
                     <img
                         class="logo-icon"
-                        src="/logo.svg"
+                        src="/favicon.svg"
                         alt=""
                         width="30"
                         height="30"

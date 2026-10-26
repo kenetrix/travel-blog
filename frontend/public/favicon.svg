@@ -1,30 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Travel Blog: a visited (gold) globe with a flight (cyan) across it.
-       Everything stays inside the maskable safe zone (radius 205 around the
-       centre); pwa-assets.config.ts fills the corners for square icons. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 80 352 352">
+  <!-- Globe and plane without background: browser tab and top bar. The
+       app icon with background is icon.svg. -->
   <defs>
     <linearGradient id="globe" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ecbd63"/>
       <stop offset="1" stop-color="#c4852a"/>
     </linearGradient>
     <clipPath id="sphere">
-      <circle cx="240" cy="290" r="138"/>
+      <circle cx="256" cy="256" r="168"/>
     </clipPath>
   </defs>
-
-  <rect width="512" height="512" rx="112" fill="#2a2c2e"/>
-
-  <circle cx="240" cy="290" r="138" fill="url(#globe)"/>
-  <g clip-path="url(#sphere)" fill="none" stroke="#2a2c2e" stroke-opacity="0.32" stroke-width="10">
-    <ellipse cx="240" cy="290" rx="58" ry="138"/>
-    <path d="M240 152v276M102 244h276M102 336h276"/>
+  <circle cx="256" cy="256" r="168" fill="url(#globe)"/>
+  <g clip-path="url(#sphere)" fill="none" stroke="#2a2c2e" stroke-opacity="0.3" stroke-width="12">
+    <ellipse cx="256" cy="256" rx="71" ry="168"/>
+    <path d="M256 88V424M88 200H424M88 312H424"/>
   </g>
 
-  <path d="M128 384C150 270 230 188 356 166" fill="none" stroke="#5fd4e4" stroke-width="16"
-        stroke-linecap="round" stroke-dasharray="2 30"/>
+  <path d="M150 352C172 262 245 196 322 176" fill="none" stroke="#5fd4e4"
+        stroke-width="18" stroke-linecap="round" stroke-dasharray="2 34"/>
 
-  <!-- Plane at the end of the route, heading along it (absolute points:
-       some PNG renderers misplace transformed paths) -->
-  <path fill="#f4f2ec" stroke="#2a2c2e" stroke-width="6" stroke-linejoin="round"
-        d="M418.9 148.3 L418.9 153.1 L414.1 157.8 L406.6 160.9 L383.2 166.7 L371.4 214.7 L359.1 217.7 L360.8 172.3 L340.8 177.3 L334.0 193.2 L324.0 195.7 L325.1 171.7 L312.9 151.0 L322.9 148.5 L336.3 159.4 L356.4 154.4 L333.5 115.1 L345.8 112.0 L378.7 148.8 L402.1 143.0 L410.2 142.2 L416.6 144.1Z"/>
+  <path fill="#f4f2ec" stroke="#2a2c2e" stroke-width="7" stroke-linejoin="round"
+        d="M414.8 152.3 L414.9 157.6 L409.6 163 L401.1 166.6 L374.7 173.5 L361.9 227.8 L348.1 231.4 L349.5 180 L326.9 185.9 L319.5 203.9 L308.1 206.9 L309.2 179.7 L295.1 156.5 L306.4 153.6 L321.6 165.7 L344.3 159.9 L318 115.6 L331.9 112 L369.5 153.3 L395.9 146.5 L405 145.4 L412.3 147.6Z"/>
 </svg>

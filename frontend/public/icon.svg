@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The app icon (PWA, maskable, Apple): favicon.svg on the map colour.
+       Globe and plane stay inside the maskable safe zone (radius 205 around
+       the centre); pwa-assets.config.ts fills the corners for square icons.
+       Plane as absolute points: some PNG renderers misplace transformed
+       paths. -->
+  <defs>
+    <linearGradient id="globe" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ecbd63"/>
+      <stop offset="1" stop-color="#c4852a"/>
+    </linearGradient>
+    <clipPath id="sphere">
+      <circle cx="256" cy="256" r="168"/>
+    </clipPath>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="#2a2c2e"/>
+
+  <circle cx="256" cy="256" r="168" fill="url(#globe)"/>
+  <g clip-path="url(#sphere)" fill="none" stroke="#2a2c2e" stroke-opacity="0.3" stroke-width="12">
+    <ellipse cx="256" cy="256" rx="71" ry="168"/>
+    <path d="M256 88V424M88 200H424M88 312H424"/>
+  </g>
+
+  <path d="M150 352C172 262 245 196 322 176" fill="none" stroke="#5fd4e4"
+        stroke-width="18" stroke-linecap="round" stroke-dasharray="2 34"/>
+
+  <path fill="#f4f2ec" stroke="#2a2c2e" stroke-width="7" stroke-linejoin="round"
+        d="M414.8 152.3 L414.9 157.6 L409.6 163 L401.1 166.6 L374.7 173.5 L361.9 227.8 L348.1 231.4 L349.5 180 L326.9 185.9 L319.5 203.9 L308.1 206.9 L309.2 179.7 L295.1 156.5 L306.4 153.6 L321.6 165.7 L344.3 159.9 L318 115.6 L331.9 112 L369.5 153.3 L395.9 146.5 L405 145.4 L412.3 147.6Z"/>
+</svg>
