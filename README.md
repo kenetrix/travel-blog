@@ -278,6 +278,13 @@ Safari deletes stored data of websites that were not used for seven days. The
 installed app (Add to Home Screen) is not affected, so offline start is only
 guaranteed there.
 
+### Third-party licenses
+
+`npm --prefix frontend run build` writes `third-party-licenses.txt` next to
+`index.html`, with the license text of every package that reaches the browser
+(see [`frontend/licenses.ts`](frontend/licenses.ts)). The account page links
+to it.
+
 ## 📁 Project structure
 
 ```text

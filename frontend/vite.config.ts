@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import { thirdPartyLicenses } from './licenses.ts'
 
 // Same-origin API in dev and preview; the backend listens on localhost only
 const proxy = { '/api': 'http://localhost:8080' }
@@ -36,6 +37,7 @@ export default defineConfig({
     },
     plugins: [
         vue(),
+        thirdPartyLicenses(),
         VitePWA({
             registerType: 'autoUpdate',
             includeAssets: [
@@ -49,7 +51,7 @@ export default defineConfig({
                 navigateFallbackDenylist: [/^\/api\//],
                 // The airport and country data are bundled into the JS
                 maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,txt}'],
                 // Map style and tiles already seen stay available offline.
                 // API data is not cached here; the store keeps its own
                 // snapshot (see stores/snapshot.ts).
