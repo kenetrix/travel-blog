@@ -29,6 +29,9 @@ While v0.1.0 is the only release, do not add migration scripts. Change the files
 
 ## Branches
 
+Until the `v1.0.0` tag exists (`git tag -l v1.0.0` prints nothing), develop directly on `main`
+and skip the branching rules below. From `v1.0.0` on, they apply.
+
 Every feature or fix is developed in its own branch, named:
 
 ```
