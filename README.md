@@ -43,6 +43,7 @@
 - Curved routes with labels drawn right on the map
 - Distances per flight, total km and _× around the world_
 - A flight marks both countries as visited automatically
+- Optional flight number with a Flightradar24 link; date, duration (estimated from the distance until you enter it) and aircraft type filled in by hand. No external flight-data service, no API key
 
 </td>
 </tr>
@@ -62,7 +63,7 @@
 
 ### 🔓 Sharing
 
-- Every entry and flight is `private` or `public`
+- Every entry and flight is `private` or `public`; a public flight shows its route only, never its number, date or aircraft
 - A public profile shows your public travels at `/public/{username}`
 - Installable as a Progressive Web App; works on phones and tablets and [offline](#-mobile-and-offline)
 
