@@ -35,6 +35,20 @@ function update_script() {
   aarch64) arch="arm64" ;;
   *) msg_error "Unsupported architecture" && exit ;;
   esac
+  # Containers from before the login banner get it with any update run, also
+  # when the app is already up to date (see install/travelblog-install.sh)
+  local motd=/etc/profile.d/00_lxc-details.sh line
+  if [[ -f "$motd" ]] && ! grep -q banner.txt "$motd" &&
+    curl -fsSL "${COMMUNITY_SCRIPTS_URL}/ct/headers/travelblog" -o /opt/travel-blog/banner.txt &&
+    line=$(grep -n '^echo ""$' "$motd" | head -n 1 | cut -d: -f1) && [[ -n "$line" ]]; then
+    cat >/tmp/banner-line <<'EOF'
+[ -r /opt/travel-blog/banner.txt ] && printf '\033[1;33m%s\033[0m\n\n' "$(cat /opt/travel-blog/banner.txt)"
+EOF
+    sed -i "${line}r /tmp/banner-line" "$motd"
+    rm -f /tmp/banner-line
+    msg_ok "Added Login Banner"
+  fi
+
   latest=$(curl -fsSL https://api.github.com/repos/kenetrix/travel-blog/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
   current=$(cat /opt/travel-blog/version.txt 2>/dev/null || true)
   if [[ -z "$latest" ]]; then

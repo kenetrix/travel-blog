@@ -143,5 +143,23 @@ $STD rc-service nginx restart
 msg_ok "Configured nginx"
 
 motd_ssh
+
+# The ASCII header of ct/headers/ above the container details at every login.
+# motd_ssh writes those details to 00_lxc-details.sh and clears the console
+# first, so the banner goes into that file, right after the first blank line.
+msg_info "Adding Login Banner"
+MOTD=/etc/profile.d/00_lxc-details.sh
+if curl -fsSL "${COMMUNITY_SCRIPTS_URL:-https://raw.githubusercontent.com/kenetrix/travel-blog/main/proxmox}/ct/headers/travelblog" -o /opt/travel-blog/banner.txt &&
+  LINE=$(grep -n '^echo ""$' "$MOTD" 2>/dev/null | head -n 1 | cut -d: -f1) && [[ -n "$LINE" ]]; then
+  cat >/tmp/banner-line <<'EOF'
+[ -r /opt/travel-blog/banner.txt ] && printf '\033[1;33m%s\033[0m\n\n' "$(cat /opt/travel-blog/banner.txt)"
+EOF
+  sed -i "${LINE}r /tmp/banner-line" "$MOTD"
+  rm -f /tmp/banner-line
+  msg_ok "Added Login Banner"
+else
+  msg_warn "Could not add the login banner; the container works without it"
+fi
+
 customize
 cleanup_lxc
