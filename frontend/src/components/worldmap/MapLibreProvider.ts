@@ -4,6 +4,7 @@ import {
     AttributionControl,
     GeoJSONSource,
     LngLatBounds,
+    MercatorCoordinate,
     NavigationControl,
     setWorkerUrl,
 } from 'maplibre-gl'
@@ -547,19 +548,19 @@ export class MapLibreProvider implements MapProvider {
 
     private fitCountry(bounds: LngLatBounds): void {
         if (!this.map) return
-        // Leave room for the panel or sheet covering the map. Very large
-        // countries (e.g. Russia) may be overlapped by it, so they get less
-        // padding there and always zoom in at least a bit.
+        // Leave room for the panel or sheet covering the map. On desktops very
+        // large countries (e.g. Russia) may be overlapped by the floating
+        // panel, so they get less padding there and zoom in at least a bit.
+        // Tablet and phone sheets take too much of the screen for that: the
+        // country is fitted into the free area, even if that zooms out.
         const ne = bounds.getNorthEast()
         const sw = bounds.getSouthWest()
         const isLarge = ne.lng - sw.lng > 50 || ne.lat - sw.lat > 30
         const { clientWidth: width, clientHeight: height } =
             this.map.getContainer()
         const padding = { ...this.insets }
-        if (isLarge) {
-            padding.left = Math.min(padding.left, 120)
-            padding.bottom = Math.min(padding.bottom, height * 0.3)
-        }
+        const desktop = width >= 1024
+        if (isLarge && desktop) padding.left = Math.min(padding.left, 120)
         // Keep at least 120px of map to fit the country into
         const shrinkX = Math.min(
             1,
@@ -577,12 +578,23 @@ export class MapLibreProvider implements MapProvider {
             padding,
             maxZoom: 8,
         })
-        if (!camera || !camera.center) return
-        const zoom = camera.zoom ?? 3
-        this.map.easeTo({
-            center: camera.center,
-            zoom: isLarge ? Math.max(zoom, 3) : zoom,
-        })
+        if (!camera) return
+        let zoom = camera.zoom ?? 3
+        if (isLarge && desktop) zoom = Math.max(zoom, 3)
+        // The map never zooms out past its minimum; on a phone the strip
+        // above the sheet often wants less
+        zoom = Math.max(zoom, this.map.getMinZoom())
+        // cameraForBounds' centre only fits its own zoom. Recompute it for
+        // the final one: the country's middle sits in the middle of the free
+        // area, i.e. off the screen centre by half the padding difference.
+        const a = MercatorCoordinate.fromLngLat(bounds.getSouthWest())
+        const b = MercatorCoordinate.fromLngLat(bounds.getNorthEast())
+        const world = 512 * 2 ** zoom
+        const center = new MercatorCoordinate(
+            (a.x + b.x) / 2 - (padding.left - padding.right) / 2 / world,
+            (a.y + b.y) / 2 - (padding.top - padding.bottom) / 2 / world
+        ).toLngLat()
+        this.map.easeTo({ center, zoom })
     }
 
     flyTo(lng: number, lat: number, zoom: number): void {

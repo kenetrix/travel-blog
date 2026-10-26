@@ -6,7 +6,8 @@ export const COUNTRY_BOUNDS: Record<string, [number, number, number, number]> =
         TZA: [29.34, -11.72, 40.32, -0.95],
         SAH: [-17.06, 21, -8.67, 27.66],
         CAN: [-141, 41.68, -55.68, 73.8],
-        USA: [-168.11, 25.08, -66.96, 71.36],
+        // Contiguous states: with Alaska the box's centre lies in Canada
+        USA: [-124.73, 24.52, -66.95, 49.38],
         KAZ: [46.47, 40.66, 87.36, 55.39],
         UZB: [55.93, 37.14, 73.06, 45.59],
         PNG: [141, -10.65, 150.8, -2.6],
