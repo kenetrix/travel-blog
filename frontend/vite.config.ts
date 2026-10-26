@@ -11,13 +11,13 @@ const headers = {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
 }
 
-// Fonts and map data come from Google Fonts and the MapLibre demo tiles.
+// Fonts are bundled; map data comes from the MapLibre demo tiles.
 // Dev keeps the CSP off: Vite's HMR injects inline scripts.
 const csp = [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    'font-src https://fonts.gstatic.com',
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: blob: https://demotiles.maplibre.org",
     "connect-src 'self' https://demotiles.maplibre.org",
     "worker-src 'self' blob:",
@@ -38,9 +38,47 @@ export default defineConfig({
         vue(),
         VitePWA({
             registerType: 'autoUpdate',
+            includeAssets: [
+                'favicon.svg',
+                'favicon.ico',
+                'apple-touch-icon-180x180.png',
+            ],
             // Browser navigations to /api (e.g. the OIDC login redirect) must reach the server,
             // not get the cached app shell
-            workbox: { navigateFallbackDenylist: [/^\/api\//] },
+            workbox: {
+                navigateFallbackDenylist: [/^\/api\//],
+                // The airport and country data are bundled into the JS
+                maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+                // Map style and tiles already seen stay available offline.
+                // API data is not cached here; the store keeps its own
+                // snapshot (see stores/snapshot.ts).
+                runtimeCaching: [
+                    {
+                        // Regexes: workbox copies these into the service worker
+                        urlPattern:
+                            /^https:\/\/demotiles\.maplibre\.org\/(?!.*\.pbf$)/,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'map-style',
+                            cacheableResponse: { statuses: [200] },
+                        },
+                    },
+                    {
+                        urlPattern:
+                            /^https:\/\/demotiles\.maplibre\.org\/.*\.pbf$/,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'map-tiles',
+                            cacheableResponse: { statuses: [200] },
+                            expiration: {
+                                maxEntries: 1000,
+                                maxAgeSeconds: 30 * 24 * 60 * 60,
+                            },
+                        },
+                    },
+                ],
+            },
             manifest: {
                 name: 'Travel Blog',
                 short_name: 'TravelBlog',
@@ -48,7 +86,14 @@ export default defineConfig({
                 theme_color: '#1e293b',
                 background_color: '#ffffff',
                 display: 'standalone',
+                orientation: 'any',
+                start_url: '/',
                 icons: [
+                    {
+                        src: 'pwa-64x64.png',
+                        sizes: '64x64',
+                        type: 'image/png',
+                    },
                     {
                         src: 'pwa-192x192.png',
                         sizes: '192x192',
@@ -58,6 +103,12 @@ export default defineConfig({
                         src: 'pwa-512x512.png',
                         sizes: '512x512',
                         type: 'image/png',
+                    },
+                    {
+                        src: 'maskable-icon-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
                     },
                 ],
             },
