@@ -77,7 +77,13 @@ watchEffect(() => {
         <header class="appbar">
             <div class="topbar" :class="{ solo: !store.profile }">
                 <span class="logo">
-                    <span class="logo-icon" aria-hidden="true">✈</span>
+                    <img
+                        class="logo-icon"
+                        src="/logo.svg"
+                        alt=""
+                        width="30"
+                        height="30"
+                    />
                     <span class="logo-text">Travel Blog</span>
                 </span>
                 <div v-if="store.profile" class="toggle-pill">
@@ -280,33 +286,38 @@ watchEffect(() => {
 .logo {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
     font-family: 'DM Serif Display', serif;
     white-space: nowrap;
     color: var(--text);
 }
 
+/* The app icon (30px); the space before it matches the space above and
+   below, see the padding-left rules of .topbar */
 .logo-icon {
     display: none;
-    font-size: 1.1rem;
+    width: 30px;
+    height: 30px;
 }
 
 .logo-text {
     display: none;
 }
 
+/* 320px wide phones have no room for the icon beside the view switch */
 @media (min-width: 380px) {
     .logo-icon {
-        display: inline;
+        display: block;
     }
 
     .topbar {
-        padding-left: 0.9rem;
+        padding-left: calc((var(--appbar-h) - 2px - 30px) / 2);
     }
 }
 
-/* Logged out there is no view switch, so the name has room on every screen */
+/* Logged out there is no view switch, so icon and name fit on every screen */
 .topbar.solo {
-    padding: 0 1rem;
+    padding: 0 1rem 0 calc((var(--appbar-h) - 2px - 30px) / 2);
 }
 
 .topbar.solo .logo-text {
@@ -314,7 +325,7 @@ watchEffect(() => {
 }
 
 .topbar.solo .logo-icon {
-    display: none;
+    display: block;
 }
 
 @media (min-width: 600px),
@@ -341,11 +352,11 @@ watchEffect(() => {
 
     .topbar {
         gap: 1rem;
-        padding-left: 1.1rem;
+        padding-left: calc((var(--appbar-h) - 2px - 30px) / 2);
     }
 
     .logo-icon {
-        display: none;
+        display: block;
     }
 
     .logo-text {
@@ -368,16 +379,8 @@ watchEffect(() => {
         --login-h: 32px;
     }
 
-    .topbar {
-        padding-left: 0.9rem;
-    }
-
     .logo-text {
         display: none;
-    }
-
-    .logo-icon {
-        display: inline;
     }
 
     /* Qualified, as the base rule comes later in this file */
@@ -403,11 +406,11 @@ watchEffect(() => {
     .topbar {
         left: 50%;
         transform: translateX(-50%);
-        padding-left: 1.2rem;
+        padding-left: calc((var(--appbar-h) - 2px - 30px) / 2);
     }
 
     .topbar.solo {
-        padding: 0 1.2rem;
+        padding-right: 1.2rem;
     }
 
     .useractions {
