@@ -27,7 +27,7 @@
 ## Decisions
 
 ### 1. Breakpoints and tokens in `style.css`
-Base styles target phones. `min-width: 600px` adds tablet, `min-width: 1024px` adds desktop. Add CSS custom properties for spacing, radii, the app bar height, `--touch: 44px` and safe-area insets (`--safe-top: env(safe-area-inset-top)` etc.). Components use these tokens and the two media queries only.
+Base styles target phones. `min-width: 600px` adds tablet, `(min-width: 1024px) and (min-height: 501px)` adds desktop. Phones held sideways (`(orientation: landscape) and (max-height: 500px) and (min-width: 480px)`) use the tablet layout with a compact app bar beside a full-height side sheet; width alone would give them the tablet or desktop layout, which does not fit 390–430px of height. The 480px minimum keeps a portrait phone with an open keyboard (wider than high) in the phone layout. Add CSS custom properties for spacing, radii, the app bar height, `--touch: 44px` and safe-area insets (`--safe-top: env(safe-area-inset-top)` etc.). Components use these tokens and the two media queries only.
 Input font size: 16px by default, reduced to the current 0.82rem only inside `@media (pointer: fine)`, so touch devices never zoom on focus.
 *Alternative:* a CSS framework (Tailwind). Rejected: rewrites every component and adds a build dependency for what two breakpoints solve.
 

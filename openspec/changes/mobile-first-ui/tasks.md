@@ -23,6 +23,7 @@
 - [x] 3.5 `AirportSelect.vue`: dropdown stays inside the viewport and above the keyboard on phones, 44px option rows; verify picking an airport at 320px
 - [x] 3.6 `MapProvider`/`MapLibreProvider`: accept the occupied insets from `WorldMap` and use them as `padding` for `fitBounds`/`easeTo` instead of the fixed left padding; verify that selecting a country centres it in the visible map area on phone (above the sheet), tablet (beside the side sheet) and desktop
 - [x] 3.7 Verify orientation change with an open sheet and unsaved country edits keeps state and input (rotate in DevTools between 390×844 and 844×390)
+- [x] 3.8 Side sheets (tablet, phone held sideways, desktop) can be hidden with a tab at their edge; app bar, stats and messages use the freed space via `--sheet-space`; verified at 844x390 and 1280x800 (both sides) that hiding and showing moves sheet, tab, app bar and stats as expected
 
 ## 4. Pages and dialogs
 

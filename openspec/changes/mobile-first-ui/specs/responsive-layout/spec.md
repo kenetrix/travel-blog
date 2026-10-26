@@ -17,18 +17,26 @@ The UI SHALL be fully usable from 320px to at least 1366px viewport width in por
 - **THEN** the layout adapts to the new size and the open panel, its scroll position and unsaved input stay as they were
 
 ### Requirement: Layout classes
-The UI SHALL use three layout classes by viewport width: phone (below 600px), tablet (600px to 1023px) and desktop (1024px and wider). Phone is the base layout; tablet and desktop extend it.
+The UI SHALL use three layout classes: phone (below 600px wide), tablet (600px to 1023px wide, or a landscape viewport at most 500px high and at least 480px wide) and desktop (1024px wide and more than 500px high). Phone is the base layout; tablet and desktop extend it.
 
 #### Scenario: Phone width
-- **WHEN** the viewport is narrower than 600px
+- **WHEN** the viewport is narrower than 600px and not a short landscape viewport
 - **THEN** panels open as a bottom sheet and pages use the full width
 
 #### Scenario: Tablet width
-- **WHEN** the viewport is between 600px and 1023px
+- **WHEN** the viewport is between 600px and 1023px wide
 - **THEN** panels open as a side sheet next to the visible map and page content is shown in a centered column
 
+#### Scenario: Phone held sideways
+- **WHEN** the viewport is in landscape, at most 500px high and at least 480px wide (e.g. 844×390 or 932×430)
+- **THEN** the side sheet uses the full height on the left, a compact app bar sits beside it, and no content is cut off
+
+#### Scenario: Portrait phone with the keyboard open
+- **WHEN** a portrait phone narrower than 480px opens its on-screen keyboard
+- **THEN** the phone layout stays in place
+
 #### Scenario: Desktop width
-- **WHEN** the viewport is 1024px or wider
+- **WHEN** the viewport is 1024px or wider and more than 500px high
 - **THEN** panels float over the map beside each other as before and page content is shown in a centered column
 
 ### Requirement: App bar
@@ -56,6 +64,25 @@ On phones the country panel, the flight panel and the country details SHALL open
 #### Scenario: Long content
 - **WHEN** a sheet holds more content than fits on the screen
 - **THEN** the sheet content scrolls inside the sheet and the map behind it does not move
+
+### Requirement: Hide the side sheet
+Outside the phone layout the country panel, the flight panel and the country details SHALL be hideable to show more of the map. A tab at the sheet's edge SHALL stay visible to show it again, and the app bar, stats and messages SHALL use the space it frees.
+
+#### Scenario: Hide the country list on a phone held sideways
+- **WHEN** the user taps the tab of the open country panel at 844x390
+- **THEN** the panel slides off screen, only its tab stays at the left edge, and the app bar and stats move to the left
+
+#### Scenario: Show it again
+- **WHEN** the user taps the tab of the hidden panel
+- **THEN** the panel slides back with its list and scroll position unchanged
+
+#### Scenario: Selecting a country while hidden
+- **WHEN** the panel is hidden and the user taps a country on the map
+- **THEN** the panel shows again with the country details
+
+#### Scenario: Default state
+- **WHEN** the app opens outside the phone layout
+- **THEN** the panel is shown
 
 ### Requirement: Full-screen pages
 The log-in, password, account, administration and new-trip pages SHALL use the whole screen on phones, keep their header with the back action visible while the content scrolls, and show content in a centered column of limited width on tablets and desktops.
