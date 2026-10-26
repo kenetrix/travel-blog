@@ -211,7 +211,9 @@ onBeforeUnmount(() => unregister())
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0 1.1rem 1.1rem;
+    /* --sheet-pad: lets content such as a sticky footer reach the edges */
+    --sheet-pad: 1.1rem;
+    padding: 0 var(--sheet-pad) var(--sheet-pad);
 }
 
 /* While collapsed only the title shows; scrolling would move hidden content */
@@ -243,7 +245,7 @@ onBeforeUnmount(() => unregister())
     .content,
     .sheet:not(.expanded) .content {
         overflow-y: auto;
-        padding: 1.1rem;
+        padding: var(--sheet-pad);
     }
 
     /* Hidden: slid out to the left, only the tab stays on screen */
@@ -251,14 +253,16 @@ onBeforeUnmount(() => unregister())
         transform: translateX(calc(-100% - var(--edge) - var(--safe-left)));
     }
 
+    /* Halfway down the edge, away from the panels' own close buttons */
     .tab {
         position: absolute;
-        top: 0.8rem;
+        top: 50%;
         left: 100%;
         display: grid;
         place-items: center;
-        width: 2rem;
-        height: var(--touch);
+        width: 1.75rem;
+        height: 3.5rem;
+        transform: translateY(-50%);
         margin-left: 1px;
         padding: 0;
         border: 1px solid var(--line);
@@ -291,7 +295,8 @@ onBeforeUnmount(() => unregister())
     .content,
     .sheet:not(.expanded) .content {
         gap: 0.6rem;
-        padding: 0.8rem;
+        --sheet-pad: 0.8rem;
+        padding: var(--sheet-pad);
     }
 }
 

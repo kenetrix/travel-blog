@@ -357,10 +357,9 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
         </details>
 
         <div class="actions">
-            <span v-if="!store.canWrite" class="hint offline">
+            <p v-if="!store.canWrite" class="hint offline">
                 {{ OFFLINE_HINT }}
-            </span>
-            <span v-else class="hint keys">Esc closes · Ctrl+Enter saves</span>
+            </p>
             <button class="btn cancel" @click="leave(() => emit('close'))">
                 Cancel
             </button>
@@ -661,32 +660,32 @@ input[type='checkbox'] {
     accent-color: #3a7d5c;
 }
 
+/* Stays at the bottom of the panel while the details scroll; reaches the
+   panel's edges through the sheet's padding */
 .actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    align-items: center;
+    position: sticky;
+    bottom: calc(-1 * var(--sheet-pad, 0px));
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-}
-
-/* Keyboard shortcuts mean nothing on a touch screen */
-@media (pointer: coarse) {
-    .hint.keys {
-        display: none;
-    }
+    margin: 0 calc(-1 * var(--sheet-pad, 0px)) calc(-1 * var(--sheet-pad, 0px));
+    padding: 0.75rem var(--sheet-pad, 0px) var(--sheet-pad, 0px);
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    backdrop-filter: blur(8px);
 }
 
 .hint.offline {
+    grid-column: 1 / -1;
+    margin: 0;
     color: #8a5a12;
 }
 
-.hint {
-    margin-right: auto;
-}
-
 .btn {
-    min-height: 40px;
-    padding: 0.4rem 1.1rem;
+    min-height: var(--touch);
+    padding: 0 1rem;
+    font-family: inherit;
     border-radius: 0.5rem;
     font-size: 0.8rem;
     font-weight: 500;
