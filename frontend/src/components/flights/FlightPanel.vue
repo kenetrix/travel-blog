@@ -3,6 +3,8 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useTravelStore } from '../stores/store'
 import AirportSelect from './AirportSelect.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
+import AppSheet from '../ui/AppSheet.vue'
+import { OFFLINE_HINT } from '../ui/offline'
 import { vEnterNext } from '../ui/enterNext'
 import { distanceKm, formatDistance } from './distance'
 import type { Airport } from './airports'
@@ -35,12 +37,24 @@ const duplicate = computed(() => {
 })
 
 const canAdd = computed(
-    () => !!from.value && !!to.value && !sameAirport.value && !duplicate.value
+    () =>
+        store.canWrite &&
+        !!from.value &&
+        !!to.value &&
+        !sameAirport.value &&
+        !duplicate.value
 )
 
 const totalKm = computed(() =>
     store.flights.reduce((sum, f) => sum + distanceKm(f.from, f.to), 0)
 )
+
+const expanded = ref(false)
+
+// Touch screens have no hover: a tap highlights a flight, a second tap clears
+function toggleHighlight(id: string) {
+    store.highlightFlight(store.highlightedFlightId === id ? null : id)
+}
 
 async function addFlight() {
     if (!from.value || !to.value || !canAdd.value) return
@@ -54,83 +68,115 @@ async function addFlight() {
 </script>
 
 <template>
-    <form v-enter-next class="panel" @submit.prevent="addFlight">
-        <div>
-            <h2>Add flight</h2>
-            <p class="sub">Draw a route on the map</p>
-        </div>
+    <AppSheet v-model:expanded="expanded" side="right" label="Flights">
+        <form v-enter-next class="flight-form" @submit.prevent="addFlight">
+            <div>
+                <h2>Add flight</h2>
+                <p class="sub">Draw a route on the map</p>
+            </div>
 
-        <div>
-            <label>From</label>
-            <AirportSelect
-                v-model="from"
-                placeholder="Search airport or IATA"
-            />
-        </div>
+            <div>
+                <label>From</label>
+                <AirportSelect
+                    v-model="from"
+                    placeholder="Search airport or IATA"
+                    @focus="expanded = true"
+                />
+            </div>
 
-        <div>
-            <label>To</label>
-            <AirportSelect v-model="to" placeholder="Search airport or IATA" />
-        </div>
+            <div>
+                <label>To</label>
+                <AirportSelect
+                    v-model="to"
+                    placeholder="Search airport or IATA"
+                    @focus="expanded = true"
+                />
+            </div>
 
-        <button class="btn btn-primary" type="submit" :disabled="!canAdd">
-            Add route
-        </button>
-        <p v-if="duplicate" class="hint">This flight was already added.</p>
-        <p v-else-if="sameAirport" class="hint">
-            Choose two different airports.
-        </p>
+            <button
+                class="btn btn-primary"
+                type="submit"
+                :disabled="!canAdd"
+                :title="store.canWrite ? undefined : OFFLINE_HINT"
+            >
+                Add route
+            </button>
+            <p v-if="!store.canWrite" class="hint offline">
+                {{ OFFLINE_HINT }}
+            </p>
+            <p v-else-if="duplicate" class="hint">
+                This flight was already added.
+            </p>
+            <p v-else-if="sameAirport" class="hint">
+                Choose two different airports.
+            </p>
 
-        <div v-if="store.flights.length">
-            <label class="list-head">
-                <span>Flights</span>
-                <span>{{ format(totalKm) }} total</span>
-            </label>
-            <ul class="flights">
-                <li
-                    v-for="f in store.flights"
-                    :key="f.id"
-                    @mouseenter="store.highlightFlight(f.id)"
-                    @mouseleave="store.highlightFlight(null)"
-                >
-                    <span>{{ f.label }}</span>
-                    <span class="km">{{
-                        format(distanceKm(f.from, f.to))
-                    }}</span>
-                    <button
-                        type="button"
-                        class="visibility"
-                        :aria-label="
-                            f.visibility === 'public'
-                                ? `${f.label} is public; make it private`
-                                : `${f.label} is private; make it public`
-                        "
-                        :title="
-                            f.visibility === 'public'
-                                ? 'Public - click to make private'
-                                : 'Only you - click to make public'
-                        "
-                        @click="
-                            store.setFlightVisibility(
-                                f.id,
-                                f.visibility === 'public' ? 'private' : 'public'
-                            )
-                        "
+            <div v-if="store.flights.length">
+                <label class="list-head">
+                    <span>Flights</span>
+                    <span>{{ format(totalKm) }} total</span>
+                </label>
+                <ul class="flights">
+                    <li
+                        v-for="f in store.flights"
+                        :key="f.id"
+                        :class="{ active: store.highlightedFlightId === f.id }"
+                        @mouseenter="store.highlightFlight(f.id)"
+                        @mouseleave="store.highlightFlight(null)"
                     >
-                        {{ f.visibility === 'public' ? '🌐' : '🔒' }}
-                    </button>
-                    <button
-                        type="button"
-                        class="remove"
-                        :aria-label="`Remove ${f.label}`"
-                        @click="pendingRemoval = f"
-                    >
-                        ×
-                    </button>
-                </li>
-            </ul>
-        </div>
-    </form>
+                        <button
+                            type="button"
+                            class="route"
+                            :aria-pressed="store.highlightedFlightId === f.id"
+                            @click="toggleHighlight(f.id)"
+                        >
+                            <span>{{ f.label }}</span>
+                            <span class="km">{{
+                                format(distanceKm(f.from, f.to))
+                            }}</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="icon visibility"
+                            :disabled="!store.canWrite"
+                            :aria-label="
+                                f.visibility === 'public'
+                                    ? `${f.label} is public; make it private`
+                                    : `${f.label} is private; make it public`
+                            "
+                            :title="
+                                !store.canWrite
+                                    ? OFFLINE_HINT
+                                    : f.visibility === 'public'
+                                      ? 'Public - click to make private'
+                                      : 'Only you - click to make public'
+                            "
+                            @click="
+                                store.setFlightVisibility(
+                                    f.id,
+                                    f.visibility === 'public'
+                                        ? 'private'
+                                        : 'public'
+                                )
+                            "
+                        >
+                            {{ f.visibility === 'public' ? '🌐' : '🔒' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="icon remove"
+                            :disabled="!store.canWrite"
+                            :title="store.canWrite ? undefined : OFFLINE_HINT"
+                            :aria-label="`Remove ${f.label}`"
+                            @click="pendingRemoval = f"
+                        >
+                            ×
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </form>
+    </AppSheet>
 
     <ConfirmModal
         v-if="pendingRemoval"
@@ -143,20 +189,10 @@ async function addFlight() {
 </template>
 
 <style scoped>
-.panel {
-    top: 5.2rem;
-    right: 1.2rem;
-    z-index: 10;
-    position: absolute;
+.flight-form {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    width: 240px;
-    background: var(--panel);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 1.1rem;
 }
 
 h2 {
@@ -183,8 +219,14 @@ label {
     margin: 0;
     padding: 0;
     list-style: none;
-    max-height: 9rem;
-    overflow-y: auto;
+}
+
+/* Desktop: a short list, the panel floats over the map */
+@media (min-width: 1024px) {
+    .flights {
+        max-height: 9rem;
+        overflow-y: auto;
+    }
 }
 
 .list-head {
@@ -198,55 +240,110 @@ label {
     color: #c0392b;
 }
 
-.km {
-    margin: 0 auto 0 0.6rem;
-    color: var(--muted);
-    font-size: 0.72rem;
+.hint.offline {
+    color: #8a5a12;
 }
 
 .flights li {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.25rem 0.1rem;
-    font-size: 0.8rem;
+    border-radius: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.flights li.active {
+    background: var(--line-faint);
+}
+
+.route {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    min-height: var(--touch);
+    padding: 0 0.1rem;
+    border: none;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.km {
+    margin-left: 0.6rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.icon {
+    flex: none;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: none;
+    background: none;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* Mouse: denser rows, as before */
+@media (pointer: fine) {
+    .flights li {
+        font-size: 0.8rem;
+    }
+
+    .route,
+    .icon {
+        min-height: 1.8rem;
+        height: auto;
+    }
+
+    .icon {
+        width: 1.6rem;
+    }
 }
 
 .visibility {
-    border: none;
-    background: none;
-    font-size: 0.75rem;
-    line-height: 1;
-    cursor: pointer;
+    font-size: 0.8rem;
     opacity: 0.55;
 }
 
-.visibility:hover {
+.visibility:hover:not(:disabled) {
     opacity: 1;
 }
 
 .remove {
-    border: none;
-    background: none;
     color: var(--muted);
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
+    font-size: 1.1rem;
 }
 
-.remove:hover {
+.remove:hover:not(:disabled) {
     color: #c0392b;
+}
+
+.icon:disabled {
+    opacity: 0.3;
 }
 
 .btn {
     box-sizing: border-box;
     width: 100%;
+    min-height: var(--touch);
     padding: 0.5rem;
     border: none;
     border-radius: 0.5rem;
-    font-size: 0.82rem;
+    font: inherit;
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
+}
+
+@media (pointer: fine) {
+    .btn {
+        min-height: 0;
+        font-size: 0.82rem;
+    }
 }
 
 .btn-primary {

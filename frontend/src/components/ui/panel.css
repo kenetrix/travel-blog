@@ -1,8 +1,9 @@
 /* Shared by the profile and administration pages */
 .panel {
+    box-sizing: border-box;
     max-width: 720px;
-    margin: 0 auto 1.2rem;
-    padding: 1.2rem 1.3rem;
+    margin: 0 auto 1rem;
+    padding: 1rem;
     border: 1px solid var(--line);
     border-radius: 0.8rem;
     background: var(--raised);
@@ -32,7 +33,13 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-height: var(--touch);
     font-size: 0.85rem;
+}
+
+.panel input[type='checkbox'] {
+    width: 1.1rem;
+    height: 1.1rem;
 }
 
 .panel input:not([type='checkbox']),
@@ -46,7 +53,7 @@
     background: var(--page);
     color: var(--text);
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--field-font);
 }
 
 .panel .color {
@@ -66,9 +73,23 @@
     resize: vertical;
 }
 
+/* Side by side from tablets on; stacked on phones */
 .panel .row {
     display: flex;
-    gap: 0.6rem;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+@media (min-width: 600px) {
+    .panel {
+        margin-bottom: 1.2rem;
+        padding: 1.2rem 1.3rem;
+    }
+
+    .panel .row {
+        flex-direction: row;
+        gap: 0.6rem;
+    }
 }
 
 .panel .row > div {
@@ -103,6 +124,7 @@
 .panel .btn {
     display: inline-block;
     box-sizing: border-box;
+    min-height: var(--touch);
     padding: 0.5rem 0.9rem;
     border: none;
     border-radius: 0.5rem;
@@ -114,6 +136,13 @@
     text-align: center;
     text-decoration: none;
     cursor: pointer;
+}
+
+@media (pointer: fine) {
+    .panel .check,
+    .panel .btn {
+        min-height: 0;
+    }
 }
 
 .panel .btn:disabled {
@@ -152,4 +181,8 @@
 .toast.error {
     background: #c0392b;
     color: #fff;
+}
+
+.offline-note {
+    color: #8a5a12;
 }

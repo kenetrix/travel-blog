@@ -5,6 +5,7 @@ import PageWrapper from '../ui/PageWrapper.vue'
 import { useTravelStore } from '../stores/store'
 import { LANGUAGES } from './options'
 import { vEnterNext } from '../ui/enterNext'
+import { OFFLINE_HINT } from '../ui/offline'
 
 const store = useTravelStore()
 const router = useRouter()
@@ -131,8 +132,17 @@ async function changeUsername() {
         :title="title"
         subtitle="Your countries and flights, on every device"
     >
+        <p v-if="!store.canWrite" class="card note offline">
+            Logging in needs a connection.
+        </p>
         <div v-if="sso" class="card">
-            <a class="btn sso" href="/api/auth/oidc/login">
+            <a
+                class="btn sso"
+                :class="{ disabled: !store.canWrite }"
+                href="/api/auth/oidc/login"
+                :aria-disabled="!store.canWrite"
+                @click="!store.canWrite && $event.preventDefault()"
+            >
                 Log in with {{ sso.name }}
             </a>
             <p v-if="!passwordLogin && error" class="error" role="alert">
@@ -230,7 +240,12 @@ async function changeUsername() {
 
             <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-            <button class="btn" type="submit" :disabled="busy">
+            <button
+                class="btn"
+                type="submit"
+                :disabled="busy || !store.canWrite"
+                :title="store.canWrite ? undefined : OFFLINE_HINT"
+            >
                 {{ buttonLabel }}
             </button>
         </form>
@@ -263,12 +278,20 @@ select {
     background: var(--raised);
     color: var(--text);
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--field-font);
 }
 
 .row {
     display: flex;
-    gap: 0.6rem;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+@media (min-width: 600px) {
+    .row {
+        flex-direction: row;
+        gap: 0.6rem;
+    }
 }
 
 .row > div {
@@ -301,6 +324,7 @@ select {
 }
 
 .btn {
+    min-height: var(--touch);
     margin-top: 0.9rem;
     padding: 0.6rem;
     border: none;
@@ -321,6 +345,19 @@ select {
 
 .or {
     text-align: center;
+}
+
+.offline {
+    color: #8a5a12;
+}
+
+.sso.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.link {
+    min-height: 2rem;
 }
 
 .btn:disabled {

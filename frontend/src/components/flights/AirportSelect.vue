@@ -4,6 +4,7 @@ import { searchAirports, type Airport } from './airports'
 import { focusNext } from '../ui/enterNext'
 
 defineProps<{ placeholder?: string }>()
+const emit = defineEmits<{ focus: [] }>()
 const model = defineModel<Airport | null>({ default: null })
 
 const query = ref('')
@@ -19,9 +20,21 @@ function label(a: Airport) {
     return `${a.iata} · ${a.city}`
 }
 
-function onFocus() {
+function onFocus(e: FocusEvent) {
     query.value = ''
     editing.value = true
+    emit('focus')
+    // Phones: keep the field and its results above the on-screen keyboard
+    if (!matchMedia('(pointer: coarse)').matches) return
+    // Only the sheet scrolls; scrollIntoView would also shift the map page
+    const input = e.target as HTMLElement
+    const box = input.closest<HTMLElement>('[data-scroll]')
+    if (!box) return
+    setTimeout(() => {
+        const top =
+            input.getBoundingClientRect().top - box.getBoundingClientRect().top
+        box.scrollBy({ top: top - 8, behavior: 'smooth' })
+    }, 300)
 }
 
 function onInput(e: Event) {
@@ -122,8 +135,11 @@ function onBlur() {
 
 .clear {
     position: absolute;
-    top: 0.2rem;
-    right: 0.4rem;
+    top: 0;
+    right: 0;
+    width: 2.6rem;
+    height: 100%;
+    max-height: var(--touch);
     border: none;
     background: none;
     color: var(--muted);
@@ -148,11 +164,12 @@ function onBlur() {
 input {
     box-sizing: border-box;
     width: 100%;
-    padding: 0.4rem 1.6rem 0.4rem 0.6rem;
+    padding: 0.5rem 2.6rem 0.5rem 0.6rem;
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
-    font-size: 0.82rem;
+    font-size: var(--field-font);
     background: var(--raised);
+    color: var(--text);
     outline: none;
 }
 
@@ -166,7 +183,7 @@ input:focus {
     top: calc(100% + 0.25rem);
     left: 0;
     right: 0;
-    max-height: 13rem;
+    max-height: min(13rem, 40dvh);
     overflow-y: auto;
     margin: 0;
     padding: 0.25rem;
@@ -181,10 +198,19 @@ li {
     display: grid;
     grid-template-columns: auto 1fr;
     column-gap: 0.5rem;
+    min-height: var(--touch);
+    box-sizing: border-box;
+    align-content: center;
     padding: 0.35rem 0.5rem;
     border-radius: 0.35rem;
     font-size: 0.8rem;
     cursor: pointer;
+}
+
+@media (pointer: fine) {
+    li {
+        min-height: 0;
+    }
 }
 
 li.active {

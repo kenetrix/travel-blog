@@ -4,6 +4,9 @@ import { storeToRefs } from 'pinia'
 import { MapLibreProvider } from '../worldmap/MapLibreProvider'
 import { useTravelStore } from '../stores/store'
 import { distanceKm, formatDistance } from '../flights/distance'
+import { useLayout } from '../ui/useLayout'
+import { sheetInsets } from '../ui/mapInsets'
+import type { MapInsets } from './MapProvider'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const store = useTravelStore()
@@ -29,6 +32,26 @@ const timesAroundEarth = computed(() =>
 const mapContainer = ref<HTMLElement | null>(null)
 const props = defineProps<{ view: 'countries' | 'flights' }>()
 const provider = new MapLibreProvider()
+const { layout } = useLayout()
+
+// Free edges around the map per layout: the app bar (and on phones the
+// stats) on top, plus whatever the open sheet covers
+const BASE: Record<string, MapInsets> = {
+    phone: { top: 120, right: 24, bottom: 24, left: 24 },
+    tablet: { top: 100, right: 40, bottom: 40, left: 40 },
+    desktop: { top: 80, right: 60, bottom: 80, left: 40 },
+}
+
+function insets(): MapInsets {
+    const base = BASE[layout.value]
+    const sheet = sheetInsets()
+    return {
+        top: Math.max(base.top, sheet.top ?? 0),
+        right: Math.max(base.right, sheet.right ?? 0),
+        bottom: Math.max(base.bottom, sheet.bottom ?? 0),
+        left: Math.max(base.left, sheet.left ?? 0),
+    }
+}
 
 onMounted(() => {
     if (!mapContainer.value) return
@@ -72,7 +95,7 @@ function syncMap() {
 watch(selectedIso, (iso) => {
     // Defer so the colour change is painted first; computing the bounds of a
     // huge country (e.g. Russia) would otherwise block the main thread
-    if (iso) setTimeout(() => provider.focusCountry(iso), 50)
+    if (iso) setTimeout(() => provider.focusCountry(iso, insets()), 50)
     else provider.focusCountry(null)
 })
 
@@ -129,23 +152,67 @@ watch(
     cursor: default !important;
 }
 
-/* Stats */
+/* Stats: phones show them under the app bar, the sheet covers the bottom */
 .stats {
     position: absolute;
-    bottom: 1.5rem;
+    top: calc(var(--safe-top) + var(--appbar-h) + 1rem);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 1.2rem;
+    gap: 1rem;
+    width: max-content;
+    max-width: calc(100vw - 2 * var(--edge));
+    box-sizing: border-box;
     background: var(--panel);
     backdrop-filter: blur(8px);
     border: 1px solid var(--line);
     border-radius: 2rem;
-    padding: 0.45rem 1.1rem;
-    font-size: 0.78rem;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.75rem;
     color: var(--muted);
+    white-space: nowrap;
     pointer-events: none;
     z-index: 10;
+}
+
+/* Tablet: bottom right, beside the side sheet */
+@media (min-width: 600px) {
+    .stats {
+        top: auto;
+        bottom: calc(var(--safe-bottom) + 1.2rem);
+        left: calc(var(--safe-left) + var(--edge) + min(360px, 45vw) + 1rem);
+        transform: none;
+        gap: 1.2rem;
+        padding: 0.45rem 1.1rem;
+        font-size: 0.78rem;
+    }
+}
+
+/* Desktop: centred at the bottom */
+@media (min-width: 1024px) {
+    .stats {
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+/* Phones: zoom and attribution move to the top right, away from the sheet */
+@media (max-width: 599px) {
+    .map :deep(.maplibregl-ctrl-bottom-right) {
+        top: calc(var(--safe-top) + var(--appbar-h) + 5.4rem);
+        bottom: auto;
+        right: var(--safe-right);
+    }
+
+    .map :deep(.maplibregl-ctrl-group) {
+        display: none;
+    }
+}
+
+.map :deep(.maplibregl-ctrl-bottom-right) {
+    margin-bottom: var(--safe-bottom);
+    margin-right: var(--safe-right);
 }
 
 .dot {

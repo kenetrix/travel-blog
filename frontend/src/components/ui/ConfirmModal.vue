@@ -24,20 +24,23 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-    <div class="overlay" @click="emit('cancel')" role="presentation">
-        <div class="modal" role="dialog" aria-modal="true" @click.stop>
-            <h3>{{ title }}</h3>
-            <p class="message">{{ message }}</p>
-            <div class="actions">
-                <button class="btn cancel" @click="emit('cancel')">
-                    Cancel
-                </button>
-                <button class="btn confirm" @click="emit('confirm')">
-                    {{ props.confirmLabel }}
-                </button>
+    <!-- On body: sheets and panels would otherwise clip the fixed overlay -->
+    <Teleport to="body">
+        <div class="overlay" @click="emit('cancel')" role="presentation">
+            <div class="modal" role="dialog" aria-modal="true" @click.stop>
+                <h3>{{ title }}</h3>
+                <p class="message">{{ message }}</p>
+                <div class="actions">
+                    <button class="btn cancel" @click="emit('cancel')">
+                        Cancel
+                    </button>
+                    <button class="btn confirm" @click="emit('confirm')">
+                        {{ props.confirmLabel }}
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 
 <style scoped>
@@ -48,15 +51,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem calc(1rem + var(--safe-right)) calc(1rem + var(--safe-bottom))
+        calc(1rem + var(--safe-left));
     background: rgba(0, 0, 0, 0.25);
+    font-family: 'DM Sans', sans-serif;
 }
 
 .modal {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
+    box-sizing: border-box;
     width: 320px;
-    max-width: calc(100vw - 2.4rem);
+    max-width: 100%;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
     background: var(--panel);
     backdrop-filter: blur(8px);
     border: 1px solid var(--line);
@@ -80,20 +89,35 @@ h3 {
 
 .actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column-reverse;
     gap: 0.5rem;
 }
 
+@media (min-width: 600px) {
+    .actions {
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+}
+
 .btn {
+    min-height: var(--touch);
     padding: 0.4rem 0.9rem;
     border-radius: 0.5rem;
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     border: 1px solid transparent;
+    font-family: inherit;
     transition:
         border-color 0.15s ease,
         background-color 0.15s ease;
+}
+
+@media (pointer: fine) {
+    .btn {
+        min-height: 0;
+    }
 }
 
 .btn.cancel {

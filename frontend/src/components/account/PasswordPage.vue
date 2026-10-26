@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import { useTravelStore } from '../stores/store'
 import { vEnterNext } from '../ui/enterNext'
+import { OFFLINE_HINT } from '../ui/offline'
 
 const store = useTravelStore()
 const router = useRouter()
@@ -74,10 +75,22 @@ async function submit() {
 
             <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-            <button class="btn" type="submit" :disabled="busy">
+            <p v-if="!store.canWrite" class="note offline">
+                {{ OFFLINE_HINT }}
+            </p>
+            <button
+                class="btn"
+                type="submit"
+                :disabled="busy || !store.canWrite"
+            >
                 Change password
             </button>
-            <button class="btn secondary" type="button" @click="store.logout()">
+            <button
+                class="btn secondary"
+                type="button"
+                :disabled="!store.canWrite"
+                @click="store.logout()"
+            >
                 Log out
             </button>
         </form>
@@ -109,7 +122,7 @@ input {
     background: var(--raised);
     color: var(--text);
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--field-font);
 }
 
 .note {
@@ -125,6 +138,7 @@ input {
 }
 
 .btn {
+    min-height: var(--touch);
     margin-top: 0.9rem;
     padding: 0.6rem;
     border: none;
@@ -142,6 +156,10 @@ input {
     border: 1px solid var(--line-strong);
     background: var(--raised);
     color: var(--text);
+}
+
+.offline {
+    color: #8a5a12;
 }
 
 .btn:disabled {

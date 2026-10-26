@@ -6,6 +6,7 @@ import TabBar from '../ui/TabBar.vue'
 import OidcSettings from './OidcSettings.vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
+import { OFFLINE_HINT } from '../ui/offline'
 
 type AdminUser = Schemas['AdminUser']
 
@@ -147,6 +148,9 @@ async function deleteUser() {
                 {{ message.text }}
             </p>
 
+            <p v-if="!store.canWrite" class="toast offline-note">
+                {{ OFFLINE_HINT }}. The administration is not available offline.
+            </p>
             <TabBar v-model="tab" :tabs="tabs" />
             <template v-if="tab === 'users'">
                 <section class="panel">
@@ -171,6 +175,7 @@ async function deleteUser() {
                                 </div>
                                 <select
                                     :value="user.role"
+                                    :disabled="!store.canWrite"
                                     :aria-label="`Role of ${user.username}`"
                                     @change="
                                         setRole(
@@ -193,6 +198,7 @@ async function deleteUser() {
                                     <button
                                         type="button"
                                         class="btn secondary"
+                                        :disabled="!store.canWrite"
                                         @click="startReset(user)"
                                     >
                                         Reset password
@@ -200,6 +206,7 @@ async function deleteUser() {
                                     <button
                                         type="button"
                                         class="btn danger"
+                                        :disabled="!store.canWrite"
                                         @click="toDelete = user"
                                     >
                                         Delete
@@ -221,7 +228,13 @@ async function deleteUser() {
                                     :aria-label="`Temporary password for ${user.username}`"
                                     required
                                 />
-                                <button type="submit" class="btn">Set</button>
+                                <button
+                                    type="submit"
+                                    class="btn"
+                                    :disabled="!store.canWrite"
+                                >
+                                    Set
+                                </button>
                             </form>
                         </li>
                     </ul>
@@ -234,7 +247,7 @@ async function deleteUser() {
                         <input
                             type="checkbox"
                             :checked="registrationOpen"
-                            :disabled="!loaded"
+                            :disabled="!loaded || !store.canWrite"
                             @change="
                                 setRegistration(
                                     ($event.target as HTMLInputElement).checked
@@ -286,6 +299,7 @@ async function deleteUser() {
 }
 
 .panel .users .row {
+    flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.6rem 1rem;

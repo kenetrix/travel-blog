@@ -5,6 +5,52 @@ body {
     height: 100%;
 }
 
+body {
+    background: var(--page);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+}
+
+/* Layout is mobile first: base styles are for phones, wider screens add
+   @media (min-width: 600px) for tablets and (min-width: 1024px) for
+   desktops. Keep in sync with useLayout.ts. */
+:root {
+    --touch: 44px;
+    --gap: 0.75rem;
+    --edge: 0.75rem;
+    --radius: 1rem;
+    --appbar-h: 3.5rem;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --field-font: 16px;
+}
+
+@media (min-width: 600px) {
+    :root {
+        --edge: 1.2rem;
+    }
+}
+
+/* Below 16px, mobile browsers zoom into a focused field */
+@media (pointer: fine) {
+    :root {
+        --field-font: 0.82rem;
+    }
+}
+
+input,
+select,
+textarea {
+    font-size: var(--field-font);
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
 /* Map status colours, the same in both themes; keep in sync with Colors in
    components/worldmap/MapProvider.ts */
 :root {

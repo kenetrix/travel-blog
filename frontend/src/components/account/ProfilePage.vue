@@ -131,7 +131,8 @@ async function changePassword() {
 const confirmDelete = ref(false)
 
 async function logout() {
-    await store.logout()
+    const failed = await store.logout()
+    if (failed) return say(failed, true)
     router.push({ name: 'home' })
 }
 
@@ -152,7 +153,9 @@ async function deleteAccount() {
         :subtitle="store.profile ? `@${store.profile.username}` : undefined"
     >
         <template #actions>
-            <button class="logout" @click="logout">Log out</button>
+            <button class="logout" :disabled="!store.canWrite" @click="logout">
+                Log out
+            </button>
         </template>
         <p
             v-if="message"
@@ -237,7 +240,13 @@ async function deleteAccount() {
                         <p v-if="profileError" class="error" role="alert">
                             {{ profileError }}
                         </p>
-                        <button class="btn" type="submit">Save profile</button>
+                        <button
+                            class="btn"
+                            type="submit"
+                            :disabled="!store.canWrite"
+                        >
+                            Save profile
+                        </button>
                     </form>
                 </section>
             </template>
@@ -248,6 +257,7 @@ async function deleteAccount() {
                         <label for="unit">Distances in</label>
                         <select
                             id="unit"
+                            :disabled="!store.canWrite"
                             :value="store.settings.distanceUnit"
                             @change="
                                 setSetting(
@@ -263,6 +273,7 @@ async function deleteAccount() {
                         <label for="theme">Theme</label>
                         <select
                             id="theme"
+                            :disabled="!store.canWrite"
                             :value="store.settings.theme"
                             @change="
                                 setSetting(
@@ -279,6 +290,7 @@ async function deleteAccount() {
                         <label for="view">Start with</label>
                         <select
                             id="view"
+                            :disabled="!store.canWrite"
                             :value="store.settings.defaultView"
                             @change="
                                 setSetting(
@@ -296,6 +308,7 @@ async function deleteAccount() {
                         >
                         <select
                             id="default-visibility"
+                            :disabled="!store.canWrite"
                             :value="store.settings.defaultVisibility"
                             @change="
                                 setSetting(
@@ -339,7 +352,11 @@ async function deleteAccount() {
                         <p v-if="passwordError" class="error" role="alert">
                             {{ passwordError }}
                         </p>
-                        <button class="btn" type="submit">
+                        <button
+                            class="btn"
+                            type="submit"
+                            :disabled="!store.canWrite"
+                        >
                             Change password
                         </button>
                     </form>
@@ -353,6 +370,7 @@ async function deleteAccount() {
                     <div class="actions">
                         <button
                             class="btn danger"
+                            :disabled="!store.canWrite"
                             @click="confirmDelete = true"
                         >
                             Delete account
@@ -376,6 +394,7 @@ async function deleteAccount() {
 <style src="../ui/panel.css"></style>
 <style scoped>
 .logout {
+    min-height: var(--touch);
     padding: 0.4rem 0.9rem;
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
@@ -384,6 +403,16 @@ async function deleteAccount() {
     font-size: 0.8rem;
     color: var(--text);
     cursor: pointer;
+}
+
+.logout:disabled {
+    opacity: 0.5;
+}
+
+@media (pointer: fine) {
+    .logout {
+        min-height: 0;
+    }
 }
 
 .logout:hover {

@@ -27,12 +27,15 @@ const model = defineModel<string>({ required: true })
     margin: 0 auto 1.2rem;
     padding: 0.25rem;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
     border-radius: 0.7rem;
     background: var(--chip);
 }
 
 button {
-    flex: 1;
+    flex: 1 0 auto;
+    min-height: 40px;
     padding: 0.45rem 0.9rem;
     border: none;
     border-radius: 0.5rem;
@@ -43,6 +46,12 @@ button {
     font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
+}
+
+@media (pointer: fine) {
+    button {
+        min-height: 0;
+    }
 }
 
 button.active {

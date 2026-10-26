@@ -41,6 +41,7 @@ async function setColor(value: string) {
                 class="switch"
                 :class="{ on: isPublic }"
                 role="switch"
+                :disabled="!store.canWrite"
                 :aria-checked="isPublic"
                 aria-labelledby="visibility-title"
                 @click="toggle"
@@ -68,6 +69,7 @@ async function setColor(value: string) {
                 {{ initial }}
                 <input
                     type="color"
+                    :disabled="!store.canWrite"
                     aria-labelledby="color-title"
                     :value="color"
                     @change="
@@ -143,6 +145,17 @@ async function setColor(value: string) {
     background: var(--line-strong);
     cursor: pointer;
     transition: background 0.15s;
+}
+
+/* A 44px touch target around the smaller track */
+.switch::before {
+    content: '';
+    position: absolute;
+    inset: -10px -4px;
+}
+
+.switch:disabled {
+    opacity: 0.5;
 }
 
 .switch.on {

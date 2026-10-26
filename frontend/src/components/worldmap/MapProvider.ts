@@ -11,6 +11,14 @@ export interface MapMarker {
     label?: string
 }
 
+// Pixels at each edge that panels cover; the map fits countries inside the rest
+export interface MapInsets {
+    top: number
+    right: number
+    bottom: number
+    left: number
+}
+
 export interface MapProvider {
     mount(container: HTMLElement): void
     destroy(): void
@@ -21,7 +29,7 @@ export interface MapProvider {
     highlightFlight(id: string | null): void
     addMarker(marker: MapMarker): void
     onCountryClick(callback: (countryCode: string) => void): void
-    focusCountry(isoCode: string | null): void
+    focusCountry(isoCode: string | null, insets?: MapInsets): void
     flyTo(lng: number, lat: number, zoom: number): void
 }
 

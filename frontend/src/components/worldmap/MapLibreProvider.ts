@@ -6,7 +6,12 @@ import {
     NavigationControl,
     setWorkerUrl,
 } from 'maplibre-gl'
-import type { MapProvider, FlightRoute, MapMarker } from './MapProvider'
+import type {
+    MapProvider,
+    FlightRoute,
+    MapMarker,
+    MapInsets,
+} from './MapProvider'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { Colors } from './MapProvider'
 
@@ -48,6 +53,7 @@ export class MapLibreProvider implements MapProvider {
     private focused = ''
     private boundsCache = new Map<string, LngLatBounds>()
     private readyCallback?: () => void
+    private insets: MapInsets = { top: 80, right: 60, bottom: 80, left: 360 }
 
     mount(container: HTMLElement): void {
         // Keep the map hidden until our custom styling is applied, so the
@@ -437,7 +443,8 @@ export class MapLibreProvider implements MapProvider {
         this.clickCallback = callback
     }
 
-    focusCountry(isoCode: string | null): void {
+    focusCountry(isoCode: string | null, insets?: MapInsets): void {
+        if (insets) this.insets = insets
         if (!this.map || !this.countryLayerId) return
         this.setFocused(isoCode)
         if (!isoCode) return
@@ -523,19 +530,34 @@ export class MapLibreProvider implements MapProvider {
 
     private fitCountry(bounds: LngLatBounds): void {
         if (!this.map) return
-        // Leave room on the left for the country detail modal. Very large
+        // Leave room for the panel or sheet covering the map. Very large
         // countries (e.g. Russia) may be overlapped by it, so they get less
-        // left padding and always zoom in at least a bit.
+        // padding there and always zoom in at least a bit.
         const ne = bounds.getNorthEast()
         const sw = bounds.getSouthWest()
         const isLarge = ne.lng - sw.lng > 50 || ne.lat - sw.lat > 30
+        const { clientWidth: width, clientHeight: height } =
+            this.map.getContainer()
+        const padding = { ...this.insets }
+        if (isLarge) {
+            padding.left = Math.min(padding.left, 120)
+            padding.bottom = Math.min(padding.bottom, height * 0.3)
+        }
+        // Keep at least 120px of map to fit the country into
+        const shrinkX = Math.min(
+            1,
+            (width - 120) / (padding.left + padding.right)
+        )
+        const shrinkY = Math.min(
+            1,
+            (height - 120) / (padding.top + padding.bottom)
+        )
+        padding.left *= Math.max(0, shrinkX)
+        padding.right *= Math.max(0, shrinkX)
+        padding.top *= Math.max(0, shrinkY)
+        padding.bottom *= Math.max(0, shrinkY)
         const camera = this.map.cameraForBounds(bounds, {
-            padding: {
-                top: 80,
-                bottom: 80,
-                right: 60,
-                left: isLarge ? 120 : 360,
-            },
+            padding,
             maxZoom: 8,
         })
         if (!camera || !camera.center) return

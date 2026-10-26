@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTravelStore } from '../stores/store'
 import { storeToRefs } from 'pinia'
 import { Countries, getCountryByIso, type Country } from './countries'
 import CountryDetailModal from './CountryDetailModal.vue'
+import AppSheet from '../ui/AppSheet.vue'
 
 const store = useTravelStore()
-const { visited, wishlist, selectedIso, details, toast } = storeToRefs(store)
+const { visited, wishlist, selectedIso, details } = storeToRefs(store)
+
+// Phones: the sheet opens fully for the details and for a search
+const expanded = ref(false)
+watch(selectedIso, (iso) => iso && (expanded.value = true))
 
 const searchCountry = ref('')
 
@@ -50,104 +55,112 @@ const listedCountries = computed(() => {
 </script>
 
 <template>
-    <div v-if="toast" class="toast" role="status">{{ toast }}</div>
-    <CountryDetailModal
-        v-if="selectedIso"
-        :iso="selectedIso"
-        @close="store.selectCountry(null)"
-    />
-    <div v-else class="panel">
-        <div>
-            <h2>Countries</h2>
-            <p class="sub">Visited countries in the world</p>
-        </div>
+    <AppSheet
+        v-model:expanded="expanded"
+        :wide="!!selectedIso"
+        :label="selectedIso ? 'Country details' : 'Countries'"
+    >
+        <CountryDetailModal
+            v-if="selectedIso"
+            :iso="selectedIso"
+            @close="store.selectCountry(null)"
+        />
+        <template v-else>
+            <div>
+                <h2>Countries</h2>
+                <p class="sub">Visited countries in the world</p>
+            </div>
 
-        <div>
-            <input v-model="searchCountry" placeholder="Search for country" />
-        </div>
+            <div>
+                <input
+                    v-model="searchCountry"
+                    type="search"
+                    placeholder="Search for country"
+                    aria-label="Search for country"
+                    @focus="expanded = true"
+                />
+            </div>
 
-        <div v-if="allTags.length && !query" class="tags">
-            <button
-                v-for="t in allTags"
-                :key="t"
-                type="button"
-                class="tag"
-                :class="{ on: activeTag === t }"
-                @click="activeTag = activeTag === t ? '' : t"
-            >
-                {{ t }}
-            </button>
-        </div>
-
-        <div v-if="wishlistCountries.length">
-            <label>Want to go</label>
-            <ol>
-                <li
-                    v-for="country in wishlistCountries"
-                    :key="country.alpha3"
-                    @click="store.selectCountry(country.alpha3)"
+            <div v-if="allTags.length && !query" class="tags">
+                <button
+                    v-for="t in allTags"
+                    :key="t"
+                    type="button"
+                    class="tag"
+                    :class="{ on: activeTag === t }"
+                    @click="activeTag = activeTag === t ? '' : t"
                 >
-                    <span
-                        :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                    ></span>
-                    {{ country.name }}
-                </li>
-            </ol>
-        </div>
+                    {{ t }}
+                </button>
+            </div>
 
-        <div>
-            <label>{{ query ? 'Results' : 'Visited' }}</label>
-            <ol>
-                <li
-                    v-for="country in listedCountries"
-                    :key="country.alpha3"
-                    @click="store.selectCountry(country.alpha3)"
-                >
-                    <span
-                        :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                    ></span>
-                    {{ country.name }}
-                    <span
-                        v-if="query && visited.has(country.alpha3)"
-                        class="check"
+            <div v-if="wishlistCountries.length">
+                <label>Want to go</label>
+                <ol>
+                    <li
+                        v-for="country in wishlistCountries"
+                        :key="country.alpha3"
                     >
-                        ✓
-                    </span>
-                    <span
-                        v-else-if="query && wishlist.has(country.alpha3)"
-                        class="wish"
+                        <button
+                            type="button"
+                            @click="store.selectCountry(country.alpha3)"
+                        >
+                            <span
+                                :class="`fi fi-${country.alpha2.toLowerCase()}`"
+                            ></span>
+                            {{ country.name }}
+                        </button>
+                    </li>
+                </ol>
+            </div>
+
+            <div>
+                <label>{{ query ? 'Results' : 'Visited' }}</label>
+                <ol>
+                    <li
+                        v-for="country in listedCountries"
+                        :key="country.alpha3"
                     >
-                        ☆
-                    </span>
-                    <span v-if="details[country.alpha3]?.rating" class="rating">
-                        {{ '★'.repeat(details[country.alpha3].rating) }}
-                    </span>
-                </li>
-                <li v-if="!listedCountries.length" class="empty">
-                    No countries found
-                </li>
-            </ol>
-        </div>
-    </div>
+                        <button
+                            type="button"
+                            @click="store.selectCountry(country.alpha3)"
+                        >
+                            <span
+                                :class="`fi fi-${country.alpha2.toLowerCase()}`"
+                            ></span>
+                            {{ country.name }}
+                            <span
+                                v-if="query && visited.has(country.alpha3)"
+                                class="check"
+                            >
+                                ✓
+                            </span>
+                            <span
+                                v-else-if="
+                                    query && wishlist.has(country.alpha3)
+                                "
+                                class="wish"
+                            >
+                                ☆
+                            </span>
+                            <span
+                                v-if="details[country.alpha3]?.rating"
+                                class="rating"
+                            >
+                                {{ '★'.repeat(details[country.alpha3].rating) }}
+                            </span>
+                        </button>
+                    </li>
+                    <li v-if="!listedCountries.length" class="empty">
+                        No countries found
+                    </li>
+                </ol>
+            </div>
+        </template>
+    </AppSheet>
 </template>
 
 <style scoped>
-.panel {
-    position: absolute;
-    top: 5.2rem;
-    left: 1.2rem;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    width: 240px;
-    background: var(--panel);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 1.1rem;
-}
-
 h2 {
     font-family: 'DM Serif Display', serif;
     font-size: 1rem;
@@ -169,22 +182,44 @@ label {
 }
 
 ol {
-    max-height: 50vh;
-    overflow-y: auto;
-    display: block;
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--muted);
-    margin-bottom: 0.25rem;
+    margin: 0;
+    padding: 0;
     list-style-type: none;
 }
 
-li {
+li button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--touch);
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: left;
+    color: var(--muted);
     cursor: pointer;
 }
 
-li:hover {
+li button:hover {
     color: var(--text);
+}
+
+/* A mouse needs no 44px rows; keep the denser desktop list */
+@media (pointer: fine) {
+    li button {
+        min-height: 1.6rem;
+    }
+}
+
+/* Desktop: the panel grows with the list up to half the screen */
+@media (min-width: 1024px) {
+    ol {
+        max-height: 50vh;
+        overflow-y: auto;
+    }
 }
 
 .tags {
@@ -194,13 +229,22 @@ li:hover {
 }
 
 .tag {
-    padding: 0.1rem 0.5rem;
+    min-height: 2rem;
+    padding: 0.1rem 0.7rem;
     border: 1px solid var(--line-strong);
     border-radius: 1rem;
     background: var(--raised);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--muted-strong);
     cursor: pointer;
+}
+
+@media (pointer: fine) {
+    .tag {
+        min-height: 0;
+        padding: 0.1rem 0.5rem;
+        font-size: 0.72rem;
+    }
 }
 
 .tag.on {
@@ -212,6 +256,7 @@ li:hover {
 .wish {
     color: var(--wishlist);
     font-size: 0.8em;
+    margin-left: 0.3rem;
 }
 
 .rating {
@@ -220,43 +265,29 @@ li:hover {
     margin-left: 0.3rem;
 }
 
-.toast {
-    position: absolute;
-    bottom: 1.5rem;
-    left: 1.2rem;
-    z-index: 20;
-    padding: 0.5rem 0.9rem;
-    border-radius: 0.5rem;
-    background: #1a1c1e;
-    color: #fff;
-    font-size: 0.8rem;
-}
-
 li.empty {
-    cursor: default;
     font-size: 0.82rem;
+    color: var(--muted);
 }
 
 .check {
     color: #3a7d5c;
     font-size: 0.8em;
+    margin-left: 0.3rem;
 }
 
 .fi {
     margin-right: 0.6rem;
 }
 
-.flag {
-    margin-right: 0.4rem;
-    font-size: 1.05em;
-}
-
 input {
-    padding: 0.4rem 0.6rem;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
-    font-size: 0.82rem;
     background: var(--raised);
+    color: var(--text);
     outline: none;
 }
 

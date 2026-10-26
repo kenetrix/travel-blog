@@ -17,6 +17,7 @@ import { getCountryByIso } from './countries'
 import { getCountryFacts } from './countryFacts'
 import { RouterLink, useRoute } from 'vue-router'
 import ConfirmModal from '../ui/ConfirmModal.vue'
+import { OFFLINE_HINT } from '../ui/offline'
 
 const props = defineProps<{ iso: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -36,6 +37,8 @@ const pendingLeave = ref<(() => void) | null>(null)
 const showRemoveConfirm = ref(false)
 // The long texts are fetched when the modal opens
 const loadingDetails = ref(false)
+// Offline and never loaded before, so only rating and tags are known
+const unavailable = ref(false)
 
 const SUGGESTED_TAGS = ['beach', 'city trip', 'hiking', 'culture', 'nightlife']
 
@@ -54,11 +57,13 @@ function load(iso: string) {
 
 async function loadAndFill(iso: string) {
     load(iso)
+    unavailable.value = false
     loadingDetails.value = true
     const ok = await store.loadCountryDetails(iso)
     // Skip if the user moved on or has already started editing
     if (props.iso !== iso) return
     loadingDetails.value = false
+    unavailable.value = !ok && store.connection === 'offline'
     if (ok && !dirty.value) load(iso)
 }
 
@@ -104,7 +109,7 @@ async function persist() {
 
 function save() {
     // Nothing to save; also covers Ctrl+Enter
-    if (!dirty.value || loadingDetails.value) return
+    if (!dirty.value || loadingDetails.value || !store.canWrite) return
     if (status.value === 'none' && store.visited.has(props.iso)) {
         showRemoveConfirm.value = true
     } else {
@@ -190,7 +195,7 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
 </script>
 
 <template>
-    <div class="panel">
+    <div class="details-panel">
         <div class="header">
             <div>
                 <div class="title-row">
@@ -283,6 +288,10 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
 
         <details open>
             <summary>Notes</summary>
+            <p v-if="unavailable" class="empty">
+                Not available offline. Open this country once while online to
+                keep its notes on this device.
+            </p>
             <label for="food">Food place recommendations</label>
             <textarea
                 id="food"
@@ -348,14 +357,23 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
         </details>
 
         <div class="actions">
-            <span class="hint">Esc closes · Ctrl+Enter saves</span>
+            <span v-if="!store.canWrite" class="hint offline">
+                {{ OFFLINE_HINT }}
+            </span>
+            <span v-else class="hint keys">Esc closes · Ctrl+Enter saves</span>
             <button class="btn cancel" @click="leave(() => emit('close'))">
                 Cancel
             </button>
             <button
                 class="btn save"
-                :disabled="!dirty || loadingDetails"
-                :title="dirty ? undefined : 'No changes to save'"
+                :disabled="!dirty || loadingDetails || !store.canWrite"
+                :title="
+                    !store.canWrite
+                        ? OFFLINE_HINT
+                        : dirty
+                          ? undefined
+                          : 'No changes to save'
+                "
                 @click="save"
             >
                 Save
@@ -383,25 +401,13 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
 </template>
 
 <style scoped>
-.panel {
-    position: absolute;
-    top: 5.2rem;
-    left: 1.2rem;
-    z-index: 10;
+.details-panel {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    width: 340px;
-    max-height: calc(100vh - 7rem);
-    overflow-y: auto;
-    background: var(--panel);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 1.1rem;
 }
 
-.panel > * {
+.details-panel > * {
     flex-shrink: 0;
 }
 
@@ -428,9 +434,13 @@ h2 {
 }
 
 .close {
+    flex: none;
+    width: var(--touch);
+    height: var(--touch);
+    margin: -0.6rem -0.7rem 0 0;
     border: none;
     background: transparent;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
     line-height: 1;
     color: var(--muted);
     cursor: pointer;
@@ -446,6 +456,7 @@ h2 {
 
 .segmented button {
     flex: 1;
+    min-height: 40px;
     padding: 0.35rem 0;
     border: none;
     background: var(--raised);
@@ -474,6 +485,7 @@ h2 {
 }
 
 .segmented.visibility button {
+    min-height: 36px;
     padding: 0.25rem 0;
     font-size: 0.72rem;
 }
@@ -487,11 +499,14 @@ h2 {
 /* Rating */
 .title-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0 0.6rem;
 }
 
 .star {
+    min-width: 32px;
+    min-height: 40px;
     border: none;
     background: transparent;
     padding: 0 0.05rem;
@@ -512,6 +527,7 @@ details {
 }
 
 summary {
+    padding: 0.4rem 0;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 600;
@@ -567,7 +583,8 @@ details > :not(summary) + :not(summary) {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
-    padding: 0.15rem 0.55rem;
+    min-height: 2rem;
+    padding: 0.15rem 0.65rem;
     border: 1px solid var(--line-strong);
     border-radius: 1rem;
     background: var(--raised);
@@ -588,6 +605,8 @@ details > :not(summary) + :not(summary) {
 }
 
 .icon {
+    padding: 0.2rem 0.3rem;
+    margin-right: -0.3rem;
     border: none;
     background: transparent;
     color: var(--muted);
@@ -598,7 +617,7 @@ details > :not(summary) + :not(summary) {
 
 .link-btn {
     display: inline-block;
-    padding: 0;
+    padding: 0.5rem 0;
     font-size: 0.78rem;
     color: #3a7d5c;
     text-decoration: none;
@@ -622,8 +641,9 @@ input:not([type='checkbox']) {
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: var(--field-font);
     background: var(--raised);
+    color: var(--text);
     outline: none;
 }
 
@@ -643,9 +663,21 @@ input[type='checkbox'] {
 
 .actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     align-items: center;
     gap: 0.5rem;
+}
+
+/* Keyboard shortcuts mean nothing on a touch screen */
+@media (pointer: coarse) {
+    .hint.keys {
+        display: none;
+    }
+}
+
+.hint.offline {
+    color: #8a5a12;
 }
 
 .hint {
@@ -653,7 +685,8 @@ input[type='checkbox'] {
 }
 
 .btn {
-    padding: 0.4rem 0.9rem;
+    min-height: 40px;
+    padding: 0.4rem 1.1rem;
     border-radius: 0.5rem;
     font-size: 0.8rem;
     font-weight: 500;

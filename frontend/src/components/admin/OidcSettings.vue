@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
+import { useTravelStore } from '../stores/store'
 
 type OidcConfig = Schemas['OidcAdminConfig']
 
+const store = useTravelStore()
 const emit = defineEmits<{ say: [text: string, error?: boolean] }>()
 const say = (text: string, error = false) => emit('say', text, error)
 
@@ -229,13 +231,17 @@ onMounted(async () => {
                 cannot lock yourself out.
             </p>
             <div v-if="!oidcReadonly" class="actions">
-                <button type="submit" class="btn" :disabled="oidcBusy">
+                <button
+                    type="submit"
+                    class="btn"
+                    :disabled="oidcBusy || !store.canWrite"
+                >
                     Save
                 </button>
                 <button
                     type="button"
                     class="btn secondary"
-                    :disabled="oidcBusy"
+                    :disabled="oidcBusy || !store.canWrite"
                     @click="testOidc"
                 >
                     Test
@@ -244,7 +250,7 @@ onMounted(async () => {
                     v-if="oidc.source === 'settings'"
                     type="button"
                     class="btn danger"
-                    :disabled="oidcBusy"
+                    :disabled="oidcBusy || !store.canWrite"
                     @click="removeOidc"
                 >
                     Remove

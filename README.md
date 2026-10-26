@@ -64,7 +64,7 @@
 
 - Every entry and flight is `private` or `public`
 - A public profile shows your public travels at `/public/{username}`
-- Installable as a Progressive Web App
+- Installable as a Progressive Web App; works on phones and tablets and [offline](#-mobile-and-offline)
 
 </td>
 </tr>
@@ -250,6 +250,34 @@ flowchart TD
     Only -- no --> E403["403 password change required"]
 ```
 
+## 📱 Mobile and offline
+
+The layout is mobile first: phones (below 600px) get a bottom sheet for the
+country and flight panels, tablets (600–1023px) a side sheet, desktops the
+floating panels. Breakpoints and shared sizes are in
+[`frontend/src/style.css`](frontend/src/style.css); the sheet is
+[`AppSheet.vue`](frontend/src/components/ui/AppSheet.vue).
+
+Offline, the installed app starts from its service worker and a logged-in user
+stays logged in:
+
+- After every successful load the store keeps a snapshot of the account and
+  travel data in `localStorage`
+  ([`snapshot.ts`](frontend/src/components/stores/snapshot.ts)). Without a
+  connection (or when the server does not answer within 8 seconds) the app
+  shows that snapshot.
+- Offline the app is read-only: saving, flights, account and admin changes,
+  log-in and log-out are disabled until the connection returns. Nothing is
+  queued.
+- Back online the app reloads its data. Only a `401` from the server ends the
+  session; it also deletes the snapshot, as do logging out and deleting the
+  account.
+- Map style and tiles already viewed are cached by the service worker.
+
+Safari deletes stored data of websites that were not used for seven days. The
+installed app (Add to Home Screen) is not affected, so offline start is only
+guaranteed there.
+
 ## 📁 Project structure
 
 ```text
@@ -279,6 +307,7 @@ travel-blog/
 | Type-check the frontend  | `npm --prefix frontend run type-check`        |
 | Build the frontend       | `npm --prefix frontend run build`             |
 | Format frontend code     | `cd frontend && npx prettier --write <files>` |
+| Regenerate the PWA icons | `npm --prefix frontend run generate:icons`    |
 
 More detail lives next to the code: [`api/`](api/README.md) · [`backend/`](backend/README.md) · [`frontend/`](frontend/README.md) · [`proxmox/`](proxmox/README.md) (LXC helper script)
 

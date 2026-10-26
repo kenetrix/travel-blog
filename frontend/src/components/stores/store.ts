@@ -1,8 +1,19 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { api, problemMessage, type Schemas } from '../../api/client'
+import { ref, computed, watch } from 'vue'
+import {
+    api,
+    NetworkError,
+    onReachability,
+    problemMessage,
+    type Schemas,
+} from '../../api/client'
 import { getAirport, type Airport } from '../flights/airports'
 import { getCountryByAlpha2 } from '../countries/countries'
+import { readSnapshot, removeSnapshot, writeSnapshot } from './snapshot'
+
+const OFFLINE_MESSAGE = new NetworkError().message
+// While offline but with a network, how often to look for the server again
+const RETRY_MS = 30_000
 
 // A flight resolved against the airport data, ready for the map and lists
 export interface Flight {
@@ -69,6 +80,13 @@ export const useTravelStore = defineStore('travel', () => {
     const toast = ref('')
     let toastTimer: ReturnType<typeof setTimeout> | undefined
 
+    // offline: no network, or the server cannot be reached. The app then
+    // shows the last snapshot and allows no changes.
+    const connection = ref<'online' | 'offline'>(
+        navigator.onLine ? 'online' : 'offline'
+    )
+    const canWrite = computed(() => connection.value === 'online')
+
     const flights = computed<Flight[]>(() =>
         flightRecords.value.flatMap((f) => {
             const from = getAirport(f.from)
@@ -103,11 +121,91 @@ export const useTravelStore = defineStore('travel', () => {
         visibility.value = {}
         flightRecords.value = []
         selectedIso.value = null
+        removeSnapshot()
     }
+
+    // --- Offline snapshot --------------------------------------------------
+
+    function saveSnapshot() {
+        if (!profile.value || authState.value !== 'ready') return
+        writeSnapshot({
+            username: profile.value.username,
+            profile: profile.value,
+            role: role.value,
+            mustChangePassword: mustChangePassword.value,
+            settings: settings.value,
+            visited: [...visited.value],
+            wishlist: [...wishlist.value],
+            details: details.value,
+            detailsLoaded: [...detailsLoaded],
+            visibility: visibility.value,
+            flights: flightRecords.value,
+        })
+    }
+
+    // True if there was a snapshot to show
+    function restoreSnapshot(): boolean {
+        const s = readSnapshot()
+        if (!s) return false
+        profile.value = s.profile
+        role.value = s.role
+        mustChangePassword.value = s.mustChangePassword
+        settings.value = s.settings
+        visited.value = new Set(s.visited)
+        wishlist.value = new Set(s.wishlist)
+        details.value = s.details
+        detailsLoaded.clear()
+        for (const iso of s.detailsLoaded) detailsLoaded.add(iso)
+        visibility.value = s.visibility
+        flightRecords.value = s.flights
+        authState.value = 'ready'
+        return true
+    }
+
+    // Batched: a save touches several of these at once
+    let snapshotTimer: ReturnType<typeof setTimeout> | undefined
+    watch(
+        [
+            profile,
+            settings,
+            visited,
+            wishlist,
+            details,
+            visibility,
+            flightRecords,
+        ],
+        () => {
+            clearTimeout(snapshotTimer)
+            snapshotTimer = setTimeout(saveSnapshot, 300)
+        },
+        { deep: true }
+    )
+
+    // --- Connection --------------------------------------------------------
+
+    let loading = false
+
+    onReachability((reachable) => {
+        const wasOffline = connection.value === 'offline'
+        connection.value = reachable ? 'online' : 'offline'
+        // Back online: refresh, which also ends an expired session
+        if (reachable && wasOffline && !loading) load()
+    })
+
+    window.addEventListener('online', () => !loading && load())
+    window.addEventListener('offline', () => (connection.value = 'offline'))
+    setInterval(() => {
+        if (connection.value === 'offline' && navigator.onLine && !loading) {
+            load()
+        }
+    }, RETRY_MS)
+
+    // --- Loading -----------------------------------------------------------
 
     // Three requests in parallel (account, countries, flights); the browser
     // revalidates each with its ETag, so an unchanged copy costs only a 304
     async function load() {
+        loading = true
         try {
             const [account, countries, flightList] = await Promise.all([
                 api.GET('/user'),
@@ -132,8 +230,18 @@ export const useTravelStore = defineStore('travel', () => {
                 flightRecords.value = flightList.data
             }
             authState.value = 'ready'
+            saveSnapshot()
         } catch (e) {
+            if (e instanceof NetworkError) {
+                // Keep what is already shown; else the last snapshot, if any
+                if (authState.value !== 'ready' && !restoreSnapshot()) {
+                    authState.value = 'anonymous'
+                }
+                return
+            }
             notify(problemMessage(e, 'Could not load your travel data'))
+        } finally {
+            loading = false
         }
     }
 
@@ -164,6 +272,7 @@ export const useTravelStore = defineStore('travel', () => {
     async function checkUsername(
         username: string
     ): Promise<Schemas['UsernameCheck'] | string> {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { data, error } = await api.GET('/auth/users/{username}', {
                 params: { path: { username } },
@@ -187,6 +296,7 @@ export const useTravelStore = defineStore('travel', () => {
     }
 
     async function login(username: string, password: string) {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { error } = await api.POST('/auth/login', {
                 body: { username, password },
@@ -200,6 +310,7 @@ export const useTravelStore = defineStore('travel', () => {
     }
 
     async function register(input: RegisterInput) {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { error } = await api.POST('/auth/register', { body: input })
             if (error) throw error
@@ -210,17 +321,22 @@ export const useTravelStore = defineStore('travel', () => {
         }
     }
 
-    // Loading again moves the state to anonymous
-    async function logout() {
+    // Loading again moves the state to anonymous. Offline the server could
+    // not end the session, so logging out waits for the connection.
+    async function logout(): Promise<string | null> {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             await api.POST('/auth/logout')
-        } finally {
-            clear()
-            await load()
+        } catch (e) {
+            if (e instanceof NetworkError) return e.message
         }
+        clear()
+        await load()
+        return null
     }
 
     async function updateProfile(changes: ProfileUpdate) {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { data, error } = await api.PATCH('/user/profile', {
                 body: changes,
@@ -235,6 +351,7 @@ export const useTravelStore = defineStore('travel', () => {
 
     // Applied right away, rolled back if the server rejects it
     async function saveSettings(next: Settings) {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         const before = settings.value
         settings.value = next
         try {
@@ -251,6 +368,7 @@ export const useTravelStore = defineStore('travel', () => {
         currentPassword: string,
         newPassword: string
     ) {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { error } = await api.PUT('/user/password', {
                 body: { currentPassword, newPassword },
@@ -263,6 +381,7 @@ export const useTravelStore = defineStore('travel', () => {
     }
 
     async function deleteAccount() {
+        if (!canWrite.value) return OFFLINE_MESSAGE
         try {
             const { error } = await api.DELETE('/user')
             if (error) throw error
@@ -290,6 +409,8 @@ export const useTravelStore = defineStore('travel', () => {
     // Fetches the long texts of a country once; false if that failed
     async function loadCountryDetails(iso: string): Promise<boolean> {
         if (detailsLoaded.has(iso) || statusOf(iso) === 'none') return true
+        // Offline only the snapshot has details; the panel says so
+        if (!canWrite.value) return false
         try {
             const { data, error } = await api.GET('/countries/{iso}', {
                 params: { path: { iso } },
@@ -299,7 +420,9 @@ export const useTravelStore = defineStore('travel', () => {
             detailsLoaded.add(iso)
             return true
         } catch (e) {
-            notify(problemMessage(e, 'Could not load the country details'))
+            if (!(e instanceof NetworkError)) {
+                notify(problemMessage(e, 'Could not load the country details'))
+            }
             return false
         }
     }
@@ -331,6 +454,10 @@ export const useTravelStore = defineStore('travel', () => {
         data: CountryDetails,
         vis?: Visibility
     ): Promise<boolean> {
+        if (!canWrite.value) {
+            notify(OFFLINE_MESSAGE)
+            return false
+        }
         const before = {
             status: statusOf(iso),
             details: details.value[iso],
@@ -371,6 +498,10 @@ export const useTravelStore = defineStore('travel', () => {
     // --- Flights -----------------------------------------------------------
 
     async function addFlight(from: Airport, to: Airport): Promise<boolean> {
+        if (!canWrite.value) {
+            notify(OFFLINE_MESSAGE)
+            return false
+        }
         // Only the client knows the airports' countries; the server marks
         // them visited
         const countries = [
@@ -412,6 +543,7 @@ export const useTravelStore = defineStore('travel', () => {
     async function setFlightVisibility(id: string, vis: Visibility) {
         const flight = flightRecords.value.find((f) => f.id === id)
         if (!flight) return
+        if (!canWrite.value) return notify(OFFLINE_MESSAGE)
         const before = flight.visibility
         flight.visibility = vis
         try {
@@ -430,6 +562,7 @@ export const useTravelStore = defineStore('travel', () => {
     async function removeFlight(id: string) {
         const index = flightRecords.value.findIndex((f) => f.id === id)
         if (index < 0) return
+        if (!canWrite.value) return notify(OFFLINE_MESSAGE)
         const [removed] = flightRecords.value.splice(index, 1)
         if (highlightedFlightId.value === id) highlightedFlightId.value = null
         try {
@@ -455,6 +588,9 @@ export const useTravelStore = defineStore('travel', () => {
 
     return {
         authState,
+        connection,
+        canWrite,
+        hasDetails: (iso: string) => detailsLoaded.has(iso),
         profile,
         role,
         isAdmin,
