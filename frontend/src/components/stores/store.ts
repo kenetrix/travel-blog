@@ -22,7 +22,14 @@ export interface Flight {
     to: [number, number]
     label: string
     visibility: Visibility
+    // Entered by the user; unset if unknown
+    flightNumber?: string
+    date?: string
+    durationMinutes?: number
+    aircraft?: string
 }
+
+export type FlightUpdate = Schemas['FlightUpdate']
 
 export type CountryStatus = Schemas['CountryStatus']
 export type CountryDetails = Schemas['CountryDetails']
@@ -76,6 +83,12 @@ export const useTravelStore = defineStore('travel', () => {
     const preview = ref<{ iso: string; status: CountryStatus } | null>(null)
     // Flight hovered in the flight panel, emphasised on the map
     const highlightedFlightId = ref<string | null>(null)
+    // Flight picked in the list or on the map: its details are open and the
+    // map shows it
+    const selectedFlightId = ref<string | null>(null)
+    // Bumped to make the map fit the selected flight again, e.g. after the
+    // sheet covering it changed size
+    const flightFocus = ref(0)
 
     const toast = ref('')
     let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -99,6 +112,10 @@ export const useTravelStore = defineStore('travel', () => {
                     to: to.coords,
                     label: `${f.from} → ${f.to}`,
                     visibility: f.visibility,
+                    flightNumber: f.flightNumber,
+                    date: f.date,
+                    durationMinutes: f.durationMinutes,
+                    aircraft: f.aircraft,
                 },
             ]
         })
@@ -121,6 +138,7 @@ export const useTravelStore = defineStore('travel', () => {
         visibility.value = {}
         flightRecords.value = []
         selectedIso.value = null
+        selectedFlightId.value = null
         removeSnapshot()
     }
 
@@ -497,10 +515,14 @@ export const useTravelStore = defineStore('travel', () => {
 
     // --- Flights -----------------------------------------------------------
 
-    async function addFlight(from: Airport, to: Airport): Promise<boolean> {
+    // Returns the new flight's id, or null if it could not be added
+    async function addFlight(
+        from: Airport,
+        to: Airport
+    ): Promise<string | null> {
         if (!canWrite.value) {
             notify(OFFLINE_MESSAGE)
-            return false
+            return null
         }
         // Only the client knows the airports' countries; the server marks
         // them visited
@@ -532,30 +554,50 @@ export const useTravelStore = defineStore('travel', () => {
                 }
                 visibility.value[iso] ??= settings.value.defaultVisibility
             }
-            return true
+            return data.id
         } catch (e) {
             notify(problemMessage(e, 'Could not add the flight'))
+            return null
+        }
+    }
+
+    // Applied right away, restored if the server rejects it. Empty values
+    // ('' or 0) clear a field, as on the server.
+    async function updateFlight(
+        id: string,
+        patch: FlightUpdate
+    ): Promise<boolean> {
+        const index = flightRecords.value.findIndex((f) => f.id === id)
+        if (index < 0) return false
+        if (!canWrite.value) {
+            notify(OFFLINE_MESSAGE)
+            return false
+        }
+        const before = flightRecords.value[index]
+        const after = { ...before }
+        for (const [key, value] of Object.entries(patch)) {
+            if (value === '' || value === 0)
+                delete after[key as keyof FlightUpdate]
+            else Object.assign(after, { [key]: value })
+        }
+        flightRecords.value[index] = after
+        try {
+            const { error } = await api.PATCH('/flights/{id}', {
+                params: { path: { id } },
+                body: patch,
+            })
+            if (error) throw error
+            return true
+        } catch (e) {
+            const current = flightRecords.value.findIndex((f) => f.id === id)
+            if (current >= 0) flightRecords.value[current] = before
+            notify(problemMessage(e, 'Could not change the flight'))
             return false
         }
     }
 
-    // Applied right away, restored if the server rejects it
-    async function setFlightVisibility(id: string, vis: Visibility) {
-        const flight = flightRecords.value.find((f) => f.id === id)
-        if (!flight) return
-        if (!canWrite.value) return notify(OFFLINE_MESSAGE)
-        const before = flight.visibility
-        flight.visibility = vis
-        try {
-            const { error } = await api.PATCH('/flights/{id}', {
-                params: { path: { id } },
-                body: { visibility: vis },
-            })
-            if (error) throw error
-        } catch (e) {
-            flight.visibility = before
-            notify(problemMessage(e, 'Could not change the flight'))
-        }
+    function setFlightVisibility(id: string, visibility: Visibility) {
+        return updateFlight(id, { visibility })
     }
 
     // Applied right away, restored if the server rejects it
@@ -565,6 +607,7 @@ export const useTravelStore = defineStore('travel', () => {
         if (!canWrite.value) return notify(OFFLINE_MESSAGE)
         const [removed] = flightRecords.value.splice(index, 1)
         if (highlightedFlightId.value === id) highlightedFlightId.value = null
+        if (selectedFlightId.value === id) selectedFlightId.value = null
         try {
             const { error } = await api.DELETE('/flights/{id}', {
                 params: { path: { id } },
@@ -578,6 +621,16 @@ export const useTravelStore = defineStore('travel', () => {
 
     function highlightFlight(id: string | null) {
         highlightedFlightId.value = id
+    }
+
+    function selectFlight(id: string | null) {
+        if (id && id !== selectedFlightId.value) flightFocus.value++
+        selectedFlightId.value = id
+        highlightedFlightId.value = id
+    }
+
+    function focusSelectedFlight() {
+        if (selectedFlightId.value) flightFocus.value++
     }
 
     function notify(message: string) {
@@ -624,8 +677,13 @@ export const useTravelStore = defineStore('travel', () => {
         loadCountryDetails,
         addFlight,
         setFlightVisibility,
+        updateFlight,
         removeFlight,
         highlightedFlightId,
         highlightFlight,
+        selectedFlightId,
+        selectFlight,
+        flightFocus,
+        focusSelectedFlight,
     }
 })

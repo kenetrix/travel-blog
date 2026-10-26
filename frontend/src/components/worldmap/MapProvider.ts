@@ -29,7 +29,11 @@ export interface MapProvider {
     highlightFlight(id: string | null): void
     addMarker(marker: MapMarker): void
     onCountryClick(callback: (countryCode: string) => void): void
+    // While routes are shown: the clicked route's id, or null for a click
+    // away from all routes
+    onFlightClick(callback: (id: string | null) => void): void
     focusCountry(isoCode: string | null, insets?: MapInsets): void
+    focusFlight(id: string | null, insets?: MapInsets): void
     flyTo(lng: number, lat: number, zoom: number): void
 }
 

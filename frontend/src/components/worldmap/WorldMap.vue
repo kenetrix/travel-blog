@@ -17,6 +17,8 @@ const {
     preview,
     flights,
     highlightedFlightId,
+    selectedFlightId,
+    flightFocus,
     visitedCount,
 } = storeToRefs(store)
 
@@ -62,6 +64,10 @@ onMounted(() => {
         if (props.view !== 'countries') return
         store.selectCountry(iso)
     })
+    // A click away from all routes clears the selection
+    provider.onFlightClick((id) => {
+        if (props.view === 'flights') store.selectFlight(id)
+    })
 })
 
 onUnmounted(() => provider.destroy())
@@ -97,6 +103,15 @@ watch(selectedIso, (iso) => {
     // huge country (e.g. Russia) would otherwise block the main thread
     if (iso) setTimeout(() => provider.focusCountry(iso, insets()), 50)
     else provider.focusCountry(null)
+})
+
+// Fit the selected route into the free part of the map, after the sheet
+// had a moment to change
+watch(flightFocus, () => {
+    setTimeout(() => {
+        if (selectedFlightId.value)
+            provider.focusFlight(selectedFlightId.value, insets())
+    }, 50)
 })
 
 watch(
@@ -147,9 +162,13 @@ watch(
     height: 100%;
 }
 
-/* Countries are only clickable in the countries view */
+/* Countries are only clickable in the countries view, routes in the flights view */
 .map.no-pointer :deep(.maplibregl-canvas) {
     cursor: default !important;
+}
+
+.map.no-pointer :deep(.maplibregl-canvas.route-hover) {
+    cursor: pointer !important;
 }
 
 /* Stats: phones show them under the app bar, the sheet covers the bottom */

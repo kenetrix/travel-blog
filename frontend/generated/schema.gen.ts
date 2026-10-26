@@ -90,7 +90,7 @@ export interface paths {
         delete: operations['deleteFlight']
         options?: never
         head?: never
-        /** Change the visibility of a flight */
+        /** Change the visibility or details of a flight */
         patch: operations['updateFlight']
         trace?: never
     }
@@ -479,10 +479,35 @@ export interface components {
             countries: string[]
             visibility?: components['schemas']['Visibility']
         }
+        /**
+         * @description Changes only the fields present; at least one is required. An empty
+         *     string (or `0` for the duration) clears a field.
+         */
         FlightUpdate: {
-            visibility: components['schemas']['Visibility']
+            visibility?: components['schemas']['Visibility']
+            /**
+             * @description Airline designator and number; spaces, hyphens and leading zeros are dropped, e.g. `lh 0400` is stored as `LH400`
+             * @example LH400
+             */
+            flightNumber?: string
+            /**
+             * @description Day of the flight (YYYY-MM-DD), years 1900 to 2100
+             * @example 2026-03-14
+             */
+            date?: string
+            /** @example 710 */
+            durationMinutes?: number
+            /**
+             * @description Aircraft type as entered
+             * @example Boeing 787-9
+             */
+            aircraft?: string
         }
-        /** @description Airports are resolved by the client from its reference data */
+        /**
+         * @description Airports are resolved by the client from its reference data. The
+         *     optional fields are only set when the user entered them and are left
+         *     out of public travel data.
+         */
         Flight: {
             /** Format: uuid */
             id: string
@@ -499,6 +524,20 @@ export interface components {
             visibility: components['schemas']['Visibility']
             /** Format: date-time */
             createdAt: string
+            /**
+             * @description Canonical form
+             * @example LH400
+             */
+            flightNumber?: string
+            /**
+             * Format: date
+             * @example 2026-03-14
+             */
+            date?: string
+            /** @example 710 */
+            durationMinutes?: number
+            /** @example Boeing 787-9 */
+            aircraft?: string
         }
         FlightCreated: {
             /** Format: uuid */

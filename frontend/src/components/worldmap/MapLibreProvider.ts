@@ -45,6 +45,8 @@ function curve(
 }
 
 const HIGHLIGHT_SOURCE = 'countries-state'
+// Half the side of the square around a click that may hit a route
+const ROUTE_HIT_PX = 12
 
 // Attribution as the (i) button only, never opened by itself (MapLibre opens it
 // on load and resize). Without MapLibre's own credit it stays hidden until a
@@ -63,6 +65,10 @@ class CollapsedAttribution extends AttributionControl {
 export class MapLibreProvider implements MapProvider {
     private map?: MLMap
     private clickCallback?: (countryCode: string) => void
+    private flightClickCallback?: (id: string | null) => void
+    // Drawn arc per route id, for hit tests and fitting the map to a route
+    private arcs = new Map<string, [number, number][]>()
+    private routesVisible = false
     private countryLayerId = ''
     private highlighted = new Set<string>()
     private wished = new Set<string>()
@@ -295,6 +301,19 @@ export class MapLibreProvider implements MapProvider {
                 })
             }
 
+            // Routes are thin dashed lines; a tap anywhere near one counts
+            this.map!.on('click', (e) => {
+                if (!this.routesVisible) return
+                this.flightClickCallback?.(this.routeAt(e.point))
+            })
+            this.map!.on('mousemove', (e) => {
+                if (!this.routesVisible) return
+                this.map!.getCanvas().classList.toggle(
+                    'route-hover',
+                    this.routeAt(e.point) !== null
+                )
+            })
+
             this.readyCallback?.()
             this.reveal()
         })
@@ -400,10 +419,48 @@ export class MapLibreProvider implements MapProvider {
         ])
     }
 
+    // Id of the route within ROUTE_HIT_PX of a screen point, if any
+    private routeAt(point: { x: number; y: number }): string | null {
+        if (!this.map) return null
+        const { x, y } = point
+        const r = ROUTE_HIT_PX
+        const hits = this.map.queryRenderedFeatures(
+            [
+                [x - r, y - r],
+                [x + r, y + r],
+            ],
+            { layers: ['flights-line', 'flights-label'] }
+        )
+        return (hits[0]?.properties?.id as string | undefined) ?? null
+    }
+
+    onFlightClick(callback: (id: string | null) => void): void {
+        this.flightClickCallback = callback
+    }
+
+    focusFlight(id: string | null, insets?: MapInsets): void {
+        if (insets) this.insets = insets
+        const points = id ? this.arcs.get(id) : undefined
+        if (!points) return
+        const lngs = points.map((p) => p[0])
+        const lats = points.map((p) => p[1])
+        this.fitInsets(
+            new LngLatBounds(
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)]
+            ),
+            // The ends are airports: keep them clear of the edges
+            { maxZoom: 7, squeezeLarge: false, margin: 32 }
+        )
+    }
+
     showFlightRoutes(routes: FlightRoute[], visible: boolean): void {
         if (!this.map?.getSource('flights')) return
 
         const arcs = routes.map((r) => ({ r, points: curve(r.from, r.to) }))
+        this.arcs = new Map(arcs.map(({ r, points }) => [r.id, points]))
+        this.routesVisible = visible
+        if (!visible) this.map.getCanvas().classList.remove('route-hover')
 
         ;(this.map.getSource('flights') as GeoJSONSource).setData({
             type: 'FeatureCollection',
@@ -547,6 +604,17 @@ export class MapLibreProvider implements MapProvider {
     }
 
     private fitCountry(bounds: LngLatBounds): void {
+        this.fitInsets(bounds, { maxZoom: 8, squeezeLarge: true })
+    }
+
+    private fitInsets(
+        bounds: LngLatBounds,
+        {
+            maxZoom,
+            squeezeLarge,
+            margin = 0,
+        }: { maxZoom: number; squeezeLarge: boolean; margin?: number }
+    ): void {
         if (!this.map) return
         // Leave room for the panel or sheet covering the map. On desktops very
         // large countries (e.g. Russia) may be overlapped by the floating
@@ -555,10 +623,16 @@ export class MapLibreProvider implements MapProvider {
         // country is fitted into the free area, even if that zooms out.
         const ne = bounds.getNorthEast()
         const sw = bounds.getSouthWest()
-        const isLarge = ne.lng - sw.lng > 50 || ne.lat - sw.lat > 30
+        const isLarge =
+            squeezeLarge && (ne.lng - sw.lng > 50 || ne.lat - sw.lat > 30)
         const { clientWidth: width, clientHeight: height } =
             this.map.getContainer()
-        const padding = { ...this.insets }
+        const padding = {
+            top: this.insets.top + margin,
+            right: this.insets.right + margin,
+            bottom: this.insets.bottom + margin,
+            left: this.insets.left + margin,
+        }
         const desktop = width >= 1024
         if (isLarge && desktop) padding.left = Math.min(padding.left, 120)
         // Keep at least 120px of map to fit the country into
@@ -574,10 +648,7 @@ export class MapLibreProvider implements MapProvider {
         padding.right *= Math.max(0, shrinkX)
         padding.top *= Math.max(0, shrinkY)
         padding.bottom *= Math.max(0, shrinkY)
-        const camera = this.map.cameraForBounds(bounds, {
-            padding,
-            maxZoom: 8,
-        })
+        const camera = this.map.cameraForBounds(bounds, { padding, maxZoom })
         if (!camera) return
         let zoom = camera.zoom ?? 3
         if (isLarge && desktop) zoom = Math.max(zoom, 3)
