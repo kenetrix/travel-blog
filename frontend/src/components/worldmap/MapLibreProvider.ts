@@ -1,6 +1,7 @@
 import { COUNTRY_BOUNDS } from './countryBounds'
 import {
     Map as MLMap,
+    AttributionControl,
     GeoJSONSource,
     LngLatBounds,
     NavigationControl,
@@ -44,6 +45,20 @@ function curve(
 
 const HIGHLIGHT_SOURCE = 'countries-state'
 
+// Attribution as the (i) button only, never opened by itself (MapLibre opens it
+// on load and resize). Without MapLibre's own credit it stays hidden until a
+// map source brings an attribution, as the demo tiles do not.
+class CollapsedAttribution extends AttributionControl {
+    constructor() {
+        super({ compact: true })
+        const update = this._updateCompact
+        this._updateCompact = () => {
+            update()
+            this._container?.classList.remove('maplibregl-compact-show')
+        }
+    }
+}
+
 export class MapLibreProvider implements MapProvider {
     private map?: MLMap
     private clickCallback?: (countryCode: string) => void
@@ -65,12 +80,14 @@ export class MapLibreProvider implements MapProvider {
             center: [15, 32],
             zoom: 2.5,
             minZoom: 2,
+            attributionControl: false,
         })
 
         const canvasContainer = this.map.getCanvasContainer()
         canvasContainer.style.opacity = '0'
         canvasContainer.style.transition = 'opacity 0.3s'
 
+        this.map.addControl(new CollapsedAttribution(), 'bottom-right')
         this.map.addControl(
             new NavigationControl({ showCompass: false }),
             'bottom-right'
