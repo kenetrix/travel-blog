@@ -15,13 +15,36 @@ FlightInput:
 
 FlightUpdate:
   type: object
-  required: [visibility]
+  description: |
+    Changes only the fields present; at least one is required. An empty
+    string (or `0` for the duration) clears a field.
   properties:
     visibility: { $ref: './common.yaml#/Visibility' }
+    flightNumber:
+      type: string
+      maxLength: 16
+      description: >-
+        Airline designator and number; spaces, hyphens and leading zeros
+        are dropped, e.g. `lh 0400` is stored as `LH400`
+      example: LH400
+    date:
+      type: string
+      pattern: '^(\d{4}-\d{2}-\d{2})?$'
+      description: Day of the flight (YYYY-MM-DD), years 1900 to 2100
+      example: '2026-03-14'
+    durationMinutes: { type: integer, minimum: 0, maximum: 1440, example: 710 }
+    aircraft:
+      type: string
+      maxLength: 60
+      description: Aircraft type as entered
+      example: Boeing 787-9
 
 Flight:
   type: object
-  description: Airports are resolved by the client from its reference data
+  description: |
+    Airports are resolved by the client from its reference data. The
+    optional fields are only set when the user entered them and are left
+    out of public travel data.
   required: [id, from, to, visibility, createdAt]
   properties:
     id: { type: string, format: uuid }
@@ -29,6 +52,10 @@ Flight:
     to: { type: string, description: IATA code, example: HND }
     visibility: { $ref: './common.yaml#/Visibility' }
     createdAt: { type: string, format: date-time }
+    flightNumber: { type: string, description: Canonical form, example: LH400 }
+    date: { type: string, format: date, example: '2026-03-14' }
+    durationMinutes: { type: integer, example: 710 }
+    aircraft: { type: string, example: Boeing 787-9 }
 
 FlightCreated:
   type: object

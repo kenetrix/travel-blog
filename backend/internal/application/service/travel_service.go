@@ -221,11 +221,15 @@ func (s *TravelService) markVisited(user domain.UserID, iso string, def domain.V
 	return true, s.entries.Upsert(user, *e)
 }
 
-func (s *TravelService) SetFlightVisibility(user domain.UserID, id string, v domain.Visibility) error {
-	if err := checkVisibility(v); err != nil {
+// UpdateFlight changes the given fields of a flight; empty values clear them.
+func (s *TravelService) UpdateFlight(user domain.UserID, id string, u domain.FlightUpdate) error {
+	if u.Empty() {
+		return fmt.Errorf("%w: nothing to change", ErrInvalid)
+	}
+	if err := checkFlightUpdate(&u); err != nil {
 		return err
 	}
-	found, err := s.flights.SetVisibility(user, id, v)
+	found, err := s.flights.Update(user, id, u)
 	if err != nil {
 		return err
 	}

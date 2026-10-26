@@ -18,6 +18,10 @@ CREATE TABLE flights (
 	to_iata TEXT NOT NULL,
 	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
 	created_at TEXT NOT NULL, -- RFC 3339
+	flight_number TEXT, -- canonical, e.g. 'LH400'
+	flown_on TEXT, -- YYYY-MM-DD
+	duration_minutes INTEGER CHECK (duration_minutes BETWEEN 1 AND 1440),
+	aircraft TEXT,
 	UNIQUE (user_id, from_iata, to_iata)
 );
 

@@ -45,8 +45,8 @@ type FlightRepository interface {
 	List(user domain.UserID) ([]domain.Flight, error)
 	ListPublic(user domain.UserID) ([]domain.Flight, error)
 	Create(user domain.UserID, f domain.Flight) error
-	// SetVisibility and Delete return false if the user has no such flight.
-	SetVisibility(user domain.UserID, id string, v domain.Visibility) (bool, error)
+	// Update and Delete return false if the user has no such flight.
+	Update(user domain.UserID, id string, u domain.FlightUpdate) (bool, error)
 	Delete(user domain.UserID, id string) (bool, error)
 	RouteExists(user domain.UserID, from, to string) (bool, error)
 }

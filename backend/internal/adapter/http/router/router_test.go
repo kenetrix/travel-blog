@@ -148,6 +148,26 @@ func TestTravelFlow(t *testing.T) {
 		t.Errorf("update flight: %d %s", rec.Code, rec.Body)
 	}
 
+	rec = do(t, h, "PATCH", "/api/flights/"+created.Id, `{"flightNumber":"nh 204","date":"2026-03-14","durationMinutes":710,"aircraft":"Boeing 787-9"}`, me)
+	if rec.Code != 204 {
+		t.Errorf("flight details: %d %s", rec.Code, rec.Body)
+	}
+	body := do(t, h, "GET", "/api/flights", "", me).Body.String()
+	for _, want := range []string{`"flightNumber":"NH204"`, `"date":"2026-03-14"`, `"durationMinutes":710`, `"aircraft":"Boeing 787-9"`, `"visibility":"public"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("flights miss %s: %s", want, body)
+		}
+	}
+	for _, invalid := range []string{`{}`, `{"flightNumber":"400"}`, `{"date":"2026-02-30"}`, `{"durationMinutes":2000}`} {
+		if rec := do(t, h, "PATCH", "/api/flights/"+created.Id, invalid, me); rec.Code != 400 {
+			t.Errorf("PATCH %s: %d, want 400", invalid, rec.Code)
+		}
+	}
+	rec = do(t, h, "PATCH", "/api/flights/"+created.Id, `{"date":""}`, me)
+	if body := do(t, h, "GET", "/api/flights", "", me).Body.String(); rec.Code != 204 || strings.Contains(body, `"date"`) || !strings.Contains(body, `"NH204"`) {
+		t.Errorf("clear date: %d %s", rec.Code, body)
+	}
+
 	rec = do(t, h, "PUT", "/api/countries/JPN", `{"status":"none","details":{"food":"","sightseeing":"","notes":"","rating":0,"tags":[]}}`, me)
 	if rec.Code != 204 {
 		t.Errorf("remove country: %d %s", rec.Code, rec.Body)
@@ -260,6 +280,21 @@ func TestPublicTravel(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, `"JPN"`) || strings.Contains(body, `"FRA"`) || strings.Contains(body, "@example.com") {
 		t.Errorf("public view leaks or misses data: %s", body)
+	}
+
+	// Public flights show the route, not when or on which flight
+	rec = do(t, h, "POST", "/api/flights", `{"from":"BER","to":"HND","countries":["DEU","JPN"],"visibility":"public"}`, alice)
+	var created struct{ Id string }
+	json.Unmarshal(rec.Body.Bytes(), &created)
+	do(t, h, "PATCH", "/api/flights/"+created.Id, `{"flightNumber":"NH204","date":"2026-03-14","durationMinutes":710,"aircraft":"Boeing 787-9"}`, alice)
+	body = do(t, h, "GET", "/api/public/alice", "", nil).Body.String()
+	if !strings.Contains(body, `"HND"`) {
+		t.Errorf("public flight missing: %s", body)
+	}
+	for _, field := range []string{"flightNumber", "date", "durationMinutes", "aircraft"} {
+		if strings.Contains(body, `"`+field+`"`) {
+			t.Errorf("public view leaks %s: %s", field, body)
+		}
 	}
 }
 

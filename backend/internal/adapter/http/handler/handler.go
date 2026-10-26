@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -104,7 +105,7 @@ func (h *Handler) flightsOf(user domain.UserID) ([]api.Flight, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	out := toAPIFlights(flights)
+	out := toAPIFlights(flights, true)
 	etag, err := etagOf(user, out)
 	return out, etag, err
 }
@@ -201,7 +202,7 @@ func toAPISummaries(entries []domain.CountryEntry) []api.CountrySummary {
 	return out
 }
 
-func toAPIFlights(flights []domain.Flight) []api.Flight {
+func toAPIFlights(flights []domain.Flight, details bool) []api.Flight {
 	out := make([]api.Flight, len(flights))
 	for i, f := range flights {
 		out[i] = api.Flight{
@@ -211,8 +212,26 @@ func toAPIFlights(flights []domain.Flight) []api.Flight {
 			Visibility: api.Visibility(f.Visibility),
 			CreatedAt:  f.CreatedAt,
 		}
+		if !details {
+			continue
+		}
+		out[i].FlightNumber = optional(f.Number)
+		out[i].Aircraft = optional(f.Aircraft)
+		out[i].DurationMinutes = optional(f.DurationMinutes)
+		if d, err := time.Parse(time.DateOnly, f.Date); err == nil {
+			out[i].Date = &openapi_types.Date{Time: d}
+		}
 	}
 	return out
+}
+
+// optional returns nil for the zero value, so the field is left out of the JSON.
+func optional[T comparable](v T) *T {
+	var zero T
+	if v == zero {
+		return nil
+	}
+	return &v
 }
 
 func toAPIProfile(p domain.Profile) api.Profile {

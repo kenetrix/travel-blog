@@ -107,3 +107,42 @@ func trimText(field, s string, max int) (string, error) {
 	}
 	return s, nil
 }
+
+const (
+	// The longest scheduled flights take under 20 hours
+	maxFlightMinutes  = 24 * 60
+	maxAircraftLength = 60
+)
+
+// checkFlightUpdate validates u and normalises its flight number and aircraft.
+func checkFlightUpdate(u *domain.FlightUpdate) error {
+	if u.Visibility != nil {
+		if err := checkVisibility(*u.Visibility); err != nil {
+			return err
+		}
+	}
+	if u.Number != nil && *u.Number != "" {
+		number, ok := domain.NormalizeFlightNumber(*u.Number)
+		if !ok {
+			return fmt.Errorf("%w: flight number %q must be an airline code and up to four digits, e.g. LH 400", ErrInvalid, *u.Number)
+		}
+		u.Number = &number
+	}
+	if u.Date != nil && *u.Date != "" {
+		d, err := time.Parse(time.DateOnly, *u.Date)
+		if err != nil || d.Year() < 1900 || d.Year() > 2100 {
+			return fmt.Errorf("%w: date %q must be a day between 1900 and 2100 (YYYY-MM-DD)", ErrInvalid, *u.Date)
+		}
+	}
+	if u.DurationMinutes != nil && (*u.DurationMinutes < 0 || *u.DurationMinutes > maxFlightMinutes) {
+		return fmt.Errorf("%w: duration must be 1 to %d minutes", ErrInvalid, maxFlightMinutes)
+	}
+	if u.Aircraft != nil {
+		aircraft, err := trimText("aircraft", *u.Aircraft, maxAircraftLength)
+		if err != nil {
+			return err
+		}
+		u.Aircraft = &aircraft
+	}
+	return nil
+}

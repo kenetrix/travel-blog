@@ -6,7 +6,7 @@ parameters:
 patch:
   tags: [flights]
   operationId: updateFlight
-  summary: Change the visibility of a flight
+  summary: Change the visibility or details of a flight
   requestBody:
     required: true
     content:

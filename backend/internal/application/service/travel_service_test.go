@@ -3,6 +3,7 @@ package service_test
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"travel-blog/backend/internal/application/service"
@@ -76,13 +77,13 @@ func TestVisibilityDefaults(t *testing.T) {
 		}
 	}
 
-	if err := s.SetFlightVisibility(local, f.ID, domain.Private); err != nil {
+	if err := s.UpdateFlight(local, f.ID, domain.FlightUpdate{Visibility: vis(domain.Private)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, flights, _ := s.Travel(local); flights[0].Visibility != domain.Private {
-		t.Error("SetFlightVisibility had no effect")
+		t.Error("visibility update had no effect")
 	}
-	if err := s.SetFlightVisibility(local, "00000000-0000-0000-0000-000000000000", domain.Public); !errors.Is(err, service.ErrNotFound) {
+	if err := s.UpdateFlight(local, "00000000-0000-0000-0000-000000000000", domain.FlightUpdate{Visibility: vis(domain.Public)}); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("unknown flight: %v", err)
 	}
 }
@@ -173,6 +174,64 @@ func TestCreateFlight(t *testing.T) {
 	}
 }
 
+func TestUpdateFlightDetails(t *testing.T) {
+	s := newEnv(t).travel
+	f, _, err := s.CreateFlight(local, "BER", "HND", []string{"DEU", "JPN"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	str := func(v string) *string { return &v }
+	num := func(v int) *int { return &v }
+	get := func() domain.Flight {
+		t.Helper()
+		flights, err := s.Flights(local)
+		if err != nil || len(flights) != 1 {
+			t.Fatalf("flights: %v %v", flights, err)
+		}
+		return flights[0]
+	}
+
+	// Stored normalised and trimmed
+	err = s.UpdateFlight(local, f.ID, domain.FlightUpdate{
+		Number: str("nh 0204"), Date: str("2026-03-14"), DurationMinutes: num(710), Aircraft: str("  Boeing 787-9 "),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := domain.Flight{Number: "NH204", Date: "2026-03-14", DurationMinutes: 710, Aircraft: "Boeing 787-9"}
+	if got := get(); got.Number != want.Number || got.Date != want.Date || got.DurationMinutes != want.DurationMinutes || got.Aircraft != want.Aircraft {
+		t.Errorf("after update: %+v", got)
+	}
+
+	invalid := map[string]domain.FlightUpdate{
+		"nothing":         {},
+		"flight number":   {Number: str("400")},
+		"impossible date": {Date: str("2026-02-30")},
+		"date format":     {Date: str("14.03.2026")},
+		"early date":      {Date: str("1899-12-31")},
+		"long duration":   {DurationMinutes: num(1441)},
+		"negative":        {DurationMinutes: num(-5)},
+		"long aircraft":   {Aircraft: str(strings.Repeat("x", 61))},
+		"visibility":      {Visibility: vis("friends")},
+	}
+	for name, u := range invalid {
+		if err := s.UpdateFlight(local, f.ID, u); !errors.Is(err, service.ErrInvalid) {
+			t.Errorf("%s: got %v, want ErrInvalid", name, err)
+		}
+	}
+	if got := get(); got.Number != "NH204" || got.Date != "2026-03-14" {
+		t.Errorf("rejected updates changed the flight: %+v", got)
+	}
+
+	// Clearing one field keeps the others
+	if err := s.UpdateFlight(local, f.ID, domain.FlightUpdate{Number: str(""), DurationMinutes: num(0)}); err != nil {
+		t.Fatal(err)
+	}
+	if got := get(); got.Number != "" || got.DurationMinutes != 0 || got.Date != "2026-03-14" || got.Aircraft != "Boeing 787-9" {
+		t.Errorf("after clearing: %+v", got)
+	}
+}
+
 func TestUsersAreIsolated(t *testing.T) {
 	e := newEnv(t)
 	s := e.travel
@@ -197,7 +256,7 @@ func TestUsersAreIsolated(t *testing.T) {
 	if err := s.DeleteFlight(alice, f.ID); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("alice deleted local's flight: %v", err)
 	}
-	if err := s.SetFlightVisibility(alice, f.ID, domain.Public); !errors.Is(err, service.ErrNotFound) {
+	if err := s.UpdateFlight(alice, f.ID, domain.FlightUpdate{Visibility: vis(domain.Public)}); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("alice changed local's flight: %v", err)
 	}
 

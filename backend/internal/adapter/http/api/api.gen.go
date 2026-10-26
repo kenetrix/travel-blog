@@ -275,9 +275,24 @@ type CountrySummary struct {
 // CountrySummaryStatus defines model for CountrySummary.Status.
 type CountrySummaryStatus string
 
-// Flight Airports are resolved by the client from its reference data
+// Flight Airports are resolved by the client from its reference data. The
+// optional fields are only set when the user entered them and are left
+// out of public travel data.
 type Flight struct {
+	// Aircraft Example: Boeing 787-9
+	Aircraft  *string   `json:"aircraft,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
+
+	// Date Example: 2026-03-14
+	Date *openapi_types.Date `json:"date,omitempty"`
+
+	// DurationMinutes Example: 710
+	DurationMinutes *int `json:"durationMinutes,omitempty"`
+
+	// FlightNumber Canonical form
+	//
+	// Example: LH400
+	FlightNumber *string `json:"flightNumber,omitempty"`
 
 	// From IATA code
 	//
@@ -315,9 +330,27 @@ type FlightInput struct {
 	Visibility *Visibility `json:"visibility,omitempty"`
 }
 
-// FlightUpdate defines model for FlightUpdate.
+// FlightUpdate Changes only the fields present; at least one is required. An empty
+// string (or `0` for the duration) clears a field.
 type FlightUpdate struct {
-	Visibility Visibility `json:"visibility"`
+	// Aircraft Aircraft type as entered
+	//
+	// Example: Boeing 787-9
+	Aircraft *string `json:"aircraft,omitempty"`
+
+	// Date Day of the flight (YYYY-MM-DD), years 1900 to 2100
+	//
+	// Example: 2026-03-14
+	Date *string `json:"date,omitempty"`
+
+	// DurationMinutes Example: 710
+	DurationMinutes *int `json:"durationMinutes,omitempty"`
+
+	// FlightNumber Airline designator and number; spaces, hyphens and leading zeros are dropped, e.g. `lh 0400` is stored as `LH400`
+	//
+	// Example: LH400
+	FlightNumber *string     `json:"flightNumber,omitempty"`
+	Visibility   *Visibility `json:"visibility,omitempty"`
 }
 
 // LoginInput defines model for LoginInput.
@@ -649,7 +682,7 @@ type ServerInterface interface {
 	// DeleteFlight Remove a flight
 	// (DELETE /flights/{id})
 	DeleteFlight(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// UpdateFlight Change the visibility of a flight
+	// UpdateFlight Change the visibility or details of a flight
 	// (PATCH /flights/{id})
 	UpdateFlight(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// GetPublicTravel Public profile and public data of a user
@@ -3248,7 +3281,7 @@ type StrictServerInterface interface {
 	// DeleteFlight Remove a flight
 	// (DELETE /flights/{id})
 	DeleteFlight(ctx context.Context, request DeleteFlightRequestObject) (DeleteFlightResponseObject, error)
-	// UpdateFlight Change the visibility of a flight
+	// UpdateFlight Change the visibility or details of a flight
 	// (PATCH /flights/{id})
 	UpdateFlight(ctx context.Context, request UpdateFlightRequestObject) (UpdateFlightResponseObject, error)
 	// GetPublicTravel Public profile and public data of a user

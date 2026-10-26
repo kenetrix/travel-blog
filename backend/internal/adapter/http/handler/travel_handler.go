@@ -140,7 +140,14 @@ func (h *Handler) UpdateFlight(ctx context.Context, req api.UpdateFlightRequestO
 	if err != nil {
 		return nil, err
 	}
-	err = h.travel.SetFlightVisibility(user, req.Id.String(), domain.Visibility(req.Body.Visibility))
+	in := req.Body
+	err = h.travel.UpdateFlight(user, req.Id.String(), domain.FlightUpdate{
+		Visibility:      visibilityOf(in.Visibility),
+		Number:          in.FlightNumber,
+		Date:            in.Date,
+		DurationMinutes: in.DurationMinutes,
+		Aircraft:        in.Aircraft,
+	})
 	switch {
 	case errors.Is(err, service.ErrInvalid):
 		return api.UpdateFlight400ApplicationProblemPlusJSONResponse{BadRequestApplicationProblemPlusJSONResponse: badRequest(err)}, nil
@@ -191,6 +198,7 @@ func (h *Handler) GetPublicTravel(_ context.Context, req api.GetPublicTravelRequ
 			HomeCountry: p.HomeCountry,
 		},
 		Entries: toAPIEntries(entries),
-		Flights: toAPIFlights(flights),
+		// Date and flight number would tell when the user was where
+		Flights: toAPIFlights(flights, false),
 	}, nil
 }
