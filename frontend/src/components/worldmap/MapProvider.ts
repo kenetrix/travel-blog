@@ -56,6 +56,7 @@ export const Colors = {
     // well as from the dark base
     flight: '#5fd4e4',
     flightLabel: '#c4f1f7',
+    // Also --map-water in style.css and the theme colour of the app
     water: '#373838',
     geoline: '#4c4d4d',
     label: '#dbdbdb',

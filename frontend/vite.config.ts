@@ -85,8 +85,9 @@ export default defineConfig({
                 name: 'Travel Blog',
                 short_name: 'TravelBlog',
                 description: 'Travel tracker',
-                theme_color: '#1e293b',
-                background_color: '#ffffff',
+                // Map water colour, as theme-color in index.html
+                theme_color: '#373838',
+                background_color: '#373838',
                 display: 'standalone',
                 orientation: 'any',
                 start_url: '/',

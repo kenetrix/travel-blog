@@ -287,7 +287,8 @@ select {
     gap: 0.35rem;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .row {
         flex-direction: row;
         gap: 0.6rem;

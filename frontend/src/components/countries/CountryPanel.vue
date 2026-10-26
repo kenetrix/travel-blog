@@ -5,12 +5,15 @@ import { storeToRefs } from 'pinia'
 import { Countries, getCountryByIso, type Country } from './countries'
 import CountryDetailModal from './CountryDetailModal.vue'
 import AppSheet from '../ui/AppSheet.vue'
+import { useLayout } from '../ui/useLayout'
 
 const store = useTravelStore()
+const { layout } = useLayout()
 const { visited, wishlist, selectedIso, details } = storeToRefs(store)
 
 // Phones: the sheet opens fully for the details and for a search
-const expanded = ref(false)
+// Phones start with the map; side sheets start open
+const expanded = ref(layout.value !== 'phone')
 watch(selectedIso, (iso) => iso && (expanded.value = true))
 
 const searchCountry = ref('')
@@ -215,7 +218,7 @@ li button:hover {
 }
 
 /* Desktop: the panel grows with the list up to half the screen */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 501px) {
     ol {
         max-height: 50vh;
         overflow-y: auto;

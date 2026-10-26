@@ -66,12 +66,16 @@ watchEffect(() => {
 
 <template>
     <div class="wrapper">
+        <!-- Solid behind the iOS status bar: the app reaches under it
+             (viewport-fit=cover), and iOS would blur the map there -->
+        <div class="status-bar" aria-hidden="true" />
+
         <!-- Map-->
         <WorldMap :view="view" />
 
         <!-- One bar on phones and tablets; on desktops its parts float apart -->
         <header class="appbar">
-            <div class="topbar">
+            <div class="topbar" :class="{ solo: !store.profile }">
                 <span class="logo">
                     <span class="logo-icon" aria-hidden="true">✈</span>
                     <span class="logo-text">Travel Blog</span>
@@ -211,7 +215,22 @@ watchEffect(() => {
     font-family: 'DM Sans', sans-serif;
 }
 
-/* Phones and tablets: one bar across the top */
+/* Above pages too, whose headers leave the same room at the top */
+.status-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    height: var(--safe-top);
+    background: var(--map-water);
+    pointer-events: none;
+}
+
+/* Portrait phones: one continuous bar, too narrow for two boxes. Wider
+   screens split it into two islands (see the tablet query below): name and
+   view switch on the left (centred on desktops), account actions on the
+   right. */
 .appbar {
     position: absolute;
     top: calc(var(--safe-top) + 0.5rem);
@@ -224,22 +243,38 @@ watchEffect(() => {
     gap: 0.4rem;
     box-sizing: border-box;
     height: var(--appbar-h);
-    padding: 0 0.1rem 0 0.3rem;
     background: var(--panel);
     backdrop-filter: blur(8px);
     border: 1px solid var(--line);
     border-radius: 2rem;
 }
 
+/* --pill-h and --login-h: heights of the view switch and the login button.
+   The space beside them matches the space above and below. */
 .topbar,
 .useractions {
+    --pill-h: 42px;
+    --login-h: 36px;
     display: flex;
     align-items: center;
     min-width: 0;
+    box-sizing: border-box;
+    height: 100%;
 }
 
 .topbar {
     gap: 0.5rem;
+    padding: 0 calc((var(--appbar-h) - 2px - var(--pill-h)) / 2);
+}
+
+/* The avatar circles sit inside 44px touch targets, which already leave
+   about the same space as around the switch */
+.useractions {
+    padding: 0;
+}
+
+.useractions:has(.login) {
+    padding: 0 calc((var(--appbar-h) - 2px - var(--login-h)) / 2);
 }
 
 .logo {
@@ -252,7 +287,6 @@ watchEffect(() => {
 
 .logo-icon {
     display: none;
-    padding-left: 0.4rem;
     font-size: 1.1rem;
 }
 
@@ -264,16 +298,50 @@ watchEffect(() => {
     .logo-icon {
         display: inline;
     }
+
+    .topbar {
+        padding-left: 0.9rem;
+    }
 }
 
-@media (min-width: 600px) {
+/* Logged out there is no view switch, so the name has room on every screen */
+.topbar.solo {
+    padding: 0 1rem;
+}
+
+.topbar.solo .logo-text {
+    display: inline;
+}
+
+.topbar.solo .logo-icon {
+    display: none;
+}
+
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .appbar {
         top: calc(var(--safe-top) + 1.2rem);
-        padding: 0 0.2rem 0 1rem;
+        height: auto;
+        background: none;
+        backdrop-filter: none;
+        border: none;
+        /* The gap between the islands belongs to the map */
+        pointer-events: none;
+    }
+
+    .topbar,
+    .useractions {
+        height: var(--appbar-h);
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--line);
+        border-radius: 2rem;
+        pointer-events: auto;
     }
 
     .topbar {
         gap: 1rem;
+        padding-left: 1.1rem;
     }
 
     .logo-icon {
@@ -285,32 +353,65 @@ watchEffect(() => {
     }
 }
 
-/* Desktop: centred pill and actions on the right, as separate islands */
-@media (min-width: 1024px) {
+/* Phones held sideways: the sheet takes the full height on the left, the
+   bar sits beside it */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    .appbar {
+        top: calc(var(--safe-top) + var(--edge));
+        left: calc(var(--safe-left) + var(--edge) + var(--sheet-space));
+        transition: left 0.25s ease;
+    }
+
+    .topbar,
+    .useractions {
+        --pill-h: 36px;
+        --login-h: 32px;
+    }
+
+    .topbar {
+        padding-left: 0.9rem;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .logo-icon {
+        display: inline;
+    }
+
+    /* Qualified, as the base rule comes later in this file */
+    .topbar .toggle-pill button {
+        min-height: 30px;
+    }
+}
+
+/* Desktop: the switch island is centred on the screen */
+@media (min-width: 1024px) and (min-height: 501px) {
     .appbar {
         display: contents;
     }
 
     .topbar,
     .useractions {
+        --appbar-h: 3.25rem;
         position: absolute;
         top: 1.2rem;
         z-index: 20;
-        background: var(--panel);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--line);
-        border-radius: 2rem;
     }
 
     .topbar {
         left: 50%;
         transform: translateX(-50%);
-        padding: 0.3rem 0.3rem 0.3rem 1.2rem;
+        padding-left: 1.2rem;
+    }
+
+    .topbar.solo {
+        padding: 0 1.2rem;
     }
 
     .useractions {
         right: calc(var(--safe-right) + 1.2rem);
-        padding: 0 0.1rem;
     }
 }
 
@@ -321,12 +422,13 @@ watchEffect(() => {
     padding: 3px;
 }
 
+/* 320px wide phones: narrow enough for both islands */
 .toggle-pill button {
     min-height: 36px;
     border: none;
     background: transparent;
     border-radius: 2rem;
-    padding: 0 0.7rem;
+    padding: 0 0.45rem;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.78rem;
     font-weight: 500;
@@ -363,8 +465,7 @@ watchEffect(() => {
 .login {
     display: flex;
     align-items: center;
-    min-height: 36px;
-    margin: 0 0.2rem;
+    min-height: var(--login-h);
     padding: 0 0.9rem;
     border-radius: 1.2rem;
     background: #3a7d5c;
@@ -443,16 +544,24 @@ watchEffect(() => {
     font-size: 0.8rem;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .toast {
         top: calc(var(--safe-top) + var(--appbar-h) + 4rem);
-        left: calc(var(--safe-left) + var(--edge) + min(360px, 45vw) + 1rem);
+        left: calc(var(--safe-left) + var(--sheet-space) + 1rem);
         transform: none;
     }
 }
 
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    .toast {
+        top: calc(var(--safe-top) + var(--appbar-h) + 1rem);
+        left: calc(var(--safe-left) + var(--edge) + var(--sheet-space));
+    }
+}
+
 /* Desktop: in the bottom-left corner, where it always was */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 501px) {
     .toast {
         top: auto;
         bottom: 1.5rem;

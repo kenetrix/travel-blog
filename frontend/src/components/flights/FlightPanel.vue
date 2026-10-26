@@ -4,6 +4,7 @@ import { useTravelStore } from '../stores/store'
 import AirportSelect from './AirportSelect.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import AppSheet from '../ui/AppSheet.vue'
+import { useLayout } from '../ui/useLayout'
 import { OFFLINE_HINT } from '../ui/offline'
 import { vEnterNext } from '../ui/enterNext'
 import { distanceKm, formatDistance } from './distance'
@@ -13,6 +14,7 @@ import type { Flight } from '../stores/store'
 const format = (km: number) => formatDistance(km, store.settings.distanceUnit)
 
 const store = useTravelStore()
+const { layout } = useLayout()
 
 onUnmounted(() => store.highlightFlight(null))
 
@@ -49,7 +51,8 @@ const totalKm = computed(() =>
     store.flights.reduce((sum, f) => sum + distanceKm(f.from, f.to), 0)
 )
 
-const expanded = ref(false)
+// Phones start with the map; side sheets start open
+const expanded = ref(layout.value !== 'phone')
 
 // Touch screens have no hover: a tap highlights a flight, a second tap clears
 function toggleHighlight(id: string) {
@@ -222,7 +225,7 @@ label {
 }
 
 /* Desktop: a short list, the panel floats over the map */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 501px) {
     .flights {
         max-height: 9rem;
         overflow-y: auto;

@@ -4,7 +4,8 @@ import { useLayout } from './useLayout'
 import { registerSheet } from './mapInsets'
 
 // Phone: bottom sheet that collapses to a peek. Tablet: side sheet.
-// Desktop: floating panel on the given side.
+// Desktop: floating panel on the given side. Outside phones, `expanded`
+// false slides the sheet off screen, leaving a tab to bring it back.
 const props = withDefaults(
     defineProps<{ side?: 'left' | 'right'; wide?: boolean; label: string }>(),
     { side: 'left', wide: false }
@@ -62,6 +63,9 @@ function onPointerUp(e: PointerEvent) {
     dragY.value = null
 }
 
+const besideMap = computed(() => layout.value !== 'phone')
+const hidden = computed(() => besideMap.value && !expanded.value)
+
 function onKey(e: KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
@@ -79,7 +83,7 @@ let unregister = () => {}
 onMounted(() => {
     unregister = registerSheet(() => {
         const el = sheet.value
-        if (!el) return {}
+        if (!el || hidden.value) return {}
         const gap = 16
         if (layout.value === 'phone') {
             return { bottom: el.offsetHeight - offsetFor(expanded.value) + gap }
@@ -116,7 +120,29 @@ onBeforeUnmount(() => unregister())
         >
             <span class="grip" />
         </div>
-        <div class="content" data-scroll>
+        <button
+            type="button"
+            class="tab"
+            :aria-expanded="expanded"
+            :aria-label="expanded ? `Hide ${label}` : `Show ${label}`"
+            :title="expanded ? `Hide ${label}` : `Show ${label}`"
+            @click="expanded = !expanded"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M15 6l-6 6 6 6" />
+            </svg>
+        </button>
+        <div class="content" data-scroll :inert="hidden">
             <slot />
         </div>
     </section>
@@ -151,6 +177,11 @@ onBeforeUnmount(() => unregister())
 
 .sheet.expanded {
     transform: none;
+}
+
+/* Hide/show tab of side sheets; phones use the handle instead */
+.tab {
+    display: none;
 }
 
 .handle {
@@ -189,13 +220,14 @@ onBeforeUnmount(() => unregister())
 }
 
 /* Tablet: side sheet below the app bar */
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .sheet {
         top: calc(var(--appbar-h) + var(--safe-top) + 2rem);
         left: calc(var(--edge) + var(--safe-left));
         right: auto;
         bottom: calc(var(--edge) + var(--safe-bottom));
-        width: min(360px, 45vw);
+        width: var(--sheet-w);
         max-height: none;
         padding: 0;
         border: 1px solid var(--line);
@@ -213,10 +245,58 @@ onBeforeUnmount(() => unregister())
         overflow-y: auto;
         padding: 1.1rem;
     }
+
+    /* Hidden: slid out to the left, only the tab stays on screen */
+    .sheet:not(.expanded) {
+        transform: translateX(calc(-100% - var(--edge) - var(--safe-left)));
+    }
+
+    .tab {
+        position: absolute;
+        top: 0.8rem;
+        left: 100%;
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: var(--touch);
+        margin-left: 1px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-left: none;
+        border-radius: 0 0.6rem 0.6rem 0;
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+        color: var(--muted);
+        cursor: pointer;
+    }
+
+    .tab:hover {
+        color: var(--text);
+    }
+
+    .tab svg {
+        transition: transform 0.25s;
+    }
+
+    .sheet:not(.expanded) .tab svg {
+        transform: rotate(180deg);
+    }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    .sheet {
+        top: calc(var(--safe-top) + var(--edge));
+    }
+
+    .content,
+    .sheet:not(.expanded) .content {
+        gap: 0.6rem;
+        padding: 0.8rem;
+    }
 }
 
 /* Desktop: floating panel that grows with its content */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 501px) {
     .sheet {
         top: 5.2rem;
         bottom: auto;
@@ -231,6 +311,28 @@ onBeforeUnmount(() => unregister())
     .sheet.right {
         left: auto;
         right: calc(var(--edge) + var(--safe-right));
+    }
+
+    .sheet.right:not(.expanded) {
+        transform: translateX(calc(100% + var(--edge) + var(--safe-right)));
+    }
+
+    /* Mirrored: the tab sits on the left edge and points right */
+    .sheet.right .tab {
+        left: auto;
+        right: 100%;
+        margin: 0 1px 0 0;
+        border: 1px solid var(--line);
+        border-right: none;
+        border-radius: 0.6rem 0 0 0.6rem;
+    }
+
+    .sheet.right .tab svg {
+        transform: rotate(180deg);
+    }
+
+    .sheet.right:not(.expanded) .tab svg {
+        transform: none;
     }
 }
 </style>

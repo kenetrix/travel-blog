@@ -176,11 +176,12 @@ watch(
 }
 
 /* Tablet: bottom right, beside the side sheet */
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .stats {
         top: auto;
         bottom: calc(var(--safe-bottom) + 1.2rem);
-        left: calc(var(--safe-left) + var(--edge) + min(360px, 45vw) + 1rem);
+        left: calc(var(--safe-left) + var(--sheet-space) + 1rem);
         transform: none;
         gap: 1.2rem;
         padding: 0.45rem 1.1rem;
@@ -188,8 +189,17 @@ watch(
     }
 }
 
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    .stats {
+        bottom: calc(var(--safe-bottom) + var(--edge));
+        left: calc(var(--safe-left) + var(--edge) + var(--sheet-space));
+        padding: 0.3rem 0.8rem;
+        font-size: 0.72rem;
+    }
+}
+
 /* Desktop: centred at the bottom */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 501px) {
     .stats {
         bottom: 1.5rem;
         left: 50%;
@@ -198,7 +208,7 @@ watch(
 }
 
 /* Phones: zoom and attribution move to the top right, away from the sheet */
-@media (max-width: 599px) {
+@media (max-width: 479px), (max-width: 599px) and (min-height: 501px) {
     .map :deep(.maplibregl-ctrl-bottom-right) {
         top: calc(var(--safe-top) + var(--appbar-h) + 5.4rem);
         bottom: auto;

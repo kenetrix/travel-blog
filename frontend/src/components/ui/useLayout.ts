@@ -2,9 +2,11 @@ import { computed, onScopeDispose, ref, type Ref } from 'vue'
 
 export type Layout = 'phone' | 'tablet' | 'desktop'
 
-// Same breakpoints as the media queries in style.css
-const TABLET = '(min-width: 600px)'
-const DESKTOP = '(min-width: 1024px)'
+// Same breakpoints as the media queries in style.css; phones held sideways
+// use the tablet layout
+const TABLET =
+    '(min-width: 600px), (orientation: landscape) and (max-height: 500px) and (min-width: 480px)'
+const DESKTOP = '(min-width: 1024px) and (min-height: 501px)'
 const COARSE = '(pointer: coarse)'
 
 function query(media: string): Ref<boolean> {

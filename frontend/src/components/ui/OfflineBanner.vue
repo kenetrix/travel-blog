@@ -50,16 +50,25 @@ const store = useTravelStore()
 }
 
 /* Tablet: beside the side sheet */
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .offline:not(.inline) {
         top: calc(var(--safe-top) + var(--appbar-h) + 2rem);
-        left: calc(var(--safe-left) + var(--edge) + min(360px, 45vw) + 1rem);
-        max-width: calc(100vw - min(360px, 45vw) - 4rem);
+        left: calc(var(--safe-left) + var(--sheet-space) + 1rem);
+        max-width: calc(100vw - var(--sheet-space) - 4rem);
         transform: none;
     }
 }
 
-@media (min-width: 1024px) {
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    .offline:not(.inline) {
+        top: calc(var(--safe-top) + var(--appbar-h) + 1rem);
+        left: auto;
+        right: calc(var(--safe-right) + var(--edge));
+    }
+}
+
+@media (min-width: 1024px) and (min-height: 501px) {
     .offline:not(.inline) {
         top: 4.6rem;
         left: 50%;

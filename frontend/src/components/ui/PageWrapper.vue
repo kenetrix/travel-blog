@@ -63,7 +63,8 @@ header {
     border-bottom: 1px solid var(--line);
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     header {
         gap: 1.2rem;
         padding: calc(1.2rem + var(--safe-top)) calc(1.5rem + var(--safe-right))
@@ -112,7 +113,8 @@ h1 {
     display: none;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     h1 {
         font-size: 1.3rem;
     }
@@ -130,6 +132,21 @@ h1 {
     }
 }
 
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    header {
+        padding-top: calc(0.4rem + var(--safe-top));
+        padding-bottom: 0.4rem;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+    }
+
+    .sub {
+        display: none;
+    }
+}
+
 main {
     flex: 1;
     overflow-y: auto;
@@ -138,7 +155,8 @@ main {
         calc(1.5rem + var(--safe-bottom)) calc(1rem + var(--safe-left));
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     main {
         padding: 1.5rem calc(1.5rem + var(--safe-right))
             calc(1.5rem + var(--safe-bottom)) calc(1.5rem + var(--safe-left));

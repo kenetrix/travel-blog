@@ -12,9 +12,12 @@ body {
     overscroll-behavior: none;
 }
 
-/* Layout is mobile first: base styles are for phones, wider screens add
-   @media (min-width: 600px) for tablets and (min-width: 1024px) for
-   desktops. Keep in sync with useLayout.ts. */
+/* Layout is mobile first: base styles are for phones. Tablets and phones
+   held sideways (short and wide) share the side-sheet layout, desktops need
+   width and height. Keep in sync with useLayout.ts:
+   tablet:  (min-width: 600px), (orientation: landscape) and (max-height: 500px) and (min-width: 480px)
+   desktop: (min-width: 1024px) and (min-height: 501px)
+   The 480px keeps a portrait phone with its keyboard open in the phone layout. */
 :root {
     --touch: 44px;
     --gap: 0.75rem;
@@ -26,12 +29,37 @@ body {
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --field-font: 16px;
+    --sheet-w: min(360px, 45vw);
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     :root {
         --edge: 1.2rem;
     }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+    :root {
+        --appbar-h: 3rem;
+        --edge: 0.5rem;
+        --sheet-w: min(320px, 42vw);
+    }
+}
+
+/* Width the side sheet covers on tablets and phones held sideways, so the
+   app bar, stats and messages can sit beside it: the sheet when open, its
+   tab when hidden, nothing without a sheet */
+.wrapper {
+    --sheet-space: 0px;
+}
+
+.wrapper:has(.sheet) {
+    --sheet-space: calc(2rem + var(--edge));
+}
+
+.wrapper:has(.sheet.expanded) {
+    --sheet-space: calc(var(--sheet-w) + var(--edge));
 }
 
 /* Below 16px, mobile browsers zoom into a focused field */
@@ -58,6 +86,8 @@ button:disabled {
     --wishlist: #9d7fd6;
     --flight: #5fd4e4;
     --on-status: #1a1c1e;
+    /* Colors.water; also theme-color in index.html */
+    --map-water: #373838;
 }
 
 /* Theme colours of panels and pages. data-theme on <html> comes from the

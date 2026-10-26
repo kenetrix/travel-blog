@@ -93,7 +93,8 @@ h3 {
     gap: 0.5rem;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px),
+    (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .actions {
         flex-direction: row;
         justify-content: flex-end;
