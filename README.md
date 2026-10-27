@@ -39,7 +39,7 @@
 
 ## 🚀 Getting started
 
-**You need** [Go 1.26+](https://go.dev/dl/) and [Node.js 20.19+](https://nodejs.org).
+**You need** [Go 1.27.3+](https://go.dev/dl/) and [Node.js 26.12.1+](https://nodejs.org).
 
 ```bash
 npm install
