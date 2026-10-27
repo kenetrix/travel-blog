@@ -1,4 +1,4 @@
--- user_id refers to an account in the configuration database, so no foreign key:
+-- user_id refers to an account in the accounts database, so no foreign key:
 -- UserDataRepo.DeleteAll removes a user's rows.
 CREATE TABLE country_entries (
 	user_id TEXT NOT NULL,

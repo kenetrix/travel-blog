@@ -33,10 +33,11 @@ schema version 1, split by area (travel data, photos). Until the `v1.0.0` tag
 exists, change it in place and recreate the test database; from `v1.0.0` on,
 add `002_<name>.sql`, `003_...` as usual and never edit older ones.
 
-Settings of the installation (registration, single sign-on) and the user accounts (users,
-their settings, sessions and OIDC identities) live in a second database, `data/config.db`,
-with its own migrations in `migrations/config/` under the same rules. Deleting
-`data/travel-blog.db` therefore keeps all accounts. The databases cannot reference each other, so
+The user accounts (users, their settings, sessions and OIDC identities) live in a second
+database, `data/accounts.db`, and the settings of the installation (registration, single
+sign-on) in a third, `data/config.db`; their migrations are in `migrations/accounts/` and
+`migrations/config/` under the same rules. Deleting `data/travel-blog.db` therefore keeps all
+accounts. The databases cannot reference each other, so
 `user_id` in the travel data has no foreign key and `UserDataRepo.DeleteAll` removes a user's
 rows when the account is deleted.
 Before pending migrations run on an existing database, a consistent copy is saved next to

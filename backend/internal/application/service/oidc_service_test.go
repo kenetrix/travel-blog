@@ -173,7 +173,7 @@ func TestOIDCRejectsMissingSubject(t *testing.T) {
 func TestOIDCAccountsAreListedForAdmins(t *testing.T) {
 	e := newEnv(t)
 	admin, _ := e.register(t, "boss")
-	if _, err := e.configDB.Exec(`UPDATE users SET role = 'admin' WHERE id = ?`, admin); err != nil {
+	if _, err := e.accountsDB.Exec(`UPDATE users SET role = 'admin' WHERE id = ?`, admin); err != nil {
 		t.Fatal(err)
 	}
 	e.accounts.LoginOIDC(claims("s1", "ada", "", false))
@@ -193,7 +193,7 @@ func TestOIDCIdentityIsRemovedWithAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	if err := e.configDB.QueryRow(`SELECT COUNT(*) FROM oidc_identities`).Scan(&n); err != nil || n != 0 {
+	if err := e.accountsDB.QueryRow(`SELECT COUNT(*) FROM oidc_identities`).Scan(&n); err != nil || n != 0 {
 		t.Errorf("identities left: %d %v", n, err)
 	}
 }

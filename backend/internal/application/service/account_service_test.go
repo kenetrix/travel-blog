@@ -84,7 +84,7 @@ func TestExpiredSession(t *testing.T) {
 	e := newEnv(t)
 	_, token := e.register(t, "alice")
 	// Fast-forward past the session lifetime
-	if _, err := e.configDB.Exec(`UPDATE sessions SET expires_at = '2000-01-01T00:00:00Z'`); err != nil {
+	if _, err := e.accountsDB.Exec(`UPDATE sessions SET expires_at = '2000-01-01T00:00:00Z'`); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, err := e.accounts.Authenticate(token); ok || err != nil {

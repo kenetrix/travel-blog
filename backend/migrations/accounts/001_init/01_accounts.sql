@@ -1,4 +1,4 @@
--- Accounts live apart from the travel data: deleting that database keeps them.
+-- Every user has their own data, kept in the travel database.
 CREATE TABLE users (
 	id TEXT PRIMARY KEY,
 	username TEXT NOT NULL UNIQUE, -- public name, lowercase

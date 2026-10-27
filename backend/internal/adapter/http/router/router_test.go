@@ -14,6 +14,7 @@ import (
 	"travel-blog/backend/internal/adapter/repository/sqlite"
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
+	accountmigrations "travel-blog/backend/migrations/accounts"
 	configmigrations "travel-blog/backend/migrations/config"
 	migrations "travel-blog/backend/migrations/data"
 )
@@ -33,6 +34,11 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	accountsDB, err := sqlite.NewDB(filepath.Join(dir, "accounts.db"), accountmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { accountsDB.Close() })
 	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
 	if err != nil {
 		t.Fatal(err)
@@ -45,8 +51,8 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 	}
 	t.Cleanup(func() { files.Close() })
 
-	users := sqlite.NewUserRepo(configDB)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings)
+	users := sqlite.NewUserRepo(accountsDB)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(accountsDB), sqlite.NewUserDataRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 	return router.New(handler.New(travel, trips, accounts), auth.Sessions(accounts)), accounts

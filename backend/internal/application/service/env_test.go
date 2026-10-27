@@ -10,6 +10,7 @@ import (
 	"travel-blog/backend/internal/adapter/storage"
 	"travel-blog/backend/internal/application/service"
 	"travel-blog/backend/internal/domain"
+	accountmigrations "travel-blog/backend/migrations/accounts"
 	configmigrations "travel-blog/backend/migrations/config"
 	migrations "travel-blog/backend/migrations/data"
 )
@@ -19,14 +20,15 @@ const local = domain.UserID("local")
 
 // env wires all services on a fresh database and an empty photo folder.
 type env struct {
-	db        *sql.DB
-	configDB  *sql.DB
-	settings  *sqlite.SettingsRepo
-	photoDir  string
-	accounts  *service.AccountService
-	travel    *service.TravelService
-	trips     *service.TripService
-	photos    *service.PhotoService
+	db         *sql.DB
+	accountsDB *sql.DB
+	configDB   *sql.DB
+	settings   *sqlite.SettingsRepo
+	photoDir   string
+	accounts   *service.AccountService
+	travel     *service.TravelService
+	trips      *service.TripService
+	photos     *service.PhotoService
 }
 
 func newEnv(t *testing.T) *env {
@@ -37,6 +39,11 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
+	accountsDB, err := sqlite.NewDB(filepath.Join(dir, "accounts.db"), accountmigrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { accountsDB.Close() })
 	configDB, err := sqlite.NewDB(filepath.Join(dir, "config.db"), configmigrations.FS)
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +57,7 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { files.Close() })
 
-	users := sqlite.NewUserRepo(configDB)
+	users := sqlite.NewUserRepo(accountsDB)
 	locationRepo := sqlite.NewLocationRepo(db)
 	photoRepo := sqlite.NewPhotoRepo(db)
 	if err := users.Create(domain.User{
@@ -60,14 +67,15 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	return &env{
-		db:        db,
-		configDB:  configDB,
-		settings:  settings,
-		photoDir:  photoDir,
-		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings),
-		travel:    service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users),
-		trips:     service.NewTripService(sqlite.NewTripRepo(db), files, users),
-		photos:    service.NewPhotoService(locationRepo, photoRepo, files),
+		db:         db,
+		accountsDB: accountsDB,
+		configDB:   configDB,
+		settings:   settings,
+		photoDir:   photoDir,
+		accounts:   service.NewAccountService(users, sqlite.NewSessionRepo(accountsDB), sqlite.NewUserDataRepo(db), files, settings),
+		travel:     service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users),
+		trips:      service.NewTripService(sqlite.NewTripRepo(db), files, users),
+		photos:     service.NewPhotoService(locationRepo, photoRepo, files),
 	}
 }
 

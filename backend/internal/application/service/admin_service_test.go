@@ -69,7 +69,7 @@ func TestEnsureAdmin(t *testing.T) {
 func TestEnsureAdminKeepsExistingAccount(t *testing.T) {
 	e := newEnv(t)
 	// A regular account already uses the name "admin" (before it was reserved)
-	if _, err := e.configDB.Exec(`INSERT INTO users (id, username, password_hash, created_at)
+	if _, err := e.accountsDB.Exec(`INSERT INTO users (id, username, password_hash, created_at)
 		VALUES ('legacy', 'admin', 'x', '2026-01-01T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}

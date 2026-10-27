@@ -46,7 +46,7 @@ func newOIDCAdminEnv(t *testing.T, fromEnv *domain.OIDCConfig) *oidcAdminEnv {
 	t.Helper()
 	e := newEnv(t)
 	admin, _ := e.register(t, "boss")
-	if _, err := e.configDB.Exec(`UPDATE users SET role = 'admin' WHERE id = ?`, admin); err != nil {
+	if _, err := e.accountsDB.Exec(`UPDATE users SET role = 'admin' WHERE id = ?`, admin); err != nil {
 		t.Fatal(err)
 	}
 	user, _ := e.register(t, "alice")
