@@ -3,7 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { useTravelStore, type Flight, type FlightUpdate } from '../stores/store'
 import { t } from '../../i18n'
 import { vEnterNext } from '../ui/enterNext'
-import { distanceKm, estimateDurationMinutes } from './distance'
+import { estimateDurationMinutes } from './distance'
+import { distanceKm } from '../geo/geo'
 import { formatDay, formatDistance, formatDuration } from '../../i18n/format'
 import {
     flightradarUrl,

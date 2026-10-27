@@ -3,13 +3,15 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { MapLibreProvider } from '../worldmap/MapLibreProvider'
 import { useTravelStore } from '../stores/store'
-import { distanceKm } from '../flights/distance'
+import { distanceKm } from '../geo/geo'
 import { language, t } from '../../i18n'
 import { countryLabels } from './countryLabels'
 import { formatDistance, formatNumber } from '../../i18n/format'
 import { useLayout } from '../ui/useLayout'
 import { sheetInsets } from '../ui/mapInsets'
 import type { MapInsets } from './MapProvider'
+import { PLACES_MIN_ZOOM, placesOf } from './places'
+import { PIN_HEIGHT, PIN_SVG, PIN_WIDTH } from './pin'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const store = useTravelStore()
@@ -23,6 +25,10 @@ const {
     selectedFlightId,
     flightFocus,
     visitedCount,
+    tripMap,
+    tripFocus,
+    pinMode,
+    pin,
 } = storeToRefs(store)
 
 const EARTH_CIRCUMFERENCE_KM = 40075
@@ -63,20 +69,129 @@ function insets(): MapInsets {
 
 onMounted(() => {
     if (!mapContainer.value) return
-    provider.onReady(syncMap)
+    // A trip opened by URL asks for its focus before the map has loaded
+    provider.onReady(() => {
+        syncMap()
+        if (tripMap.value) fitTrip()
+    })
     provider.mount(mapContainer.value)
 
+    // While a trip is open, clicks belong to the trip editor
     provider.onCountryClick((iso) => {
-        if (props.view !== 'countries') return
+        if (props.view !== 'countries' || tripMap.value) return
         store.selectCountry(iso)
     })
     // A click away from all routes clears the selection
     provider.onFlightClick((id) => {
-        if (props.view === 'flights') store.selectFlight(id)
+        if (props.view === 'flights' && !tripMap.value) store.selectFlight(id)
     })
+    // A click on a place name sets the pin exactly on that place
+    provider.onMapClick((point, place) => {
+        if (pinMode.value !== 'click') return
+        if (place) {
+            const iso = provider.countryAt(place.lng, place.lat) ?? point.iso
+            store.setPin({ lng: place.lng, lat: place.lat, iso }, place.name)
+        } else {
+            store.setPin(point)
+        }
+    })
+    provider.onMoveEnd(() => {
+        updatePlaces()
+        if (pinMode.value === 'center') readCenterPin()
+    })
+    window.addEventListener('resize', placeCenterPin)
 })
 
-onUnmounted(() => provider.destroy())
+onUnmounted(() => {
+    window.removeEventListener('resize', placeCenterPin)
+    provider.destroy()
+})
+
+// --- Trip --------------------------------------------------------------
+
+// Names of the places in the countries in view, while a trip is edited and
+// the map is zoomed in far enough
+let placesShown = false
+let placesRequest = 0
+async function updatePlaces() {
+    const request = ++placesRequest
+    if (!tripMap.value?.editing || provider.getZoom() < PLACES_MIN_ZOOM) {
+        if (placesShown) provider.showPlaces(null)
+        placesShown = false
+        return
+    }
+    const places = await placesOf(provider.countriesInView())
+    // The map moved on, or the editor closed, while the files loaded
+    if (request !== placesRequest) return
+    provider.showPlaces(places)
+    placesShown = true
+}
+
+watch(
+    tripMap,
+    (trip) => {
+        provider.showTrip(trip?.stops ?? null)
+        updatePlaces()
+    },
+    { deep: true }
+)
+
+function fitTrip() {
+    const stops = tripMap.value?.stops ?? []
+    if (stops.length) provider.fitPoints(stops, insets())
+    else if (tripFocus.value.iso) {
+        provider.fitCountry(tripFocus.value.iso, insets())
+    }
+}
+
+// After the sheet had a moment to change
+watch(
+    () => tripFocus.value.count,
+    () => setTimeout(fitTrip, 50)
+)
+
+// The pin set by click is a map marker; the centre pin is an overlay
+watch([pin, pinMode], ([point, mode]) =>
+    provider.setPin(mode === 'click' ? point : null)
+)
+
+// Screen point of the centre pin's tip: the middle of the free map area
+const centerPin = ref<{ x: number; y: number } | null>(null)
+
+function placeCenterPin() {
+    const el = mapContainer.value
+    if (pinMode.value !== 'center' || !el) {
+        centerPin.value = null
+        return
+    }
+    const free = insets()
+    centerPin.value = {
+        x: free.left + (el.clientWidth - free.left - free.right) / 2,
+        y: free.top + (el.clientHeight - free.top - free.bottom) / 2,
+    }
+}
+
+function readCenterPin() {
+    if (!centerPin.value) return
+    const point = provider.pointAt(centerPin.value.x, centerPin.value.y)
+    if (point) store.setPin(point)
+}
+
+watch(pinMode, (mode) => {
+    if (mode !== 'center') return placeCenterPin()
+    // After the sheet collapsed. A pin set before (moving a stop) is brought
+    // under the centre pin; otherwise the pin points where the map is.
+    setTimeout(() => {
+        placeCenterPin()
+        if (!centerPin.value) return
+        if (pin.value) {
+            const { x, y } = centerPin.value
+            provider.panTo(pin.value, x, y, 8)
+        } else {
+            readCenterPin()
+        }
+    }, 300)
+})
 
 watch(
     language,
@@ -106,6 +221,7 @@ function syncMap() {
         props.view === 'flights'
     )
     provider.highlightFlight(highlightedFlightId.value)
+    provider.showTrip(tripMap.value?.stops ?? null)
 }
 
 // Re-sync whenever store or view changes
@@ -144,7 +260,20 @@ watch(
     <div
         ref="mapContainer"
         class="map"
-        :class="{ 'no-pointer': view !== 'countries' }"
+        :class="{
+            'no-pointer': view !== 'countries' || !!tripMap,
+            placing: pinMode === 'click',
+        }"
+    />
+    <!-- The map moves underneath; the tip marks the place -->
+    <div
+        v-if="pinMode === 'center' && centerPin"
+        class="center-pin"
+        :style="{
+            left: `${centerPin.x - PIN_WIDTH / 2}px`,
+            top: `${centerPin.y - PIN_HEIGHT}px`,
+        }"
+        v-html="PIN_SVG"
     />
     <!-- Stats -->
     <div class="stats">
@@ -189,6 +318,23 @@ watch(
 
 .map.no-pointer :deep(.maplibregl-canvas.route-hover) {
     cursor: pointer !important;
+}
+
+.map.placing :deep(.maplibregl-canvas) {
+    cursor: crosshair !important;
+}
+
+.center-pin {
+    position: absolute;
+    z-index: 12;
+    line-height: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
+}
+
+:deep(.trip-pin) {
+    line-height: 0;
+    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
 }
 
 /* Stats: phones show them under the app bar, the sheet covers the bottom */

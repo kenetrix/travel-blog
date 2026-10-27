@@ -16,5 +16,7 @@
         "src/**/*.tsx",
         "src/**/*.vue",
         "generated/**/*.ts"
-    ]
+    ],
+    // Run by `npm test` with Node, which needs the .ts extension in imports
+    "exclude": ["src/**/*.test.ts"]
 }

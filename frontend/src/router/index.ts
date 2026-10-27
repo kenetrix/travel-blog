@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TripPage from '../components/trips/TripPage.vue'
+import TripEditor from '../components/trips/TripEditor.vue'
 import AuthPage from '../components/account/AuthPage.vue'
 import ProfilePage from '../components/account/ProfilePage.vue'
 import PasswordPage from '../components/account/PasswordPage.vue'
@@ -10,11 +11,10 @@ export const router = createRouter({
     routes: [
         // The map is always rendered by App; the home route adds nothing on top
         { path: '/', name: 'home', component: { render: () => null } },
-        {
-            path: '/countries/:iso/trips/new',
-            name: 'trip-new',
-            component: TripPage,
-        },
+        // ?country=<alpha-3>: the country the trip is started from
+        { path: '/trips/new', name: 'trip-new', component: TripEditor },
+        { path: '/trips/:id', name: 'trip', component: TripPage },
+        { path: '/trips/:id/edit', name: 'trip-edit', component: TripEditor },
         { path: '/login', name: 'login', component: AuthPage },
         { path: '/account', name: 'account', component: ProfilePage },
         { path: '/profile', redirect: { name: 'account' } },

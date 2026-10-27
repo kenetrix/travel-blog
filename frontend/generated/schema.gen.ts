@@ -94,6 +94,53 @@ export interface paths {
         patch: operations['updateFlight']
         trace?: never
     }
+    '/trips': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The user's trips */
+        get: operations['listTrips']
+        put?: never
+        /**
+         * Add a trip with its stops
+         * @description Without `visibility`, the trip gets the user's default. Stops take the trip's visibility.
+         */
+        post: operations['createTrip']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/trips/{id}': {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                id: string
+            }
+            cookie?: never
+        }
+        /** A trip with its notes and stops */
+        get: operations['getTrip']
+        /**
+         * Replace a trip with its stops
+         * @description Saved in one transaction: stops with an `id` are updated, the others
+         *     created, and stops missing from the list deleted with their photos.
+         *     Without `visibility`, the trip keeps its own.
+         */
+        put: operations['replaceTrip']
+        post?: never
+        /** Remove a trip with its stops and their photos */
+        delete: operations['deleteTrip']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
     '/auth/register': {
         parameters: {
             query?: never
@@ -561,6 +608,142 @@ export interface components {
             /** @description Alpha-3 codes newly marked visited by this flight */
             countriesUpdated: string[]
         }
+        TripStopInput: {
+            /**
+             * Format: uuid
+             * @description A stop of this trip to keep; without it, the stop is new
+             */
+            id?: string
+            /** @example Vienna */
+            name: string
+            /**
+             * @description Alpha-3 code of the country at the stop
+             * @example AUT
+             */
+            country: string
+            /**
+             * Format: double
+             * @example 48.2082
+             */
+            lat: number
+            /**
+             * Format: double
+             * @example 16.3738
+             */
+            lng: number
+            /** @description Day of arrival (YYYY-MM-DD); empty for none */
+            arrival?: string
+            notes?: string
+        }
+        /**
+         * @description The whole trip. Stops are in visiting order; stops of the trip that are
+         *     missing here are deleted with their photos.
+         */
+        TripInput: {
+            /** @example Danube 2024 */
+            title: string
+            /** @description First day (YYYY-MM-DD); empty for none */
+            startsOn?: string
+            /** @description Last day (YYYY-MM-DD), not before `startsOn`; empty for none */
+            endsOn?: string
+            notes?: string
+            visibility?: components['schemas']['Visibility']
+            stops: components['schemas']['TripStopInput'][]
+        }
+        TripStop: {
+            /** Format: uuid */
+            id: string
+            /** @example Vienna */
+            name: string
+            /**
+             * @description Alpha-3 code
+             * @example AUT
+             */
+            country: string
+            /**
+             * Format: double
+             * @example 48.2082
+             */
+            lat: number
+            /**
+             * Format: double
+             * @example 16.3738
+             */
+            lng: number
+            /**
+             * Format: date
+             * @example 2024-05-01
+             */
+            arrival?: string
+            notes: string
+        }
+        TripSummary: {
+            /** Format: uuid */
+            id: string
+            /** @example Danube 2024 */
+            title: string
+            /**
+             * Format: date
+             * @example 2024-05-01
+             */
+            startsOn?: string
+            /**
+             * Format: date
+             * @example 2024-05-14
+             */
+            endsOn?: string
+            visibility: components['schemas']['Visibility']
+            /**
+             * @description Alpha-3 codes of the stops' countries, in the order they are first reached
+             * @example [
+             *       "AUT",
+             *       "SVK",
+             *       "HUN"
+             *     ]
+             */
+            countries: string[]
+            /** @example 4 */
+            stopCount: number
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+        }
+        /** @description A trip with its notes and stops; the other fields are those of `TripSummary` */
+        Trip: {
+            /** Format: uuid */
+            id: string
+            /** @example Danube 2024 */
+            title: string
+            /**
+             * Format: date
+             * @example 2024-05-01
+             */
+            startsOn?: string
+            /**
+             * Format: date
+             * @example 2024-05-14
+             */
+            endsOn?: string
+            visibility: components['schemas']['Visibility']
+            /**
+             * @example [
+             *       "AUT",
+             *       "SVK",
+             *       "HUN"
+             *     ]
+             */
+            countries: string[]
+            /** @example 4 */
+            stopCount: number
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+            notes: string
+            /** @description In visiting order */
+            stops: components['schemas']['TripStop'][]
+        }
         Profile: {
             /** @description Public handle, lowercase */
             username: string
@@ -1020,6 +1203,143 @@ export interface operations {
                 content?: never
             }
             400: components['responses']['BadRequest']
+            401: components['responses']['Unauthorized']
+            404: components['responses']['NotFound']
+        }
+    }
+    listTrips: {
+        parameters: {
+            query?: never
+            header?: {
+                /** @description ETag of the client's cached copy */
+                'If-None-Match'?: components['parameters']['IfNoneMatch']
+            }
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            /** @description Oldest first, without notes and stops */
+            200: {
+                headers: {
+                    ETag: components['headers']['ETag']
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': components['schemas']['TripSummary'][]
+                }
+            }
+            /** @description The client's copy is current */
+            304: {
+                headers: {
+                    ETag: components['headers']['ETag']
+                    [name: string]: unknown
+                }
+                content?: never
+            }
+            401: components['responses']['Unauthorized']
+        }
+    }
+    createTrip: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['TripInput']
+            }
+        }
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    ETag: components['headers']['ETag']
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': components['schemas']['Trip']
+                }
+            }
+            400: components['responses']['BadRequest']
+            401: components['responses']['Unauthorized']
+        }
+    }
+    getTrip: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                id: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            /** @description The trip */
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': components['schemas']['Trip']
+                }
+            }
+            401: components['responses']['Unauthorized']
+            404: components['responses']['NotFound']
+        }
+    }
+    replaceTrip: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                id: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['TripInput']
+            }
+        }
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    ETag: components['headers']['ETag']
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': components['schemas']['Trip']
+                }
+            }
+            400: components['responses']['BadRequest']
+            401: components['responses']['Unauthorized']
+            404: components['responses']['NotFound']
+        }
+    }
+    deleteTrip: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                id: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    ETag: components['headers']['ETag']
+                    [name: string]: unknown
+                }
+                content?: never
+            }
             401: components['responses']['Unauthorized']
             404: components['responses']['NotFound']
         }

@@ -31,6 +31,28 @@ export interface Flight {
 
 export type FlightUpdate = Schemas['FlightUpdate']
 
+export type TripSummary = Schemas['TripSummary']
+export type Trip = Schemas['Trip']
+export type TripInput = Schemas['TripInput']
+
+// A point on the map with the country under it (null on water)
+export interface MapPoint {
+    lng: number
+    lat: number
+    iso: string | null
+}
+
+// What the map shows of the trip open in the summary or editor
+export interface TripMap {
+    stops: { lng: number; lat: number; name: string }[]
+    // Editing: place names are shown and clicks do not open countries
+    editing: boolean
+}
+
+// How the pin is placed: by click, or fixed in the middle of the map while
+// the map moves underneath (touch)
+export type PinMode = 'off' | 'click' | 'center'
+
 export type CountryStatus = Schemas['CountryStatus']
 export type CountryDetails = Schemas['CountryDetails']
 export type Visibility = Schemas['Visibility']
@@ -77,6 +99,22 @@ export const useTravelStore = defineStore('travel', () => {
     const visibility = ref<Record<string, Visibility>>({})
     // Flights as stored on the server (IATA codes only)
     const flightRecords = ref<Schemas['Flight'][]>([])
+    const trips = ref<TripSummary[]>([])
+    // Trips with their stops, filled when a trip is opened
+    const tripDetails = ref<Record<string, Trip>>({})
+
+    const tripMap = ref<TripMap | null>(null)
+    // Bumped to make the map fit the trip's stops, or the country when the
+    // trip has none yet
+    const tripFocus = ref<{ count: number; iso: string | null }>({
+        count: 0,
+        iso: null,
+    })
+    const pinMode = ref<PinMode>('off')
+    // Where the pin points; set by the map
+    const pin = ref<MapPoint | null>(null)
+    // Name of a place label clicked on the map, which set the pin exactly
+    const pinPlace = ref<string | null>(null)
 
     const selectedIso = ref<string | null>(null)
     // Unsaved checkbox state of the open country modal, shown on the map only
@@ -137,6 +175,8 @@ export const useTravelStore = defineStore('travel', () => {
         detailsLoaded.clear()
         visibility.value = {}
         flightRecords.value = []
+        trips.value = []
+        tripDetails.value = {}
         selectedIso.value = null
         selectedFlightId.value = null
         removeSnapshot()
@@ -158,6 +198,8 @@ export const useTravelStore = defineStore('travel', () => {
             detailsLoaded: [...detailsLoaded],
             visibility: visibility.value,
             flights: flightRecords.value,
+            trips: trips.value,
+            tripDetails: tripDetails.value,
         })
     }
 
@@ -176,6 +218,8 @@ export const useTravelStore = defineStore('travel', () => {
         for (const iso of s.detailsLoaded) detailsLoaded.add(iso)
         visibility.value = s.visibility
         flightRecords.value = s.flights
+        trips.value = s.trips ?? []
+        tripDetails.value = s.tripDetails ?? {}
         authState.value = 'ready'
         return true
     }
@@ -191,6 +235,8 @@ export const useTravelStore = defineStore('travel', () => {
             details,
             visibility,
             flightRecords,
+            trips,
+            tripDetails,
         ],
         () => {
             clearTimeout(snapshotTimer)
@@ -220,16 +266,19 @@ export const useTravelStore = defineStore('travel', () => {
 
     // --- Loading -----------------------------------------------------------
 
-    // Three requests in parallel (account, countries, flights); the browser
-    // revalidates each with its ETag, so an unchanged copy costs only a 304
+    // Four requests in parallel (account, countries, flights, trips); the
+    // browser revalidates each with its ETag, so an unchanged copy costs only
+    // a 304
     async function load() {
         loading = true
         try {
-            const [account, countries, flightList] = await Promise.all([
-                api.GET('/user'),
-                api.GET('/countries'),
-                api.GET('/flights'),
-            ])
+            const [account, countries, flightList, tripList] =
+                await Promise.all([
+                    api.GET('/user'),
+                    api.GET('/countries'),
+                    api.GET('/flights'),
+                    api.GET('/trips'),
+                ])
             if (account.response.status === 401) {
                 clear()
                 authState.value = 'anonymous'
@@ -244,8 +293,10 @@ export const useTravelStore = defineStore('travel', () => {
             if (!mustChangePassword.value) {
                 if (countries.error || !countries.data) throw countries.error
                 if (flightList.error || !flightList.data) throw flightList.error
+                if (tripList.error || !tripList.data) throw tripList.error
                 applyCountries(countries.data)
                 flightRecords.value = flightList.data
+                applyTrips(tripList.data)
             }
             authState.value = 'ready'
             saveSnapshot()
@@ -279,6 +330,23 @@ export const useTravelStore = defineStore('travel', () => {
         detailsLoaded.clear()
         visibility.value = Object.fromEntries(
             entries.map((e) => [e.iso, e.visibility])
+        )
+    }
+
+    // Trips opened before, also in an earlier session, stay available
+    // offline while unchanged; deleted or changed ones drop out
+    function applyTrips(list: TripSummary[]) {
+        trips.value = list
+        const stored = readSnapshot()
+        const earlier =
+            stored?.username === profile.value?.username
+                ? (stored?.tripDetails ?? {})
+                : {}
+        const current = new Map(list.map((t) => [t.id, t.updatedAt]))
+        tripDetails.value = Object.fromEntries(
+            Object.entries({ ...earlier, ...tripDetails.value }).filter(
+                ([id, trip]) => current.get(id) === trip.updatedAt
+            )
         )
     }
 
@@ -633,6 +701,108 @@ export const useTravelStore = defineStore('travel', () => {
         if (selectedFlightId.value) flightFocus.value++
     }
 
+    // --- Trips -------------------------------------------------------------
+
+    function summaryOf(trip: Trip): TripSummary {
+        const { notes: _notes, stops: _stops, ...summary } = trip
+        return summary
+    }
+
+    function forgetTrip(id: string) {
+        trips.value = trips.value.filter((t) => t.id !== id)
+        delete tripDetails.value[id]
+    }
+
+    // The trip with its stops, from the server or, offline, as stored
+    // before; null if there is no such trip
+    async function loadTrip(id: string): Promise<Trip | null> {
+        if (!canWrite.value) return tripDetails.value[id] ?? null
+        try {
+            const { data, error, response } = await api.GET('/trips/{id}', {
+                params: { path: { id } },
+            })
+            if (response.status === 404) {
+                forgetTrip(id)
+                return null
+            }
+            if (error || !data) throw error
+            tripDetails.value[id] = data
+            return data
+        } catch (e) {
+            if (!(e instanceof NetworkError)) {
+                notify(problemMessage(e, 'store.tripLoadFailed'))
+            }
+            return tripDetails.value[id] ?? null
+        }
+    }
+
+    // Creates the trip (id null) or replaces it with all of its stops;
+    // returns the saved trip, or null after reporting the error
+    async function saveTrip(
+        id: string | null,
+        input: TripInput
+    ): Promise<Trip | null> {
+        if (!canWrite.value) {
+            notify(offlineMessage())
+            return null
+        }
+        try {
+            const { data, error } = id
+                ? await api.PUT('/trips/{id}', {
+                      params: { path: { id } },
+                      body: input,
+                  })
+                : await api.POST('/trips', { body: input })
+            if (error || !data) throw error
+            tripDetails.value[data.id] = data
+            const summary = summaryOf(data)
+            const index = trips.value.findIndex((t) => t.id === data.id)
+            if (index >= 0) trips.value[index] = summary
+            else trips.value.push(summary)
+            return data
+        } catch (e) {
+            notify(problemMessage(e, 'store.tripSaveFailed'))
+            return null
+        }
+    }
+
+    async function deleteTrip(id: string): Promise<boolean> {
+        if (!canWrite.value) {
+            notify(offlineMessage())
+            return false
+        }
+        try {
+            const { error } = await api.DELETE('/trips/{id}', {
+                params: { path: { id } },
+            })
+            if (error) throw error
+            forgetTrip(id)
+            return true
+        } catch (e) {
+            notify(problemMessage(e, 'store.tripDeleteFailed'))
+            return false
+        }
+    }
+
+    function showTrip(value: TripMap | null) {
+        tripMap.value = value
+        if (!value) setPinMode('off')
+    }
+
+    function focusTrip(iso: string | null = null) {
+        tripFocus.value = { count: tripFocus.value.count + 1, iso }
+    }
+
+    function setPinMode(mode: PinMode) {
+        pinMode.value = mode
+        if (mode === 'off') setPin(null)
+    }
+
+    function setPin(point: MapPoint | null, place: string | null = null) {
+        pin.value = point
+        pinPlace.value = place
+    }
+
     function notify(message: string) {
         toast.value = message
         clearTimeout(toastTimer)
@@ -685,5 +855,19 @@ export const useTravelStore = defineStore('travel', () => {
         selectFlight,
         flightFocus,
         focusSelectedFlight,
+        trips,
+        tripDetails,
+        loadTrip,
+        saveTrip,
+        deleteTrip,
+        tripMap,
+        showTrip,
+        tripFocus,
+        focusTrip,
+        pinMode,
+        setPinMode,
+        pin,
+        pinPlace,
+        setPin,
     }
 })

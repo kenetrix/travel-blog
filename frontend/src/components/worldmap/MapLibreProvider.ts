@@ -4,6 +4,7 @@ import {
     AttributionControl,
     GeoJSONSource,
     LngLatBounds,
+    Marker,
     MercatorCoordinate,
     NavigationControl,
     setWorkerUrl,
@@ -14,9 +15,14 @@ import type {
     FlightRoute,
     MapMarker,
     MapInsets,
+    MapPlace,
+    MapPointInfo,
+    TripStopPoint,
 } from './MapProvider'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { Colors } from './MapProvider'
+import { pinElement } from './pin'
+import type { FeatureCollection } from 'geojson'
 
 setWorkerUrl(workerUrl)
 
@@ -48,6 +54,23 @@ function curve(
 const HIGHLIGHT_SOURCE = 'countries-state'
 // Half the side of the square around a click that may hit a route
 const ROUTE_HIT_PX = 12
+// The same for a place name
+const PLACE_HIT_PX = 6
+
+// Place names by population: big cities from zoom 5, towns from zoom 9.
+// Listed smallest first, so the biggest places end up on top and win when
+// labels collide.
+const PLACE_TIERS = [
+    { id: 'places-small', min: 0, max: 100_000, minZoom: 9, size: 11 },
+    { id: 'places-medium', min: 100_000, max: 500_000, minZoom: 7, size: 12 },
+    { id: 'places-large', min: 500_000, max: 1e10, minZoom: 5, size: 13 },
+]
+const PLACE_LAYERS = PLACE_TIERS.map((t) => t.id)
+
+const EMPTY: FeatureCollection = {
+    type: 'FeatureCollection',
+    features: [],
+}
 
 // Attribution as the (i) button only, never opened by itself (MapLibre opens it
 // on load and resize). Without MapLibre's own credit it stays hidden until a
@@ -67,6 +90,13 @@ export class MapLibreProvider implements MapProvider {
     private map?: MLMap
     private clickCallback?: (countryCode: string) => void
     private flightClickCallback?: (id: string | null) => void
+    private mapClickCallback?: (
+        point: MapPointInfo,
+        place: MapPlace | null
+    ) => void
+    private moveEndCallback?: () => void
+    private pin?: Marker
+    private placesVisible = false
     // Drawn arc per route id, for hit tests and fitting the map to a route
     private arcs = new Map<string, [number, number][]>()
     private routesVisible = false
@@ -289,6 +319,98 @@ export class MapLibreProvider implements MapProvider {
                     'text-color': Colors.flightLabel,
                 },
             })
+
+            // Place names, filled while a trip is edited
+            this.map!.addSource('places', {
+                type: 'geojson',
+                data: EMPTY,
+                attribution:
+                    '<a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a>',
+            })
+            for (const tier of PLACE_TIERS) {
+                this.map!.addLayer({
+                    id: tier.id,
+                    type: 'symbol',
+                    source: 'places',
+                    minzoom: tier.minZoom,
+                    filter: [
+                        'all',
+                        ['>=', ['get', 'p'], tier.min],
+                        ['<', ['get', 'p'], tier.max],
+                    ],
+                    layout: {
+                        visibility: 'none',
+                        'text-field': ['get', 'name'],
+                        'text-font': ['Open Sans Semibold'],
+                        'text-size': tier.size,
+                        'text-padding': 4,
+                        'symbol-sort-key': ['-', 0, ['get', 'p']],
+                    },
+                    paint: {
+                        'text-color': Colors.place,
+                        'text-halo-color': Colors.water,
+                        'text-halo-width': 1.2,
+                    },
+                })
+            }
+
+            // The open trip: a line in visiting order and numbered stops
+            this.map!.addSource('trip', { type: 'geojson', data: EMPTY })
+            const isLine: ExpressionSpecification = [
+                '==',
+                ['geometry-type'],
+                'LineString',
+            ]
+            const isPoint: ExpressionSpecification = [
+                '==',
+                ['geometry-type'],
+                'Point',
+            ]
+            this.map!.addLayer({
+                id: 'trip-line',
+                type: 'line',
+                source: 'trip',
+                filter: isLine,
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': Colors.trip,
+                    'line-width': 2.5,
+                    'line-opacity': 0.9,
+                },
+            })
+            this.map!.addLayer({
+                id: 'trip-stops',
+                type: 'circle',
+                source: 'trip',
+                filter: isPoint,
+                paint: {
+                    'circle-radius': 10,
+                    'circle-color': Colors.trip,
+                    'circle-stroke-color': Colors.water,
+                    'circle-stroke-width': 1.5,
+                },
+            })
+            this.map!.addLayer({
+                id: 'trip-numbers',
+                type: 'symbol',
+                source: 'trip',
+                filter: isPoint,
+                layout: {
+                    'text-field': ['to-string', ['get', 'n']],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-size': 11,
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true,
+                },
+                paint: { 'text-color': Colors.tripNumber },
+            })
+
+            this.map!.on('click', (e) => {
+                if (!this.mapClickCallback) return
+                const point = this.pointAt(e.point.x, e.point.y)
+                if (point) this.mapClickCallback(point, this.placeAt(e.point))
+            })
+            this.map!.on('moveend', () => this.moveEndCallback?.())
 
             if (this.countryLayerId) {
                 this.map!.on('click', this.countryLayerId, (e) => {
@@ -552,11 +674,23 @@ export class MapLibreProvider implements MapProvider {
         if (!this.map || !this.countryLayerId) return
         this.setFocused(isoCode)
         if (!isoCode) return
+        const bounds = this.countryBounds(isoCode)
+        if (bounds) this.fitCountryBounds(bounds)
+    }
+
+    fitCountry(isoCode: string, insets?: MapInsets): void {
+        if (insets) this.insets = insets
+        const bounds = this.countryBounds(isoCode)
+        if (bounds) this.fitCountryBounds(bounds)
+    }
+
+    private countryBounds(isoCode: string): LngLatBounds | undefined {
+        if (!this.map || !this.countryLayerId) return
         const layer = this.map.getLayer(this.countryLayerId)
         if (!layer) return
 
         let bounds = this.boundsCache.get(isoCode)
-        if (bounds) return this.fitCountry(bounds)
+        if (bounds) return bounds
 
         const known = COUNTRY_BOUNDS[isoCode]
         if (known) {
@@ -565,7 +699,7 @@ export class MapLibreProvider implements MapProvider {
                 [known[2], known[3]]
             )
             this.boundsCache.set(isoCode, bounds)
-            return this.fitCountry(bounds)
+            return bounds
         }
 
         const features = this.map.querySourceFeatures(layer.source, {
@@ -610,7 +744,7 @@ export class MapLibreProvider implements MapProvider {
 
         bounds = this.computeBounds(lngs, lats)
         this.boundsCache.set(isoCode, bounds)
-        this.fitCountry(bounds)
+        return bounds
     }
 
     // Bounds of a country, handling shapes that cross the antimeridian
@@ -632,7 +766,7 @@ export class MapLibreProvider implements MapProvider {
         )
     }
 
-    private fitCountry(bounds: LngLatBounds): void {
+    private fitCountryBounds(bounds: LngLatBounds): void {
         this.fitInsets(bounds, { maxZoom: 8, squeezeLarge: true })
     }
 
@@ -702,4 +836,163 @@ export class MapLibreProvider implements MapProvider {
     }
 
     addMarker(_marker: MapMarker): void {}
+
+    showTrip(stops: TripStopPoint[] | null): void {
+        const source = this.map?.getSource('trip') as GeoJSONSource | undefined
+        if (!source) return
+        const points = (stops ?? []).map((s) => [s.lng, s.lat])
+        source.setData({
+            type: 'FeatureCollection',
+            features: [
+                ...(points.length > 1
+                    ? [
+                          {
+                              type: 'Feature' as const,
+                              geometry: {
+                                  type: 'LineString' as const,
+                                  coordinates: points,
+                              },
+                              properties: {},
+                          },
+                      ]
+                    : []),
+                ...points.map((coordinates, i) => ({
+                    type: 'Feature' as const,
+                    geometry: { type: 'Point' as const, coordinates },
+                    properties: { n: i + 1 },
+                })),
+            ],
+        })
+    }
+
+    fitPoints(points: TripStopPoint[], insets?: MapInsets): void {
+        if (insets) this.insets = insets
+        if (!points.length) return
+        const lngs = points.map((p) => p.lng)
+        const lats = points.map((p) => p.lat)
+        this.fitInsets(
+            new LngLatBounds(
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)]
+            ),
+            // Close enough to tell the places apart, and the markers clear of
+            // the edges
+            { maxZoom: 9, squeezeLarge: false, margin: 32 }
+        )
+    }
+
+    showPlaces(places: MapPlace[] | null): void {
+        const source = this.map?.getSource('places') as
+            GeoJSONSource | undefined
+        if (!source) return
+        this.placesVisible = !!places
+        source.setData({
+            type: 'FeatureCollection',
+            features: (places ?? []).map((p) => ({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+                properties: { name: p.name, p: p.population },
+            })),
+        })
+        for (const layer of PLACE_LAYERS) {
+            this.map!.setLayoutProperty(
+                layer,
+                'visibility',
+                places ? 'visible' : 'none'
+            )
+        }
+    }
+
+    getZoom(): number {
+        return this.map?.getZoom() ?? 0
+    }
+
+    countriesInView(): string[] {
+        if (!this.map || !this.countryLayerId) return []
+        const features = this.map.queryRenderedFeatures({
+            layers: [this.countryLayerId],
+        })
+        return [
+            ...new Set(features.flatMap((f) => f.properties?.ADM0_A3 ?? [])),
+        ] as string[]
+    }
+
+    onMoveEnd(callback: () => void): void {
+        this.moveEndCallback = callback
+    }
+
+    onMapClick(
+        callback: (point: MapPointInfo, place: MapPlace | null) => void
+    ): void {
+        this.mapClickCallback = callback
+    }
+
+    pointAt(x: number, y: number): MapPointInfo | null {
+        if (!this.map) return null
+        const { lng, lat } = this.map.unproject([x, y])
+        return { lng, lat, iso: this.countryAtPoint(x, y) }
+    }
+
+    countryAt(lng: number, lat: number): string | null {
+        if (!this.map) return null
+        const { x, y } = this.map.project([lng, lat])
+        return this.countryAtPoint(x, y)
+    }
+
+    private countryAtPoint(x: number, y: number): string | null {
+        if (!this.map || !this.countryLayerId) return null
+        const hits = this.map.queryRenderedFeatures([x, y], {
+            layers: [this.countryLayerId],
+        })
+        return (hits[0]?.properties?.ADM0_A3 as string | undefined) ?? null
+    }
+
+    // The place whose label is near a screen point, if names are shown
+    private placeAt(point: { x: number; y: number }): MapPlace | null {
+        if (!this.map || !this.placesVisible) return null
+        const { x, y } = point
+        const r = PLACE_HIT_PX
+        const hit = this.map.queryRenderedFeatures(
+            [
+                [x - r, y - r],
+                [x + r, y + r],
+            ],
+            { layers: PLACE_LAYERS }
+        )[0]
+        if (!hit || hit.geometry.type !== 'Point') return null
+        const [lng, lat] = hit.geometry.coordinates
+        return {
+            name: String(hit.properties?.name ?? ''),
+            lng,
+            lat,
+            population: Number(hit.properties?.p ?? 0),
+        }
+    }
+
+    setPin(point: TripStopPoint | null): void {
+        if (!this.map) return
+        if (!point) {
+            this.pin?.remove()
+            this.pin = undefined
+            return
+        }
+        if (!this.pin) {
+            this.pin = new Marker({ element: pinElement(), anchor: 'bottom' })
+                .setLngLat([point.lng, point.lat])
+                .addTo(this.map)
+        } else {
+            this.pin.setLngLat([point.lng, point.lat])
+        }
+    }
+
+    panTo(point: TripStopPoint, x: number, y: number, minZoom: number): void {
+        if (!this.map) return
+        const { clientWidth: width, clientHeight: height } =
+            this.map.getContainer()
+        this.map.easeTo({
+            center: [point.lng, point.lat],
+            zoom: Math.max(this.map.getZoom(), minZoom),
+            offset: [x - width / 2, y - height / 2],
+        })
+    }
 }

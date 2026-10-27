@@ -24,6 +24,7 @@ import {
 import { RouterLink, useRoute } from 'vue-router'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import { localizedData, t } from '../../i18n'
+import { tripDates } from '../trips/dates'
 
 const props = defineProps<{ iso: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -230,6 +231,29 @@ const statusOptions = computed<{ value: CountryStatus; label: string }[]>(
     ]
 )
 
+// Trips with a stop in this country: latest start first, undated ones last
+const trips = computed(() =>
+    store.trips
+        .filter((trip) => trip.countries.includes(props.iso))
+        .sort((a, b) => {
+            if (!a.startsOn || !b.startsOn)
+                return a.startsOn ? -1 : b.startsOn ? 1 : 0
+            return b.startsOn.localeCompare(a.startsOn)
+        })
+)
+
+// The other countries a trip visits, by name
+function otherCountries(countries: string[]): string {
+    return formatList(
+        countries
+            .filter((iso) => iso !== props.iso)
+            .map((iso) => {
+                const c = getCountryByIso(iso)
+                return c ? countryName(c) : iso
+            })
+    )
+}
+
 const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
     () => [
         { value: 'private', label: t('common.onlyMe') },
@@ -325,13 +349,45 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
 
         <details open>
             <summary>{{ t('country.trips') }}</summary>
-            <p class="empty">{{ t('country.tripsNote') }}</p>
+            <ul v-if="trips.length" class="trips">
+                <li v-for="trip in trips" :key="trip.id">
+                    <RouterLink :to="{ name: 'trip', params: { id: trip.id } }">
+                        <span class="trip-title">{{ trip.title }}</span>
+                        <span class="mini">
+                            <template v-if="tripDates(trip)"
+                                >{{ tripDates(trip) }} ·
+                            </template>
+                            {{ t('trip.stopCount', { count: trip.stopCount }) }}
+                            <template v-if="trip.countries.length > 1">
+                                ·
+                                {{
+                                    t('country.alsoIn', {
+                                        countries: otherCountries(
+                                            trip.countries
+                                        ),
+                                    })
+                                }}
+                            </template>
+                        </span>
+                    </RouterLink>
+                </li>
+            </ul>
+            <p v-else class="empty">{{ t('country.noTrips') }}</p>
             <RouterLink
+                v-if="store.canWrite"
                 class="link-btn"
-                :to="{ name: 'trip-new', params: { iso } }"
+                :to="{ name: 'trip-new', query: { country: iso } }"
             >
-                {{ t('country.addTrip') }}
+                {{ t('country.startTrip') }}
             </RouterLink>
+            <span
+                v-else
+                class="link-btn disabled"
+                :title="t('common.offlineHint')"
+                aria-disabled="true"
+            >
+                {{ t('country.startTrip') }}
+            </span>
         </details>
 
         <details open>
@@ -668,6 +724,40 @@ details > :not(summary) + :not(summary) {
     color: #3a7d5c;
     text-decoration: none;
     cursor: pointer;
+}
+
+.link-btn.disabled {
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
+.trips {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.trips a {
+    display: flex;
+    flex-direction: column;
+    min-height: var(--touch);
+    justify-content: center;
+    padding: 0.25rem 0.4rem;
+    border-radius: 0.4rem;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.trips a:hover {
+    background: var(--line-faint);
+}
+
+.trip-title {
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
 }
 
 /* Form */

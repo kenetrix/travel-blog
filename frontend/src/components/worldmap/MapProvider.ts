@@ -11,6 +11,25 @@ export interface MapMarker {
     label?: string
 }
 
+export interface TripStopPoint {
+    lng: number
+    lat: number
+}
+
+export interface MapPlace {
+    name: string
+    lng: number
+    lat: number
+    population: number
+}
+
+// A point on the map with the country under it (null on water)
+export interface MapPointInfo {
+    lng: number
+    lat: number
+    iso: string | null
+}
+
 // Pixels at each edge that panels cover; the map fits countries inside the rest
 export interface MapInsets {
     top: number
@@ -37,6 +56,28 @@ export interface MapProvider {
     flyTo(lng: number, lat: number, zoom: number): void
     // Labels by the base map's English country name; null keeps English
     setCountryNames(names: Record<string, string> | null): void
+    // Numbered stops joined by a line in visiting order; null hides them
+    showTrip(stops: TripStopPoint[] | null): void
+    fitPoints(points: TripStopPoint[], insets?: MapInsets): void
+    // Fits the country without marking it as selected
+    fitCountry(isoCode: string, insets?: MapInsets): void
+    // Place names; null hides them
+    showPlaces(places: MapPlace[] | null): void
+    getZoom(): number
+    // Countries with a part in the visible map
+    countriesInView(): string[]
+    onMoveEnd(callback: () => void): void
+    // Every click on the map, with the place label clicked, if any
+    onMapClick(
+        callback: (point: MapPointInfo, place: MapPlace | null) => void
+    ): void
+    // The map point and country at a screen point of the map
+    pointAt(x: number, y: number): MapPointInfo | null
+    countryAt(lng: number, lat: number): string | null
+    // The pin set by click; null removes it
+    setPin(point: TripStopPoint | null): void
+    // Moves the map so that the point lies under screen point (x, y)
+    panTo(point: TripStopPoint, x: number, y: number, minZoom: number): void
 }
 
 function mix(top: string, bottom: string, alpha: number): string {
@@ -49,8 +90,8 @@ function mix(top: string, bottom: string, alpha: number): string {
 }
 
 export const Colors = {
-    // Visited, wishlist and flight colours match --visited, --wishlist and
-    // --flight in style.css, which the legend and panels use
+    // Visited, wishlist, flight and trip colours match --visited, --wishlist,
+    // --flight and --trip in style.css, which the legend and panels use
     countryBase: '#151616',
     countryHighlight: '#d9a03f',
     countryFocus: '#fff1c4',
@@ -62,6 +103,10 @@ export const Colors = {
     // well as from the dark base
     flight: '#5fd4e4',
     flightLabel: '#c4f1f7',
+    // --trip in style.css; coral stands apart from the other three
+    trip: '#f2785c',
+    tripNumber: '#1a1c1e',
+    place: '#ededed',
     // Also --map-water in style.css and the theme colour of the app
     water: '#373838',
     geoline: '#4c4d4d',

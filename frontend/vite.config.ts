@@ -83,6 +83,16 @@ export default defineConfig({
                         },
                     },
                     {
+                        // Place names per country (public/places), loaded
+                        // only when zoomed into a country while editing a trip
+                        urlPattern: /\/places\/[A-Z]{3}\.json$/,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'places',
+                            cacheableResponse: { statuses: [200] },
+                        },
+                    },
+                    {
                         urlPattern:
                             /^https:\/\/demotiles\.maplibre\.org\/.*\.pbf$/,
                         handler: 'CacheFirst',

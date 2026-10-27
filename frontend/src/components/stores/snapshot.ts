@@ -15,6 +15,10 @@ export interface Snapshot {
     detailsLoaded: string[]
     visibility: Record<string, Schemas['Visibility']>
     flights: Schemas['Flight'][]
+    // Missing in snapshots written before trips existed
+    trips?: Schemas['TripSummary'][]
+    // Trips opened before, with their stops
+    tripDetails?: Record<string, Schemas['Trip']>
 }
 
 const KEY = 'travel-blog:offline:v1'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, watchEffect } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { useTravelStore } from './components/stores/store'
 import FlightPanel from './components/flights/FlightPanel.vue'
@@ -13,6 +13,11 @@ const route = useRoute()
 const router = useRouter()
 
 const view = ref<'countries' | 'flights'>('countries')
+
+// The trip editor is a panel over the map and takes the place of the others
+const editingTrip = computed(
+    () => route.name === 'trip-new' || route.name === 'trip-edit'
+)
 
 // Each user starts in the view picked in their settings
 watch(
@@ -206,15 +211,19 @@ watchEffect(() => {
 
         <!-- Country panel -->
         <Transition name="fade">
-            <CountryPanel v-if="store.profile && view === 'countries'" />
+            <CountryPanel
+                v-if="store.profile && view === 'countries' && !editingTrip"
+            />
         </Transition>
 
         <!-- Flight panel -->
         <Transition name="fade">
-            <FlightPanel v-if="store.profile && view === 'flights'" />
+            <FlightPanel
+                v-if="store.profile && view === 'flights' && !editingTrip"
+            />
         </Transition>
 
-        <!-- Full-page routes (e.g. new trip) -->
+        <!-- Full-page routes (e.g. a trip) and the trip editor -->
         <RouterView />
     </div>
 </template>
