@@ -1,5 +1,6 @@
 import { createApp, watch } from 'vue'
 import { createPinia } from 'pinia'
+import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
 import { router } from './router'
 import { useTravelStore } from './components/stores/store'
@@ -33,3 +34,18 @@ setLanguage(resolveLanguage(readSnapshot()?.profile.language)).finally(() =>
     app.mount('#app')
 )
 store.load()
+
+// iOS keeps a closed standalone app suspended and rarely re-checks the service
+// worker, so check whenever the app returns to the foreground. autoUpdate
+// reloads the page once the new worker takes over.
+registerSW({
+    immediate: true,
+    onRegisteredSW(_url, registration) {
+        if (!registration) return
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                registration.update().catch(() => {})
+            }
+        })
+    },
+})

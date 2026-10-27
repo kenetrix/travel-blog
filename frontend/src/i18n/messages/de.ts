@@ -63,6 +63,8 @@ export default {
         noStops:
             'Noch keine Stopps. Füge den ersten Ort hinzu, den du besucht hast.',
         addStop: 'Stopp hinzufügen',
+        nameStop: 'Stopp benennen',
+        changePlace: 'Ort ändern',
         addStopHere: 'Hier hinzufügen',
         moveHere: 'Hierher verschieben',
         move: '{name} mit der Nadel verschieben',

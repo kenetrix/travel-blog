@@ -9,6 +9,7 @@ import {
     useTravelStore,
     type Trip,
     type TripInput,
+    type MapPoint,
     type Visibility,
 } from '../stores/store'
 import { countryName, getCountryByIso } from '../countries/countries'
@@ -178,7 +179,46 @@ function onNameInput() {
 
 function stopPlacing() {
     placing.value = null
+    naming.value = null
     store.setPinMode('off')
+}
+
+// Touch: the place picked with the centre pin, named on a card of its own
+// before the stop is added
+const naming = ref<MapPoint | null>(null)
+const namingInput = ref<HTMLInputElement | null>(null)
+
+async function startNaming(point: MapPoint) {
+    naming.value = { ...point }
+    store.setPinMode('off')
+    expanded.value = true
+    await nextTick()
+    namingInput.value?.focus()
+}
+
+function addNamedStop() {
+    const point = naming.value
+    const name = placeName.value.trim()
+    if (!point?.iso || !name) return
+    draft.value.stops.push({
+        key: nextKey++,
+        name,
+        country: point.iso,
+        lng: round(point.lng),
+        lat: round(point.lat),
+        arrival: '',
+        notes: '',
+    })
+    stopPlacing()
+}
+
+// Back to the centre pin, which starts where it was
+function changePlace() {
+    const point = naming.value
+    naming.value = null
+    expanded.value = false
+    store.setPin(point)
+    store.setPinMode('center')
 }
 
 let suggestRequest = 0
@@ -225,6 +265,7 @@ async function confirmPlace() {
         stopPlacing()
         return
     }
+    if (coarsePointer.value) return startNaming(point)
     const stop: DraftStop = {
         key: nextKey++,
         name: placeName.value.trim(),
@@ -294,6 +335,17 @@ const problems = computed(() => {
 })
 
 const readOnly = computed(() => !store.canWrite || notFound.value)
+
+const canAddStop = computed(
+    () => !readOnly.value && draft.value.stops.length < MAX_STOPS
+)
+const addStopTitle = computed(() =>
+    !store.canWrite
+        ? t('common.offlineHint')
+        : draft.value.stops.length >= MAX_STOPS
+          ? t('trip.tooManyStops', { max: MAX_STOPS })
+          : t('trip.addStop')
+)
 const canSave = computed(
     () =>
         !readOnly.value &&
@@ -377,7 +429,34 @@ const heading = computed(() =>
 <template>
     <AppSheet v-model:expanded="expanded" wide :label="heading">
         <!-- Placing: on phones this is what the collapsed sheet shows -->
-        <div v-if="placing" class="placing">
+        <div v-if="naming" class="placing">
+            <div>
+                <h2>{{ t('trip.nameStop') }}</h2>
+                <p class="sub">
+                    <span :class="flagOf(naming.iso ?? '')" />
+                    {{
+                        t('trip.inCountry', {
+                            country: nameOf(naming.iso ?? ''),
+                        })
+                    }}
+                </p>
+            </div>
+            <div>
+                <label for="new-stop-name">{{
+                    t('trip.stopNamePlaceholder')
+                }}</label>
+                <input
+                    id="new-stop-name"
+                    ref="namingInput"
+                    v-model="placeName"
+                    class="field"
+                    maxlength="120"
+                    enterkeyhint="done"
+                    @keydown.enter.prevent="addNamedStop"
+                />
+            </div>
+        </div>
+        <div v-else-if="placing" class="placing">
             <div>
                 <h2>
                     {{
@@ -394,7 +473,10 @@ const heading = computed(() =>
                     }}
                 </p>
             </div>
-            <div v-if="!placingStop && store.pin?.iso" class="place-name">
+            <div
+                v-if="!placingStop && !coarsePointer && store.pin?.iso"
+                class="place-name"
+            >
                 <input
                     v-model="placeName"
                     class="field"
@@ -447,14 +529,8 @@ const heading = computed(() =>
                 <button
                     class="btn btn-primary add"
                     type="button"
-                    :disabled="readOnly || draft.stops.length >= MAX_STOPS"
-                    :title="
-                        !store.canWrite
-                            ? t('common.offlineHint')
-                            : draft.stops.length >= MAX_STOPS
-                              ? t('trip.tooManyStops', { max: MAX_STOPS })
-                              : t('trip.addStop')
-                    "
+                    :disabled="!canAddStop"
+                    :title="addStopTitle"
                     @click="startPlacing()"
                 >
                     <svg
@@ -673,6 +749,15 @@ const heading = computed(() =>
                             </details>
                         </li>
                     </ol>
+                    <button
+                        class="add-stop"
+                        type="button"
+                        :disabled="!canAddStop"
+                        :title="addStopTitle"
+                        @click="startPlacing()"
+                    >
+                        + {{ t('trip.addStop') }}
+                    </button>
                 </div>
 
                 <div>
@@ -891,6 +976,31 @@ textarea.field {
 
 .stops li.dragging {
     opacity: 0.5;
+}
+
+/* Below the list, where the next stop will appear */
+.add-stop {
+    width: 100%;
+    min-height: var(--touch);
+    margin-top: 0.5rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #3a7d5c;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.add-stop:hover:not(:disabled) {
+    background: var(--line-faint);
+}
+
+.add-stop:disabled {
+    color: var(--muted);
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .row {

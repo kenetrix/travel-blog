@@ -62,6 +62,8 @@ export default {
         stopCount: plural({ one: '{count} parada', other: '{count} paradas' }),
         noStops: 'Aún no hay paradas. Añade el primer lugar que visitaste.',
         addStop: 'Añadir parada',
+        nameStop: 'Nombra esta parada',
+        changePlace: 'Cambiar lugar',
         addStopHere: 'Añadir aquí',
         moveHere: 'Mover aquí',
         move: 'Mover {name} con el alfiler',

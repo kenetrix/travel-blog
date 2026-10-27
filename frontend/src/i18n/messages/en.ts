@@ -61,6 +61,8 @@ export default {
         stopCount: plural({ one: '{count} stop', other: '{count} stops' }),
         noStops: 'No stops yet. Add the first place you visited.',
         addStop: 'Add stop',
+        nameStop: 'Name this stop',
+        changePlace: 'Change place',
         addStopHere: 'Add stop here',
         moveHere: 'Move here',
         move: 'Move {name} with the pin',
