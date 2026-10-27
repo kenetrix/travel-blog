@@ -39,7 +39,7 @@ async function setColor(value: string) {
 <template>
     <section class="panel">
         <div class="head">
-            <h2 id="visibility-title">{{ t('profile.publicProfile') }}</h2>
+            <h2 id="visibility-title">{{ t('profile.publicProfile') }} 🌐</h2>
             <button
                 type="button"
                 class="switch"
@@ -53,10 +53,6 @@ async function setColor(value: string) {
                 <span class="knob" />
             </button>
         </div>
-        <p class="note">
-            {{ isPublic ? t('profile.publicNote') : t('profile.privateNote') }}
-        </p>
-
         <div class="head divider">
             <h2 id="color-title">{{ t('profile.colour') }}</h2>
             <label
@@ -112,6 +108,12 @@ async function setColor(value: string) {
     font-weight: 500;
 }
 
+/* The panel's muted label colour would otherwise win */
+.panel label.avatar {
+    margin-top: 0;
+    color: #fff;
+}
+
 .avatar:hover {
     filter: brightness(0.9);
 }
@@ -126,10 +128,6 @@ async function setColor(value: string) {
     border: none;
     opacity: 0;
     cursor: pointer;
-}
-
-.panel .note {
-    margin-top: 0.5rem;
 }
 
 .switch {

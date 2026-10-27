@@ -107,10 +107,10 @@ export default {
         displayNameHint: 'Показывается в публичном профиле',
         usernameRule: '3–30 строчных латинских букв, цифр или _',
         aboutMe: 'Обо мне',
-        timezone: 'Часовой пояс',
         homeCountry: 'Родная страна',
         saveProfile: 'Сохранить профиль',
-        settings: 'Настройки',
+        appearance: 'Оформление',
+        defaults: 'По умолчанию',
         distances: 'Расстояния в',
         kilometers: 'километрах',
         miles: 'милях',
@@ -129,10 +129,6 @@ export default {
         publicProfile: 'Публичный профиль',
         isPublic: 'Профиль публичный',
         isPrivate: 'Профиль закрытый',
-        publicNote:
-            'Все видят ваше отображаемое имя, описание, родную страну и всё, что отмечено как 🌐 Публично.',
-        privateNote:
-            'Никто другой ничего не видит, даже записи с отметкой 🌐 Публично.',
         colour: 'Цвет профиля',
         changeColour: 'Изменить цвет',
         colourSaved: 'Цвет сохранён',

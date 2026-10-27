@@ -2,13 +2,14 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
+import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
+import SegmentedControl from '../ui/SegmentedControl.vue'
 import ProfileHeader from './ProfileHeader.vue'
 import { vEnterNext } from '../ui/enterNext'
 import { Countries, byCountryName, countryName } from '../countries/countries'
 import { useTravelStore, type Settings } from '../stores/store'
-import { TIMEZONES } from './options'
 import { LANGUAGES, setLanguage, t, type Language } from '../../i18n'
 
 const store = useTravelStore()
@@ -39,8 +40,6 @@ const form = ref({
     lastName: '',
     displayName: '',
     bio: '',
-    language: 'en' as Language,
-    timezone: 'UTC',
     homeCountry: '',
 })
 const profileError = ref('')
@@ -55,8 +54,6 @@ function reset() {
         lastName: p.lastName,
         displayName: p.displayName,
         bio: p.bio,
-        language: p.language,
-        timezone: p.timezone,
         homeCountry: p.homeCountry,
     }
 }
@@ -68,12 +65,6 @@ watch(
     { immediate: true }
 )
 
-// Keep a time zone set elsewhere selectable
-const timezones = computed(() =>
-    TIMEZONES.includes(form.value.timezone)
-        ? TIMEZONES
-        : [form.value.timezone, ...TIMEZONES]
-)
 const countries = computed(() => [...Countries].sort(byCountryName))
 
 async function saveProfile() {
@@ -81,8 +72,6 @@ async function saveProfile() {
     const failed = await store.updateProfile(form.value)
     if (failed) profileError.value = failed
     else {
-        // Confirm in the language just picked
-        await setLanguage(form.value.language)
         reset()
         say(t('profile.saved'))
     }
@@ -98,6 +87,14 @@ async function setSetting<K extends keyof Settings>(
     const failed = await store.saveSettings({ ...store.settings, [key]: value })
     if (failed) say(failed, true)
     else say(t('profile.settingsSaved'))
+}
+
+async function setProfileLanguage(language: Language) {
+    const failed = await store.updateProfile({ language })
+    if (failed) return say(failed, true)
+    // Confirm in the language just picked
+    await setLanguage(language)
+    say(t('profile.settingsSaved'))
 }
 
 // --- Password ----------------------------------------------------------
@@ -201,36 +198,6 @@ async function deleteAccount() {
 
                         <label for="bio">{{ t('profile.aboutMe') }}</label>
                         <textarea id="bio" v-model="form.bio" rows="3" />
-                        <div class="row">
-                            <div>
-                                <label for="language">{{
-                                    t('common.language')
-                                }}</label>
-                                <select id="language" v-model="form.language">
-                                    <option
-                                        v-for="l in LANGUAGES"
-                                        :key="l.code"
-                                        :value="l.code"
-                                    >
-                                        {{ l.name }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="timezone">{{
-                                    t('profile.timezone')
-                                }}</label>
-                                <select id="timezone" v-model="form.timezone">
-                                    <option
-                                        v-for="tz in timezones"
-                                        :key="tz"
-                                        :value="tz"
-                                    >
-                                        {{ tz.replaceAll('_', ' ') }}
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
                         <label for="home-country">{{
                             t('profile.homeCountry')
                         }}</label>
@@ -259,91 +226,113 @@ async function deleteAccount() {
             </template>
             <template v-else-if="tab === 'preferences'">
                 <section class="panel">
-                    <h2>{{ t('profile.settings') }}</h2>
-                    <div class="fields">
-                        <label for="unit">{{ t('profile.distances') }}</label>
-                        <select
-                            id="unit"
+                    <h2>{{ t('profile.appearance') }}</h2>
+                    <div class="pref">
+                        <span class="pref-label">{{ t('profile.theme') }}</span>
+                        <SegmentedControl
+                            :model-value="store.settings.theme"
+                            :label="t('profile.theme')"
                             :disabled="!store.canWrite"
-                            :value="store.settings.distanceUnit"
-                            @change="
-                                setSetting(
-                                    'distanceUnit',
-                                    ($event.target as HTMLSelectElement)
-                                        .value as Settings['distanceUnit']
-                                )
-                            "
-                        >
-                            <option value="km">
-                                {{ t('profile.kilometers') }}
-                            </option>
-                            <option value="mi">{{ t('profile.miles') }}</option>
-                        </select>
-                        <label for="theme">{{ t('profile.theme') }}</label>
-                        <select
-                            id="theme"
-                            :disabled="!store.canWrite"
-                            :value="store.settings.theme"
-                            @change="
-                                setSetting(
-                                    'theme',
-                                    ($event.target as HTMLSelectElement)
-                                        .value as Settings['theme']
-                                )
-                            "
-                        >
-                            <option value="system">
-                                {{ t('profile.themeSystem') }}
-                            </option>
-                            <option value="light">
-                                {{ t('profile.themeLight') }}
-                            </option>
-                            <option value="dark">
-                                {{ t('profile.themeDark') }}
-                            </option>
-                        </select>
-                        <label for="view">{{ t('profile.startWith') }}</label>
-                        <select
-                            id="view"
-                            :disabled="!store.canWrite"
-                            :value="store.settings.defaultView"
-                            @change="
-                                setSetting(
-                                    'defaultView',
-                                    ($event.target as HTMLSelectElement)
-                                        .value as Settings['defaultView']
-                                )
-                            "
-                        >
-                            <option value="countries">
-                                {{ t('app.countries') }}
-                            </option>
-                            <option value="flights">
-                                {{ t('app.flights') }}
-                            </option>
-                        </select>
-                        <label for="default-visibility">{{
-                            t('profile.newItems')
+                            :options="[
+                                {
+                                    value: 'system',
+                                    label: '💻 ' + t('profile.themeSystem'),
+                                },
+                                {
+                                    value: 'light',
+                                    label: '☀️ ' + t('profile.themeLight'),
+                                },
+                                {
+                                    value: 'dark',
+                                    label: '🌙 ' + t('profile.themeDark'),
+                                },
+                            ]"
+                            @update:model-value="setSetting('theme', $event)"
+                        />
+                    </div>
+                    <div class="pref">
+                        <label class="pref-label" for="language">{{
+                            t('common.language')
                         }}</label>
                         <select
-                            id="default-visibility"
+                            id="language"
                             :disabled="!store.canWrite"
-                            :value="store.settings.defaultVisibility"
+                            :value="store.profile.language"
                             @change="
-                                setSetting(
-                                    'defaultVisibility',
+                                setProfileLanguage(
                                     ($event.target as HTMLSelectElement)
-                                        .value as Settings['defaultVisibility']
+                                        .value as Language
                                 )
                             "
                         >
-                            <option value="private">
-                                {{ t('common.onlyMe') }}
-                            </option>
-                            <option value="public">
-                                {{ t('common.public') }}
+                            <option
+                                v-for="l in LANGUAGES"
+                                :key="l.code"
+                                :value="l.code"
+                            >
+                                {{ l.name }}
                             </option>
                         </select>
+                    </div>
+                    <div class="pref">
+                        <span class="pref-label">{{
+                            t('profile.distances')
+                        }}</span>
+                        <SegmentedControl
+                            :model-value="store.settings.distanceUnit"
+                            :label="t('profile.distances')"
+                            :disabled="!store.canWrite"
+                            :options="[
+                                { value: 'km', label: t('profile.kilometers') },
+                                { value: 'mi', label: t('profile.miles') },
+                            ]"
+                            @update:model-value="
+                                setSetting('distanceUnit', $event)
+                            "
+                        />
+                    </div>
+                </section>
+                <section class="panel">
+                    <h2>{{ t('profile.defaults') }}</h2>
+                    <div class="pref">
+                        <span class="pref-label">{{
+                            t('profile.startWith')
+                        }}</span>
+                        <SegmentedControl
+                            :model-value="store.settings.defaultView"
+                            :label="t('profile.startWith')"
+                            :disabled="!store.canWrite"
+                            :options="[
+                                {
+                                    value: 'countries',
+                                    label: '🌍 ' + t('app.countries'),
+                                },
+                                {
+                                    value: 'flights',
+                                    label: '✈️ ' + t('app.flights'),
+                                },
+                            ]"
+                            @update:model-value="
+                                setSetting('defaultView', $event)
+                            "
+                        />
+                    </div>
+                    <div class="pref">
+                        <span class="pref-label">{{
+                            t('profile.newItems')
+                        }}</span>
+                        <SegmentedControl
+                            :model-value="store.settings.defaultVisibility"
+                            :label="t('profile.newItems')"
+                            :disabled="!store.canWrite"
+                            :options="[
+                                { value: 'private', label: t('common.onlyMe') },
+                                { value: 'public', label: t('common.public') },
+                            ]"
+                            @update:model-value="
+                                setSetting('defaultVisibility', $event)
+                            "
+                        />
                     </div>
                 </section>
             </template>
@@ -400,13 +389,7 @@ async function deleteAccount() {
             </template>
         </template>
 
-        <!-- Written by the build (licenses.ts); a plain link, so it opens
-             outside the app and also works offline from the precache -->
-        <p class="legal">
-            <a href="/third-party-licenses.txt" target="_blank" rel="noopener">
-                {{ t('profile.licenses') }}
-            </a>
-        </p>
+        <LegalFooter />
 
         <ConfirmModal
             v-if="confirmDelete"
@@ -421,17 +404,30 @@ async function deleteAccount() {
 
 <style src="../ui/panel.css"></style>
 <style scoped>
-.legal {
-    max-width: 720px;
-    margin: 1.5rem auto 0;
-    font-size: 0.78rem;
-    text-align: center;
+.pref {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--line);
 }
 
-.legal a {
-    display: inline-block;
-    padding: 0.6rem 0.4rem;
-    color: var(--muted);
+.pref:first-of-type {
+    padding-top: 0;
+    border-top: none;
+}
+
+.panel .pref-label {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.panel .pref select {
+    width: auto;
+    min-width: 10rem;
 }
 
 .logout {

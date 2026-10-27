@@ -107,10 +107,10 @@ export default {
         displayNameHint: 'Wird in deinem öffentlichen Profil gezeigt',
         usernameRule: '3–30 Kleinbuchstaben, Ziffern oder _',
         aboutMe: 'Über mich',
-        timezone: 'Zeitzone',
         homeCountry: 'Heimatland',
         saveProfile: 'Profil speichern',
-        settings: 'Einstellungen',
+        appearance: 'Darstellung',
+        defaults: 'Voreinstellungen',
         distances: 'Entfernungen in',
         kilometers: 'Kilometern',
         miles: 'Meilen',
@@ -129,10 +129,6 @@ export default {
         publicProfile: 'Öffentliches Profil',
         isPublic: 'Profil ist öffentlich',
         isPrivate: 'Profil ist privat',
-        publicNote:
-            'Alle sehen deinen Anzeigenamen, deine Beschreibung, dein Heimatland und alles, was als 🌐 Öffentlich markiert ist.',
-        privateNote:
-            'Niemand sonst sieht etwas, auch nicht als 🌐 Öffentlich markierte Einträge.',
         colour: 'Profilfarbe',
         changeColour: 'Farbe ändern',
         colourSaved: 'Farbe gespeichert',
