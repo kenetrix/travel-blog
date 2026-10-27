@@ -23,9 +23,19 @@ text; translate it when touching a file that still has some.
 
 ## Database
 
-While v0.1.0 is the only release, do not add migration scripts. Change the files in
-`backend/migrations/data/001_init/` and recreate the test database. After the first production release,
+Until the `v1.0.0` tag exists, do not add migration scripts. Change the files in
+`backend/migrations/data/001_init/` and recreate the test database. From `v1.0.0` on,
 `001_init` is frozen: add new numbered migrations (`002_<name>.sql`, ...) instead.
+
+## Releases
+
+Pushing a `v*` tag builds a GitHub release (`.github/workflows/release.yml`), which deletes
+every previous release, so only the newest one exists.
+
+- Never move or re-push an existing tag. Every release gets a new version.
+- Before `v1.0.0`, release as the next `0.x.y`: bump `y` for fixes only, `x` when features
+  are included (e.g. `v0.1.0` → `v0.1.1` or `v0.2.0`). Check `git tag -l` for the latest.
+- Tag the commit with `git tag -a v0.x.y -m "v0.x.y"`, then push only that tag.
 
 ## Branches
 
