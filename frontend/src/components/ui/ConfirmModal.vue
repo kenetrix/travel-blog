@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue'
+import { t } from '../../i18n'
 
-const props = withDefaults(
-    defineProps<{
-        title: string
-        message: string
-        confirmLabel?: string
-    }>(),
-    { confirmLabel: 'Confirm' }
-)
+const props = defineProps<{
+    title: string
+    message: string
+    confirmLabel?: string
+}>()
 
 const emit = defineEmits<{
     confirm: []
@@ -32,10 +30,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 <p class="message">{{ message }}</p>
                 <div class="actions">
                     <button class="btn cancel" @click="emit('cancel')">
-                        Cancel
+                        {{ t('common.cancel') }}
                     </button>
                     <button class="btn confirm" @click="emit('confirm')">
-                        {{ props.confirmLabel }}
+                        {{ props.confirmLabel ?? t('common.confirm') }}
                     </button>
                 </div>
             </div>

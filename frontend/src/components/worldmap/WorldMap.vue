@@ -3,7 +3,10 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { MapLibreProvider } from '../worldmap/MapLibreProvider'
 import { useTravelStore } from '../stores/store'
-import { distanceKm, formatDistance } from '../flights/distance'
+import { distanceKm } from '../flights/distance'
+import { language, t } from '../../i18n'
+import { countryLabels } from './countryLabels'
+import { formatDistance, formatNumber } from '../../i18n/format'
 import { useLayout } from '../ui/useLayout'
 import { sheetInsets } from '../ui/mapInsets'
 import type { MapInsets } from './MapProvider'
@@ -28,7 +31,10 @@ const totalKm = computed(() =>
     flights.value.reduce((sum, f) => sum + distanceKm(f.from, f.to), 0)
 )
 const timesAroundEarth = computed(() =>
-    (totalKm.value / EARTH_CIRCUMFERENCE_KM).toFixed(1)
+    formatNumber(totalKm.value / EARTH_CIRCUMFERENCE_KM, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+    })
 )
 
 const mapContainer = ref<HTMLElement | null>(null)
@@ -71,6 +77,12 @@ onMounted(() => {
 })
 
 onUnmounted(() => provider.destroy())
+
+watch(
+    language,
+    (lang) => provider.setCountryNames(lang === 'en' ? null : countryLabels()),
+    { immediate: true }
+)
 
 function syncMap() {
     const shown = new Set(visited.value)
@@ -138,20 +150,28 @@ watch(
     <div class="stats">
         <template v-if="view === 'countries'">
             <span>
-                <span class="dot visited" />{{ visitedCount }} visited
+                <span class="dot visited" />{{
+                    t('map.visited', { count: visitedCount })
+                }}
             </span>
             <span>
-                <span class="dot wishlist" />{{ wishlist.size }} want to go
+                <span class="dot wishlist" />{{
+                    t('map.wishlist', { count: wishlist.size })
+                }}
             </span>
         </template>
         <template v-else>
             <span>
                 <span class="dot flight" />{{
-                    formatDistance(totalKm, store.settings.distanceUnit)
+                    t('map.flown', {
+                        distance: formatDistance(
+                            totalKm,
+                            store.settings.distanceUnit
+                        ),
+                    })
                 }}
-                flown
             </span>
-            <span>✈ {{ timesAroundEarth }}× around the world</span>
+            <span>{{ t('map.aroundWorld', { times: timesAroundEarth }) }}</span>
         </template>
     </div>
 </template>

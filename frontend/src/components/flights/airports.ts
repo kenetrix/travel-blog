@@ -1,5 +1,8 @@
 import data from './airports.json'
+import { localizedData } from '../../i18n'
+import { regionName } from '../../i18n/format'
 
+// Names are English; airportName() and friends give the UI language
 export interface Airport {
     iata: string
     name: string
@@ -26,6 +29,18 @@ export function getAirport(iata: string): Airport | undefined {
     return byIata.get(iata)
 }
 
+export function airportName(a: Airport): string {
+    return localizedData().airports[a.iata]?.[0] || a.name
+}
+
+export function airportCity(a: Airport): string {
+    return localizedData().airports[a.iata]?.[1] || a.city
+}
+
+export function airportCountry(a: Airport): string {
+    return regionName(a.countryCode, a.country)
+}
+
 // Lowercase and strip diacritics so "sao paulo" finds "São Paulo"
 const normalize = (s: string) =>
     s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -43,14 +58,30 @@ export function searchAirports(query: string, limit = 20): Airport[] {
     const rank = (a: Airport) => {
         if (a.iata.toLowerCase() === q) return 0
         if (a.iata.toLowerCase().startsWith(q)) return 1
-        if (normalize(a.city).startsWith(q)) return 2
+        if (
+            normalize(a.city).startsWith(q) ||
+            normalize(airportCity(a)).startsWith(q)
+        )
+            return 2
         return 3
     }
 
-    return airports
-        .filter((a) =>
-            normalize(`${a.iata} ${a.city} ${a.name} ${a.country}`).includes(q)
+    // English and UI language, so "Munich" and "München" both work
+    const text = (a: Airport) =>
+        normalize(
+            [
+                a.iata,
+                a.city,
+                a.name,
+                a.country,
+                airportCity(a),
+                airportName(a),
+                airportCountry(a),
+            ].join(' ')
         )
+
+    return airports
+        .filter((a) => text(a).includes(q))
         .sort((a, b) => rank(a) - rank(b))
         .slice(0, limit)
         .sort(

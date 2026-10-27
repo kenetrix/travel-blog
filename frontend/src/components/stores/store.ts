@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import {
     api,
     NetworkError,
+    offlineMessage,
     onReachability,
     problemMessage,
     type Schemas,
@@ -11,7 +12,6 @@ import { getAirport, type Airport } from '../flights/airports'
 import { getCountryByAlpha2 } from '../countries/countries'
 import { readSnapshot, removeSnapshot, writeSnapshot } from './snapshot'
 
-const OFFLINE_MESSAGE = new NetworkError().message
 // While offline but with a network, how often to look for the server again
 const RETRY_MS = 30_000
 
@@ -257,7 +257,7 @@ export const useTravelStore = defineStore('travel', () => {
                 }
                 return
             }
-            notify(problemMessage(e, 'Could not load your travel data'))
+            notify(problemMessage(e, 'store.loadFailed'))
         } finally {
             loading = false
         }
@@ -290,7 +290,7 @@ export const useTravelStore = defineStore('travel', () => {
     async function checkUsername(
         username: string
     ): Promise<Schemas['UsernameCheck'] | string> {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { data, error } = await api.GET('/auth/users/{username}', {
                 params: { path: { username } },
@@ -298,7 +298,7 @@ export const useTravelStore = defineStore('travel', () => {
             if (error || !data) throw error
             return data
         } catch (e) {
-            return problemMessage(e, 'Could not check the username')
+            return problemMessage(e, 'store.checkFailed')
         }
     }
 
@@ -314,7 +314,7 @@ export const useTravelStore = defineStore('travel', () => {
     }
 
     async function login(username: string, password: string) {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { error } = await api.POST('/auth/login', {
                 body: { username, password },
@@ -323,30 +323,30 @@ export const useTravelStore = defineStore('travel', () => {
             await load()
             return null
         } catch (e) {
-            return problemMessage(e, 'Could not log in')
+            return problemMessage(e, 'store.loginFailed')
         }
     }
 
     async function register(input: RegisterInput) {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { error } = await api.POST('/auth/register', { body: input })
             if (error) throw error
             await load()
             return null
         } catch (e) {
-            return problemMessage(e, 'Could not create the account')
+            return problemMessage(e, 'store.registerFailed')
         }
     }
 
     // Loading again moves the state to anonymous. Offline the server could
     // not end the session, so logging out waits for the connection.
     async function logout(): Promise<string | null> {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             await api.POST('/auth/logout')
         } catch (e) {
-            if (e instanceof NetworkError) return e.message
+            if (e instanceof NetworkError) return offlineMessage()
         }
         clear()
         await load()
@@ -354,7 +354,7 @@ export const useTravelStore = defineStore('travel', () => {
     }
 
     async function updateProfile(changes: ProfileUpdate) {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { data, error } = await api.PATCH('/user/profile', {
                 body: changes,
@@ -363,13 +363,13 @@ export const useTravelStore = defineStore('travel', () => {
             profile.value = data
             return null
         } catch (e) {
-            return problemMessage(e, 'Could not save the profile')
+            return problemMessage(e, 'store.profileFailed')
         }
     }
 
     // Applied right away, rolled back if the server rejects it
     async function saveSettings(next: Settings) {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         const before = settings.value
         settings.value = next
         try {
@@ -378,7 +378,7 @@ export const useTravelStore = defineStore('travel', () => {
             return null
         } catch (e) {
             settings.value = before
-            return problemMessage(e, 'Could not save the settings')
+            return problemMessage(e, 'store.settingsFailed')
         }
     }
 
@@ -386,7 +386,7 @@ export const useTravelStore = defineStore('travel', () => {
         currentPassword: string,
         newPassword: string
     ) {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { error } = await api.PUT('/user/password', {
                 body: { currentPassword, newPassword },
@@ -394,12 +394,12 @@ export const useTravelStore = defineStore('travel', () => {
             if (error) throw error
             return null
         } catch (e) {
-            return problemMessage(e, 'Could not change the password')
+            return problemMessage(e, 'store.passwordFailed')
         }
     }
 
     async function deleteAccount() {
-        if (!canWrite.value) return OFFLINE_MESSAGE
+        if (!canWrite.value) return offlineMessage()
         try {
             const { error } = await api.DELETE('/user')
             if (error) throw error
@@ -407,7 +407,7 @@ export const useTravelStore = defineStore('travel', () => {
             await load()
             return null
         } catch (e) {
-            return problemMessage(e, 'Could not delete the account')
+            return problemMessage(e, 'store.deleteFailed')
         }
     }
 
@@ -439,7 +439,7 @@ export const useTravelStore = defineStore('travel', () => {
             return true
         } catch (e) {
             if (!(e instanceof NetworkError)) {
-                notify(problemMessage(e, 'Could not load the country details'))
+                notify(problemMessage(e, 'store.countryLoadFailed'))
             }
             return false
         }
@@ -473,7 +473,7 @@ export const useTravelStore = defineStore('travel', () => {
         vis?: Visibility
     ): Promise<boolean> {
         if (!canWrite.value) {
-            notify(OFFLINE_MESSAGE)
+            notify(offlineMessage())
             return false
         }
         const before = {
@@ -500,7 +500,7 @@ export const useTravelStore = defineStore('travel', () => {
             applyCountry(iso, before.status, before.details, before.visibility)
             if (before.loaded) detailsLoaded.add(iso)
             else detailsLoaded.delete(iso)
-            notify(problemMessage(e, 'Could not save the country'))
+            notify(problemMessage(e, 'store.countryFailed'))
             return false
         }
     }
@@ -521,7 +521,7 @@ export const useTravelStore = defineStore('travel', () => {
         to: Airport
     ): Promise<string | null> {
         if (!canWrite.value) {
-            notify(OFFLINE_MESSAGE)
+            notify(offlineMessage())
             return null
         }
         // Only the client knows the airports' countries; the server marks
@@ -556,7 +556,7 @@ export const useTravelStore = defineStore('travel', () => {
             }
             return data.id
         } catch (e) {
-            notify(problemMessage(e, 'Could not add the flight'))
+            notify(problemMessage(e, 'store.flightAddFailed'))
             return null
         }
     }
@@ -570,7 +570,7 @@ export const useTravelStore = defineStore('travel', () => {
         const index = flightRecords.value.findIndex((f) => f.id === id)
         if (index < 0) return false
         if (!canWrite.value) {
-            notify(OFFLINE_MESSAGE)
+            notify(offlineMessage())
             return false
         }
         const before = flightRecords.value[index]
@@ -591,7 +591,7 @@ export const useTravelStore = defineStore('travel', () => {
         } catch (e) {
             const current = flightRecords.value.findIndex((f) => f.id === id)
             if (current >= 0) flightRecords.value[current] = before
-            notify(problemMessage(e, 'Could not change the flight'))
+            notify(problemMessage(e, 'store.flightChangeFailed'))
             return false
         }
     }
@@ -604,7 +604,7 @@ export const useTravelStore = defineStore('travel', () => {
     async function removeFlight(id: string) {
         const index = flightRecords.value.findIndex((f) => f.id === id)
         if (index < 0) return
-        if (!canWrite.value) return notify(OFFLINE_MESSAGE)
+        if (!canWrite.value) return notify(offlineMessage())
         const [removed] = flightRecords.value.splice(index, 1)
         if (highlightedFlightId.value === id) highlightedFlightId.value = null
         if (selectedFlightId.value === id) selectedFlightId.value = null
@@ -615,7 +615,7 @@ export const useTravelStore = defineStore('travel', () => {
             if (error) throw error
         } catch (e) {
             flightRecords.value.splice(index, 0, removed)
-            notify(problemMessage(e, 'Could not remove the flight'))
+            notify(problemMessage(e, 'store.flightRemoveFailed'))
         }
     }
 

@@ -2,7 +2,15 @@
 import { ref, computed, watch } from 'vue'
 import { useTravelStore } from '../stores/store'
 import { storeToRefs } from 'pinia'
-import { Countries, getCountryByIso, type Country } from './countries'
+import {
+    Countries,
+    byCountryName,
+    countryName,
+    getCountryByIso,
+    matchesCountry,
+    type Country,
+} from './countries'
+import { t } from '../../i18n'
 import CountryDetailModal from './CountryDetailModal.vue'
 import AppSheet from '../ui/AppSheet.vue'
 import { useLayout } from '../ui/useLayout'
@@ -26,8 +34,6 @@ const allTags = computed(() => [
     ...new Set(Object.values(details.value).flatMap((d) => d.tags ?? [])),
 ])
 
-const byName = (a: Country, b: Country) => a.name.localeCompare(b.name, 'de')
-
 function fromIsos(isos: Iterable<string>): Country[] {
     return [...isos].flatMap((iso) => {
         const country = getCountryByIso(iso)
@@ -39,21 +45,17 @@ const matchesTag = (c: Country) =>
     !activeTag.value || details.value[c.alpha3]?.tags?.includes(activeTag.value)
 
 const wishlistCountries = computed(() =>
-    query.value ? [] : fromIsos(wishlist.value).filter(matchesTag).sort(byName)
+    query.value
+        ? []
+        : fromIsos(wishlist.value).filter(matchesTag).sort(byCountryName)
 )
 
 // Without a search term: visited countries. With one: any matching country.
 const listedCountries = computed(() => {
     const list = query.value
-        ? Countries.filter(
-              (c) =>
-                  c.name.toLowerCase().startsWith(query.value) ||
-                  c.nameLong?.toLowerCase().startsWith(query.value) ||
-                  c.alpha3.toLowerCase() === query.value ||
-                  c.alpha2.toLowerCase() === query.value
-          )
+        ? Countries.filter((c) => matchesCountry(c, query.value))
         : fromIsos(visited.value).filter(matchesTag)
-    return list.sort(byName)
+    return list.sort(byCountryName)
 })
 </script>
 
@@ -61,7 +63,7 @@ const listedCountries = computed(() => {
     <AppSheet
         v-model:expanded="expanded"
         :wide="!!selectedIso"
-        :label="selectedIso ? 'Country details' : 'Countries'"
+        :label="selectedIso ? t('countries.details') : t('countries.title')"
     >
         <CountryDetailModal
             v-if="selectedIso"
@@ -70,16 +72,16 @@ const listedCountries = computed(() => {
         />
         <template v-else>
             <div>
-                <h2>Countries</h2>
-                <p class="sub">Visited countries in the world</p>
+                <h2>{{ t('countries.title') }}</h2>
+                <p class="sub">{{ t('countries.subtitle') }}</p>
             </div>
 
             <div>
                 <input
                     v-model="searchCountry"
                     type="search"
-                    placeholder="Search for country"
-                    aria-label="Search for country"
+                    :placeholder="t('countries.search')"
+                    :aria-label="t('countries.search')"
                     @focus="expanded = true"
                 />
             </div>
@@ -98,7 +100,7 @@ const listedCountries = computed(() => {
             </div>
 
             <div v-if="wishlistCountries.length">
-                <label>Want to go</label>
+                <label>{{ t('countries.wishlist') }}</label>
                 <ol>
                     <li
                         v-for="country in wishlistCountries"
@@ -111,14 +113,16 @@ const listedCountries = computed(() => {
                             <span
                                 :class="`fi fi-${country.alpha2.toLowerCase()}`"
                             ></span>
-                            {{ country.name }}
+                            {{ countryName(country) }}
                         </button>
                     </li>
                 </ol>
             </div>
 
             <div>
-                <label>{{ query ? 'Results' : 'Visited' }}</label>
+                <label>{{
+                    query ? t('countries.results') : t('countries.visited')
+                }}</label>
                 <ol>
                     <li
                         v-for="country in listedCountries"
@@ -131,7 +135,7 @@ const listedCountries = computed(() => {
                             <span
                                 :class="`fi fi-${country.alpha2.toLowerCase()}`"
                             ></span>
-                            {{ country.name }}
+                            {{ countryName(country) }}
                             <span
                                 v-if="query && visited.has(country.alpha3)"
                                 class="check"
@@ -155,7 +159,7 @@ const listedCountries = computed(() => {
                         </button>
                     </li>
                     <li v-if="!listedCountries.length" class="empty">
-                        No countries found
+                        {{ t('countries.none') }}
                     </li>
                 </ol>
             </div>

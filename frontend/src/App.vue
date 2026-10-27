@@ -6,7 +6,7 @@ import FlightPanel from './components/flights/FlightPanel.vue'
 import CountryPanel from './components/countries/CountryPanel.vue'
 import WorldMap from './components/worldmap/WorldMap.vue'
 import OfflineBanner from './components/ui/OfflineBanner.vue'
-import { OFFLINE_HINT } from './components/ui/offline'
+import { t } from './i18n'
 
 const store = useTravelStore()
 const route = useRoute()
@@ -91,13 +91,13 @@ watchEffect(() => {
                         :class="{ active: view === 'countries' }"
                         @click="view = 'countries'"
                     >
-                        Countries
+                        {{ t('app.countries') }}
                     </button>
                     <button
                         :class="{ active: view === 'flights' }"
                         @click="view = 'flights'"
                     >
-                        Flights
+                        {{ t('app.flights') }}
                     </button>
                 </div>
             </div>
@@ -109,14 +109,18 @@ watchEffect(() => {
                     class="account login"
                     :to="{ name: 'login' }"
                 >
-                    Log in
+                    {{ t('app.login') }}
                 </RouterLink>
                 <RouterLink
                     v-if="store.profile"
                     class="account avatar"
                     :to="{ name: 'account' }"
-                    :title="`Account of ${store.profile.displayName}`"
-                    :aria-label="`Account of ${store.profile.displayName}`"
+                    :title="
+                        t('app.accountOf', { name: store.profile.displayName })
+                    "
+                    :aria-label="
+                        t('app.accountOf', { name: store.profile.displayName })
+                    "
                 >
                     <span
                         class="circle"
@@ -140,8 +144,8 @@ watchEffect(() => {
                     v-if="store.isAdmin"
                     class="account avatar admin"
                     :to="{ name: 'admin' }"
-                    title="Administration"
-                    aria-label="Administration"
+                    :title="t('app.administration')"
+                    :aria-label="t('app.administration')"
                 >
                     <span class="circle">
                         <svg
@@ -165,8 +169,12 @@ watchEffect(() => {
                 <button
                     v-if="store.profile"
                     class="account avatar admin"
-                    :title="store.canWrite ? 'Log out' : OFFLINE_HINT"
-                    aria-label="Log out"
+                    :title="
+                        store.canWrite
+                            ? t('app.logout')
+                            : t('common.offlineHint')
+                    "
+                    :aria-label="t('app.logout')"
                     :disabled="!store.canWrite"
                     @click="logout"
                 >

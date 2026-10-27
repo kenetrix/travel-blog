@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { searchAirports, type Airport } from './airports'
+import {
+    airportCity,
+    airportCountry,
+    airportName,
+    searchAirports,
+    type Airport,
+} from './airports'
+import { t } from '../../i18n'
 import { focusNext } from '../ui/enterNext'
 
 defineProps<{ placeholder?: string }>()
@@ -17,7 +24,7 @@ const open = computed(() => editing.value && query.value.trim() !== '')
 const results = computed(() => searchAirports(query.value))
 
 function label(a: Airport) {
-    return `${a.iata} · ${a.city}`
+    return `${a.iata} · ${airportCity(a)}`
 }
 
 function onFocus(e: FocusEvent) {
@@ -105,7 +112,7 @@ function onBlur() {
             type="button"
             class="clear"
             tabindex="-1"
-            aria-label="Clear airport"
+            :aria-label="t('flights.clearAirport')"
             @mousedown.prevent="clear"
         >
             ×
@@ -119,12 +126,14 @@ function onBlur() {
                 @mousemove="active = i"
             >
                 <strong>{{ a.iata }}</strong>
-                <span>{{ a.city }}, {{ a.country }}</span>
-                <small>{{ a.name }}</small>
+                <span>{{ airportCity(a) }}, {{ airportCountry(a) }}</span>
+                <small>{{ airportName(a) }}</small>
             </li>
-            <li v-if="!results.length" class="empty">No airports found</li>
+            <li v-if="!results.length" class="empty">
+                {{ t('flights.noAirports') }}
+            </li>
         </ul>
-        <p v-if="model && !open" class="selected">{{ model.name }}</p>
+        <p v-if="model && !open" class="selected">{{ airportName(model) }}</p>
     </div>
 </template>
 

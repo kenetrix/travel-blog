@@ -6,9 +6,10 @@ import FlightDetails from './FlightDetails.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import AppSheet from '../ui/AppSheet.vue'
 import { useLayout } from '../ui/useLayout'
-import { OFFLINE_HINT } from '../ui/offline'
+import { t } from '../../i18n'
 import { vEnterNext } from '../ui/enterNext'
-import { distanceKm, formatDistance } from './distance'
+import { distanceKm } from './distance'
+import { formatDistance } from '../../i18n/format'
 import { formatFlightNumber, normalizeFlightNumber } from './flightNumber'
 import type { Airport } from './airports'
 import type { Flight } from '../stores/store'
@@ -165,7 +166,11 @@ function skipNumber() {
 </script>
 
 <template>
-    <AppSheet v-model:expanded="expanded" side="right" label="Flights">
+    <AppSheet
+        v-model:expanded="expanded"
+        side="right"
+        :label="t('flights.title')"
+    >
         <form
             v-if="added"
             class="flight-form"
@@ -173,18 +178,22 @@ function skipNumber() {
             @keydown.esc="skipNumber"
         >
             <div>
-                <h2>Add flight</h2>
-                <p class="sub">{{ added.label }} was added</p>
+                <h2>{{ t('flights.add') }}</h2>
+                <p class="sub">
+                    {{ t('flights.wasAdded', { route: added.label }) }}
+                </p>
             </div>
 
             <div>
-                <label for="new-flight-number">Flight number (optional)</label>
+                <label for="new-flight-number">{{
+                    t('flights.numberOptional')
+                }}</label>
                 <input
                     id="new-flight-number"
                     ref="numberInput"
                     v-model="number"
                     class="field"
-                    placeholder="e.g. LH 400"
+                    :placeholder="t('flights.numberPlaceholder')"
                     autocapitalize="characters"
                     autocomplete="off"
                     spellcheck="false"
@@ -193,7 +202,7 @@ function skipNumber() {
                     :disabled="!store.canWrite"
                 />
                 <p v-if="normalizedNumber === null" class="hint below">
-                    Airline code and up to four digits, e.g. LH 400.
+                    {{ t('flights.numberRule') }}
                 </p>
             </div>
 
@@ -202,20 +211,22 @@ function skipNumber() {
                     class="btn btn-primary"
                     type="submit"
                     :disabled="!store.canWrite || normalizedNumber === null"
-                    :title="store.canWrite ? undefined : OFFLINE_HINT"
+                    :title="
+                        store.canWrite ? undefined : t('common.offlineHint')
+                    "
                 >
-                    Save
+                    {{ t('common.save') }}
                 </button>
                 <button
                     class="btn btn-secondary"
                     type="button"
                     @click="skipNumber"
                 >
-                    Skip
+                    {{ t('flights.skip') }}
                 </button>
             </div>
             <p v-if="!store.canWrite" class="hint offline">
-                {{ OFFLINE_HINT }}
+                {{ t('common.offlineHint') }}
             </p>
         </form>
 
@@ -228,30 +239,30 @@ function skipNumber() {
             @keydown.esc="cancelAdd"
         >
             <div>
-                <h2>Add flight</h2>
+                <h2>{{ t('flights.add') }}</h2>
                 <p class="sub">
                     {{
                         store.flights.length
-                            ? 'Draw a route on the map'
-                            : 'Add your first route to draw it on the map'
+                            ? t('flights.drawRoute')
+                            : t('flights.firstRoute')
                     }}
                 </p>
             </div>
 
             <div>
-                <label>From</label>
+                <label>{{ t('flights.from') }}</label>
                 <AirportSelect
                     v-model="from"
-                    placeholder="Search airport or IATA"
+                    :placeholder="t('flights.searchAirport')"
                     @focus="expanded = true"
                 />
             </div>
 
             <div>
-                <label>To</label>
+                <label>{{ t('flights.to') }}</label>
                 <AirportSelect
                     v-model="to"
-                    placeholder="Search airport or IATA"
+                    :placeholder="t('flights.searchAirport')"
                     @focus="expanded = true"
                 />
             </div>
@@ -261,9 +272,11 @@ function skipNumber() {
                     class="btn btn-primary"
                     type="submit"
                     :disabled="!canAdd"
-                    :title="store.canWrite ? undefined : OFFLINE_HINT"
+                    :title="
+                        store.canWrite ? undefined : t('common.offlineHint')
+                    "
                 >
-                    Add route
+                    {{ t('flights.addRoute') }}
                 </button>
                 <button
                     v-if="store.flights.length"
@@ -271,17 +284,17 @@ function skipNumber() {
                     type="button"
                     @click="cancelAdd"
                 >
-                    Cancel
+                    {{ t('common.cancel') }}
                 </button>
             </div>
             <p v-if="!store.canWrite" class="hint offline">
-                {{ OFFLINE_HINT }}
+                {{ t('common.offlineHint') }}
             </p>
             <p v-else-if="duplicate" class="hint">
-                This flight was already added.
+                {{ t('flights.duplicate') }}
             </p>
             <p v-else-if="sameAirport" class="hint">
-                Choose two different airports.
+                {{ t('flights.sameAirport') }}
             </p>
         </form>
 
@@ -300,14 +313,15 @@ function skipNumber() {
                             {{ formatFlightNumber(selected.flightNumber) }} ·
                         </template>
                         {{ format(distanceKm(selected.from, selected.to)) }}
-                        · tap for details
+                        · {{ t('flights.tapForDetails') }}
                     </p>
                 </div>
                 <div v-else>
-                    <h2>Flights</h2>
+                    <h2>{{ t('flights.title') }}</h2>
                     <p class="sub">
-                        {{ store.flights.length }}
-                        {{ store.flights.length === 1 ? 'flight' : 'flights' }}
+                        {{
+                            t('flights.count', { count: store.flights.length })
+                        }}
                         · {{ format(totalKm) }}
                     </p>
                 </div>
@@ -315,8 +329,12 @@ function skipNumber() {
                     class="btn btn-primary add"
                     type="button"
                     :disabled="!store.canWrite"
-                    aria-label="Add flight"
-                    :title="store.canWrite ? 'Add flight' : OFFLINE_HINT"
+                    :aria-label="t('flights.add')"
+                    :title="
+                        store.canWrite
+                            ? t('flights.add')
+                            : t('common.offlineHint')
+                    "
                     @click="startAdd"
                 >
                     <svg
@@ -331,7 +349,7 @@ function skipNumber() {
                     >
                         <path d="M12 5v14M5 12h14" />
                     </svg>
-                    <span class="add-label">Add flight</span>
+                    <span class="add-label">{{ t('flights.add') }}</span>
                 </button>
             </div>
             <ul ref="list" class="flights">
@@ -368,16 +386,19 @@ function skipNumber() {
                             class="icon visibility"
                             :disabled="!store.canWrite"
                             :aria-label="
-                                f.visibility === 'public'
-                                    ? `${f.label} is public; make it private`
-                                    : `${f.label} is private; make it public`
+                                t(
+                                    f.visibility === 'public'
+                                        ? 'flights.makePrivate'
+                                        : 'flights.makePublic',
+                                    { route: f.label }
+                                )
                             "
                             :title="
                                 !store.canWrite
-                                    ? OFFLINE_HINT
+                                    ? t('common.offlineHint')
                                     : f.visibility === 'public'
-                                      ? 'Public - click to make private'
-                                      : 'Only you - click to make public'
+                                      ? t('flights.publicTitle')
+                                      : t('flights.privateTitle')
                             "
                             @click="
                                 store.setFlightVisibility(
@@ -394,8 +415,14 @@ function skipNumber() {
                             type="button"
                             class="icon remove"
                             :disabled="!store.canWrite"
-                            :title="store.canWrite ? undefined : OFFLINE_HINT"
-                            :aria-label="`Remove ${f.label}`"
+                            :title="
+                                store.canWrite
+                                    ? undefined
+                                    : t('common.offlineHint')
+                            "
+                            :aria-label="
+                                t('flights.remove', { route: f.label })
+                            "
                             @click="pendingRemoval = f"
                         >
                             ×
@@ -413,9 +440,9 @@ function skipNumber() {
 
     <ConfirmModal
         v-if="pendingRemoval"
-        title="Remove flight"
-        :message="`Remove ${pendingRemoval.label} from your flights?`"
-        confirm-label="Remove"
+        :title="t('flights.removeTitle')"
+        :message="t('flights.removeMessage', { route: pendingRemoval.label })"
+        :confirm-label="t('common.remove')"
         @confirm="removeFlight"
         @cancel="pendingRemoval = null"
     />

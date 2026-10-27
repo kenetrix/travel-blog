@@ -7,6 +7,7 @@ import {
     MercatorCoordinate,
     NavigationControl,
     setWorkerUrl,
+    type ExpressionSpecification,
 } from 'maplibre-gl'
 import type {
     MapProvider,
@@ -75,6 +76,8 @@ export class MapLibreProvider implements MapProvider {
     private focused = ''
     private boundsCache = new Map<string, LngLatBounds>()
     private readyCallback?: () => void
+    private loaded = false
+    private countryNames: Record<string, string> | null = null
     private insets: MapInsets = { top: 80, right: 60, bottom: 80, left: 360 }
 
     mount(container: HTMLElement): void {
@@ -314,9 +317,35 @@ export class MapLibreProvider implements MapProvider {
                 )
             })
 
+            this.loaded = true
+            this.applyCountryNames()
             this.readyCallback?.()
             this.reveal()
         })
+    }
+
+    setCountryNames(names: Record<string, string> | null): void {
+        this.countryNames = names
+        if (this.loaded) this.applyCountryNames()
+    }
+
+    // The base style shows abbreviations ("Ger.") below zoom 4; translated
+    // names are shown at every zoom, as there are no translated abbreviations
+    private applyCountryNames(): void {
+        const names = this.countryNames
+        const name = names
+            ? [
+                  'match',
+                  ['get', 'NAME'],
+                  ...Object.entries(names).flat(),
+                  ['get', 'NAME'],
+              ]
+            : ['step', ['zoom'], ['get', 'ABBREV'], 4, ['get', 'NAME']]
+        this.map!.setLayoutProperty(
+            'countries-label',
+            'text-field',
+            name as ExpressionSpecification
+        )
     }
 
     onReady(callback: () => void): void {

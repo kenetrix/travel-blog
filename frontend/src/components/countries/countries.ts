@@ -1,6 +1,8 @@
 import countries from './countries.json'
+import { collator, regionName } from '../../i18n/format'
 
 export interface Country {
+    // English; countryName() gives the name in the UI language
     name: string
     nameLong?: string
     alpha3: string
@@ -25,3 +27,29 @@ export const Countries: Country[] = countries.map((c) => {
         countryCode: Number(c['country-code']),
     }
 })
+
+export function countryName(c: Country): string {
+    return regionName(c.alpha2, c.name)
+}
+
+export function byCountryName(a: Country, b: Country): number {
+    return collator().compare(countryName(a), countryName(b))
+}
+
+// Lowercase and strip diacritics so "osterreich" finds "Österreich"
+const normalize = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+// Name in the UI language or in English starts with the query, or the query
+// is the country's code
+export function matchesCountry(c: Country, query: string): boolean {
+    const q = normalize(query.trim())
+    if (!q) return false
+    return (
+        [countryName(c), c.name, c.nameLong ?? ''].some((n) =>
+            normalize(n).startsWith(q)
+        ) ||
+        c.alpha3.toLowerCase() === q ||
+        c.alpha2.toLowerCase() === q
+    )
+}

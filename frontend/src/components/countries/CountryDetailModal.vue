@@ -13,11 +13,17 @@ import {
     type CountryStatus,
     type Visibility,
 } from '../stores/store'
-import { getCountryByIso } from './countries'
+import { countryName, getCountryByIso } from './countries'
 import { getCountryFacts } from './countryFacts'
+import {
+    currencyName,
+    formatList,
+    formatNumber,
+    languageName,
+} from '../../i18n/format'
 import { RouterLink, useRoute } from 'vue-router'
 import ConfirmModal from '../ui/ConfirmModal.vue'
-import { OFFLINE_HINT } from '../ui/offline'
+import { localizedData, t } from '../../i18n'
 
 const props = defineProps<{ iso: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -27,6 +33,9 @@ const route = useRoute()
 
 const country = computed(() => getCountryByIso(props.iso))
 const facts = computed(() => getCountryFacts(props.iso))
+const name = computed(() =>
+    country.value ? countryName(country.value) : props.iso
+)
 
 const status = ref<CountryStatus>('visited')
 const form = ref(emptyDetails())
@@ -40,7 +49,13 @@ const loadingDetails = ref(false)
 // Offline and never loaded before, so only rating and tags are known
 const unavailable = ref(false)
 
-const SUGGESTED_TAGS = ['beach', 'city trip', 'hiking', 'culture', 'nightlife']
+const SUGGESTED_TAGS = [
+    'beach',
+    'cityTrip',
+    'hiking',
+    'culture',
+    'nightlife',
+] as const
 
 function load(iso: string) {
     status.value = store.visited.has(iso)
@@ -103,7 +118,7 @@ async function persist() {
     )
     // On failure the store reports the error and the form stays open
     if (!saved) return
-    store.notify(`${country.value?.name ?? props.iso} saved`)
+    store.notify(t('country.saved', { name: name.value }))
     emit('close')
 }
 
@@ -130,18 +145,41 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 // --- Facts -------------------------------------------------------------
 
-const formatNumber = (n: number) => n.toLocaleString('en')
+// Codes (EUR, de) are named by the browser; the rest are English names
+const isCurrencyCode = (s: string) => /^[A-Z]{3}$/.test(s)
+const isLanguageCode = (s: string) => /^[a-z]{2,3}$/.test(s)
 
 const factRows = computed(() => {
     const f = facts.value
     if (!f) return []
+    const area = formatNumber(f.area)
     return [
-        ['Capital', f.capital],
-        ['Region', f.region],
-        ['Population', f.population ? formatNumber(f.population) : ''],
-        ['Area', f.area ? `${formatNumber(f.area)} km²` : ''],
-        ['Currency', f.currencies],
-        ['Languages', f.languages],
+        [
+            t('country.capital'),
+            localizedData().capitals[props.iso] ?? f.capital,
+        ],
+        [t('country.region'), t(`regions.${f.region}`)],
+        [
+            t('country.population'),
+            f.population ? formatNumber(f.population) : '',
+        ],
+        [t('country.area'), f.area ? t('format.area', { area }) : ''],
+        [
+            t('country.currency'),
+            formatList(
+                f.currencies.map((c) =>
+                    isCurrencyCode(c) ? currencyName(c, c) : c
+                )
+            ),
+        ],
+        [
+            t('country.languages'),
+            formatList(
+                f.languages.map((l) =>
+                    isLanguageCode(l) ? languageName(l, l) : l
+                )
+            ),
+        ],
     ].filter(([, value]) => value)
 })
 
@@ -166,7 +204,9 @@ function removeTag(tag: string) {
 }
 
 const tagSuggestions = computed(() =>
-    SUGGESTED_TAGS.filter((t) => !form.value.tags.includes(t))
+    SUGGESTED_TAGS.map((key) => t(`country.suggestedTags.${key}`)).filter(
+        (tag) => !form.value.tags.includes(tag)
+    )
 )
 
 // --- Misc --------------------------------------------------------------
@@ -182,16 +222,20 @@ function fit(el: HTMLTextAreaElement) {
     el.style.height = `${el.scrollHeight + 2}px`
 }
 
-const statusOptions: { value: CountryStatus; label: string }[] = [
-    { value: 'visited', label: 'Visited' },
-    { value: 'wishlist', label: 'Want to go' },
-    { value: 'none', label: 'Not set' },
-]
+const statusOptions = computed<{ value: CountryStatus; label: string }[]>(
+    () => [
+        { value: 'visited', label: t('country.visited') },
+        { value: 'wishlist', label: t('country.wishlist') },
+        { value: 'none', label: t('country.notSet') },
+    ]
+)
 
-const visibilityOptions: { value: Visibility; label: string }[] = [
-    { value: 'private', label: '🔒 Only me' },
-    { value: 'public', label: '🌐 Public' },
-]
+const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
+    () => [
+        { value: 'private', label: t('common.onlyMe') },
+        { value: 'public', label: t('common.public') },
+    ]
+)
 </script>
 
 <template>
@@ -204,34 +248,38 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
                             v-if="country"
                             :class="`fi fi-${country.alpha2.toLowerCase()}`"
                         ></span>
-                        {{ country?.name ?? iso }}
+                        {{ name }}
                     </h2>
-                    <div class="stars" role="group" aria-label="Rating">
+                    <div
+                        class="stars"
+                        role="group"
+                        :aria-label="t('country.rating')"
+                    >
                         <button
                             v-for="n in 5"
                             :key="n"
                             type="button"
                             class="star"
                             :class="{ on: n <= form.rating }"
-                            :aria-label="`${n} star${n > 1 ? 's' : ''}`"
+                            :aria-label="t('country.stars', { count: n })"
                             @click="setRating(n)"
                         >
                             ★
                         </button>
                     </div>
                 </div>
-                <p class="sub">Country details</p>
+                <p class="sub">{{ t('country.details') }}</p>
             </div>
             <button
                 class="close"
-                aria-label="Close"
+                :aria-label="t('common.close')"
                 @click="leave(() => emit('close'))"
             >
                 ×
             </button>
         </div>
 
-        <div class="segmented" role="group" aria-label="Status">
+        <div class="segmented" role="group" :aria-label="t('country.status')">
             <button
                 v-for="o in statusOptions"
                 :key="o.value"
@@ -247,7 +295,7 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
             v-if="status !== 'none'"
             class="segmented visibility"
             role="group"
-            aria-label="Visibility"
+            :aria-label="t('country.visibility')"
         >
             <button
                 v-for="o in visibilityOptions"
@@ -256,8 +304,8 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
                 :class="{ on: vis === o.value }"
                 :title="
                     o.value === 'public'
-                        ? 'Shown on your public profile, if it is public'
-                        : 'Only visible to you'
+                        ? t('country.publicTitle')
+                        : t('country.privateTitle')
                 "
                 @click="vis = o.value"
             >
@@ -266,7 +314,7 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
         </div>
 
         <details open>
-            <summary>Overview</summary>
+            <summary>{{ t('country.overview') }}</summary>
             <dl v-if="factRows.length" class="facts">
                 <template v-for="[label, value] in factRows" :key="label">
                     <dt>{{ label }}</dt>
@@ -276,63 +324,62 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
         </details>
 
         <details open>
-            <summary>Trips</summary>
-            <p class="empty">Trips are planned on their own page.</p>
+            <summary>{{ t('country.trips') }}</summary>
+            <p class="empty">{{ t('country.tripsNote') }}</p>
             <RouterLink
                 class="link-btn"
                 :to="{ name: 'trip-new', params: { iso } }"
             >
-                + Add trip
+                {{ t('country.addTrip') }}
             </RouterLink>
         </details>
 
         <details open>
-            <summary>Notes</summary>
+            <summary>{{ t('country.notes') }}</summary>
             <p v-if="unavailable" class="empty">
-                Not available offline. Open this country once while online to
-                keep its notes on this device.
+                {{ t('country.notesOffline') }}
             </p>
-            <label for="food">Food place recommendations</label>
+            <label for="food">{{ t('country.food') }}</label>
             <textarea
                 id="food"
                 v-autogrow
                 v-model="form.food"
                 rows="3"
-                placeholder="Add your first food tip — restaurants, street food, cafés…"
+                :placeholder="t('country.foodPlaceholder')"
             />
-            <label for="sights">Sightseeing</label>
+            <label for="sights">{{ t('country.sights') }}</label>
             <textarea
                 id="sights"
                 v-autogrow
                 v-model="form.sightseeing"
                 rows="3"
-                placeholder="Add your first sight — places worth seeing…"
+                :placeholder="t('country.sightsPlaceholder')"
             />
-            <label for="notes">Trip notes &amp; highlights</label>
+            <label for="notes">{{ t('country.tripNotes') }}</label>
             <textarea
                 id="notes"
                 v-autogrow
                 v-model="form.notes"
                 rows="3"
-                placeholder="The story of your trip, tips for next time…"
+                :placeholder="t('country.tripNotesPlaceholder')"
             />
         </details>
 
         <details>
             <summary>
-                Tags
+                {{ t('country.tags') }}
                 <span v-if="form.tags.length" class="count">
                     {{ form.tags.length }}
                 </span>
             </summary>
             <div class="chips">
-                <span v-for="t in form.tags" :key="t" class="chip on">
-                    {{ t }}
+                <span v-for="tag in form.tags" :key="tag" class="chip on">
+                    {{ tag }}
                     <button
                         type="button"
                         class="icon"
-                        :aria-label="`Remove ${t}`"
-                        @click="removeTag(t)"
+                        :aria-label="t('country.removeTag', { tag })"
+                        @click="removeTag(tag)"
                     >
                         ×
                     </button>
@@ -340,60 +387,60 @@ const visibilityOptions: { value: Visibility; label: string }[] = [
             </div>
             <input
                 v-model="tagInput"
-                placeholder="Add tag and press Enter"
+                :placeholder="t('country.addTag')"
                 @keydown.enter.prevent.stop="addTag(tagInput)"
             />
             <div class="chips">
                 <button
-                    v-for="t in tagSuggestions"
-                    :key="t"
+                    v-for="tag in tagSuggestions"
+                    :key="tag"
                     type="button"
                     class="chip"
-                    @click="addTag(t)"
+                    @click="addTag(tag)"
                 >
-                    + {{ t }}
+                    + {{ tag }}
                 </button>
             </div>
         </details>
 
         <div class="actions">
             <p v-if="!store.canWrite" class="hint offline">
-                {{ OFFLINE_HINT }}
+                {{ t('common.offlineHint') }}
             </p>
             <button class="btn cancel" @click="leave(() => emit('close'))">
-                Cancel
+                {{ t('common.cancel') }}
             </button>
             <button
                 class="btn save"
                 :disabled="!dirty || loadingDetails || !store.canWrite"
                 :title="
                     !store.canWrite
-                        ? OFFLINE_HINT
+                        ? t('common.offlineHint')
                         : dirty
                           ? undefined
-                          : 'No changes to save'
+                          : t('country.noChanges')
                 "
                 @click="save"
             >
-                Save
+                {{ t('common.save') }}
             </button>
         </div>
     </div>
 
     <ConfirmModal
         v-if="pendingLeave"
-        title="Discard changes"
-        message="You have unsaved changes. Discard them?"
-        confirm-label="Discard"
+        :title="t('country.discardTitle')"
+        :message="t('country.discardMessage')"
+        :confirm-label="t('country.discard')"
         @confirm="(pendingLeave!(), (pendingLeave = null))"
         @cancel="pendingLeave = null"
     />
 
     <ConfirmModal
         v-if="showRemoveConfirm"
-        title="Remove country"
-        :message="`Remove ${country?.name ?? iso} from your visited countries?`"
-        confirm-label="Remove"
+        :title="t('country.removeTitle')"
+        :message="t('country.removeMessage', { name })"
+        :confirm-label="t('common.remove')"
         @confirm="persist"
         @cancel="showRemoveConfirm = false"
     />

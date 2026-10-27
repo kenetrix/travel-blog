@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useTravelStore, type Flight, type FlightUpdate } from '../stores/store'
-import { OFFLINE_HINT } from '../ui/offline'
+import { t } from '../../i18n'
 import { vEnterNext } from '../ui/enterNext'
-import {
-    distanceKm,
-    estimateDurationMinutes,
-    formatDistance,
-    formatDuration,
-} from './distance'
+import { distanceKm, estimateDurationMinutes } from './distance'
+import { formatDay, formatDistance, formatDuration } from '../../i18n/format'
 import {
     flightradarUrl,
     formatFlightNumber,
@@ -108,15 +104,8 @@ const durationLabel = computed(() =>
         : `≈ ${formatDuration(estimate.value)}`
 )
 
-// A calendar day: read and shown in UTC so no time zone shifts it
-function formatDate(day: string) {
-    return new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-    })
-}
+const formatDate = (day: string) =>
+    formatDay(day, { day: 'numeric', month: 'short', year: 'numeric' })
 
 async function save() {
     if (!canSave.value) return
@@ -129,24 +118,24 @@ async function save() {
     <div class="details">
         <dl>
             <div>
-                <dt>Distance</dt>
+                <dt>{{ t('flights.distance') }}</dt>
                 <dd>{{ formatDistance(km, store.settings.distanceUnit) }}</dd>
             </div>
             <div>
-                <dt>Duration</dt>
+                <dt>{{ t('flights.duration') }}</dt>
                 <dd>
                     {{ durationLabel }}
                     <span v-if="!flight.durationMinutes" class="muted">
-                        (estimate)
+                        {{ t('flights.estimate') }}
                     </span>
                 </dd>
             </div>
             <div v-if="flight.date">
-                <dt>Date</dt>
+                <dt>{{ t('flights.date') }}</dt>
                 <dd>{{ formatDate(flight.date) }}</dd>
             </div>
             <div v-if="flight.aircraft">
-                <dt>Aircraft</dt>
+                <dt>{{ t('flights.aircraft') }}</dt>
                 <dd>{{ flight.aircraft }}</dd>
             </div>
         </dl>
@@ -158,16 +147,22 @@ async function save() {
             target="_blank"
             rel="noopener noreferrer"
         >
-            {{ formatFlightNumber(flight.flightNumber) }} on Flightradar24 ↗
+            {{
+                t('flights.onFlightradar', {
+                    number: formatFlightNumber(flight.flightNumber),
+                })
+            }}
         </a>
 
         <form v-enter-next class="fields" @submit.prevent="save">
             <div>
-                <label :for="`number-${flight.id}`">Flight number</label>
+                <label :for="`number-${flight.id}`">{{
+                    t('flights.number')
+                }}</label>
                 <input
                     :id="`number-${flight.id}`"
                     v-model="number"
-                    placeholder="e.g. LH 400"
+                    :placeholder="t('flights.numberPlaceholder')"
                     autocapitalize="characters"
                     autocomplete="off"
                     spellcheck="false"
@@ -176,17 +171,18 @@ async function save() {
                     :disabled="!store.canWrite"
                 />
                 <p v-if="normalizedNumber === null" class="hint">
-                    Airline code and up to four digits, e.g. LH 400.
+                    {{ t('flights.numberRule') }}
                 </p>
                 <p v-else-if="!flight.flightNumber" class="muted small">
-                    Add the flight number to fill in date, duration and
-                    aircraft.
+                    {{ t('flights.numberFirst') }}
                 </p>
             </div>
 
             <template v-if="flight.flightNumber">
                 <div>
-                    <label :for="`date-${flight.id}`">Date</label>
+                    <label :for="`date-${flight.id}`">{{
+                        t('flights.date')
+                    }}</label>
                     <input
                         :id="`date-${flight.id}`"
                         v-model="date"
@@ -198,7 +194,9 @@ async function save() {
                 </div>
 
                 <div>
-                    <label :for="`hours-${flight.id}`">Duration</label>
+                    <label :for="`hours-${flight.id}`">{{
+                        t('flights.duration')
+                    }}</label>
                     <div class="duration">
                         <input
                             :id="`hours-${flight.id}`"
@@ -207,10 +205,10 @@ async function save() {
                             inputmode="numeric"
                             min="0"
                             max="24"
-                            aria-label="Hours"
+                            :aria-label="t('flights.hours')"
                             :disabled="!store.canWrite"
                         />
-                        <span>h</span>
+                        <span>{{ t('flights.hoursUnit') }}</span>
                         <input
                             v-model.number="minutes"
                             type="number"
@@ -218,36 +216,40 @@ async function save() {
                             min="0"
                             max="59"
                             step="5"
-                            aria-label="Minutes"
+                            :aria-label="t('flights.minutes')"
                             :disabled="!store.canWrite"
                         />
-                        <span>min</span>
+                        <span>{{ t('flights.minutesUnit') }}</span>
                     </div>
                     <p v-if="!durationValid" class="hint">
-                        Up to 24 hours, minutes below 60.
+                        {{ t('flights.durationRule') }}
                     </p>
                 </div>
 
                 <div>
-                    <label :for="`aircraft-${flight.id}`">Aircraft</label>
+                    <label :for="`aircraft-${flight.id}`">{{
+                        t('flights.aircraft')
+                    }}</label>
                     <select
                         :id="`aircraft-${flight.id}`"
                         v-model="aircraft"
                         :disabled="!store.canWrite"
                     >
-                        <option value="">Unknown</option>
+                        <option value="">{{ t('flights.unknown') }}</option>
                         <option v-for="t in AIRCRAFT_TYPES" :key="t" :value="t">
                             {{ t }}
                         </option>
-                        <option :value="OTHER">Other…</option>
+                        <option :value="OTHER">
+                            {{ t('flights.otherType') }}
+                        </option>
                     </select>
                     <input
                         v-if="aircraft === OTHER"
                         v-model="otherAircraft"
                         class="other"
-                        placeholder="Aircraft type"
+                        :placeholder="t('flights.aircraftType')"
                         maxlength="60"
-                        aria-label="Other aircraft type"
+                        :aria-label="t('flights.otherAircraft')"
                         :disabled="!store.canWrite"
                     />
                 </div>
@@ -257,12 +259,12 @@ async function save() {
                 class="btn"
                 type="submit"
                 :disabled="!canSave"
-                :title="store.canWrite ? undefined : OFFLINE_HINT"
+                :title="store.canWrite ? undefined : t('common.offlineHint')"
             >
-                Save
+                {{ t('common.save') }}
             </button>
             <p v-if="!store.canWrite" class="hint offline">
-                {{ OFFLINE_HINT }}
+                {{ t('common.offlineHint') }}
             </p>
         </form>
     </div>

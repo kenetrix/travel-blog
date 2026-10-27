@@ -2,19 +2,21 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
-import { getCountryByIso } from '../countries/countries'
+import { countryName, getCountryByIso } from '../countries/countries'
+import { t } from '../../i18n'
 
 const route = useRoute()
 const iso = computed(() => String(route.params.iso))
 const country = computed(() => getCountryByIso(iso.value))
+const name = computed(() =>
+    country.value ? countryName(country.value) : iso.value
+)
 </script>
 
 <template>
-    <PageWrapper title="New trip" :subtitle="country?.name ?? iso">
+    <PageWrapper :title="t('trip.title')" :subtitle="name">
         <!-- Placeholder: the trip planner is a future feature -->
-        <p class="soon">
-            Trip planning for {{ country?.name ?? iso }} is coming soon.
-        </p>
+        <p class="soon">{{ t('trip.soon', { country: name }) }}</p>
     </PageWrapper>
 </template>
 

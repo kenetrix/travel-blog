@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTravelStore } from '../stores/store'
+import { t } from '../../i18n'
 
 const emit = defineEmits<{ say: [text: string, error?: boolean] }>()
 const store = useTravelStore()
@@ -22,20 +23,23 @@ async function toggle() {
     })
     if (failed) emit('say', failed, true)
     else
-        emit('say', isPublic.value ? 'Profile is public' : 'Profile is private')
+        emit(
+            'say',
+            isPublic.value ? t('profile.isPublic') : t('profile.isPrivate')
+        )
 }
 
 async function setColor(value: string) {
     const failed = await store.updateProfile({ color: value })
     if (failed) emit('say', failed, true)
-    else emit('say', 'Colour saved')
+    else emit('say', t('profile.colourSaved'))
 }
 </script>
 
 <template>
     <section class="panel">
         <div class="head">
-            <h2 id="visibility-title">Public profile</h2>
+            <h2 id="visibility-title">{{ t('profile.publicProfile') }}</h2>
             <button
                 type="button"
                 class="switch"
@@ -50,21 +54,15 @@ async function setColor(value: string) {
             </button>
         </div>
         <p class="note">
-            <template v-if="isPublic">
-                Anyone can see your display name, bio, home country and
-                everything marked 🌐 Public.
-            </template>
-            <template v-else>
-                Nobody else can see anything, even items marked 🌐 Public.
-            </template>
+            {{ isPublic ? t('profile.publicNote') : t('profile.privateNote') }}
         </p>
 
         <div class="head divider">
-            <h2 id="color-title">Profile colour</h2>
+            <h2 id="color-title">{{ t('profile.colour') }}</h2>
             <label
                 class="avatar"
                 :style="{ background: color }"
-                title="Change colour"
+                :title="t('profile.changeColour')"
             >
                 {{ initial }}
                 <input

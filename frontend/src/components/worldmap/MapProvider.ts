@@ -35,6 +35,8 @@ export interface MapProvider {
     focusCountry(isoCode: string | null, insets?: MapInsets): void
     focusFlight(id: string | null, insets?: MapInsets): void
     flyTo(lng: number, lat: number, zoom: number): void
+    // Labels by the base map's English country name; null keeps English
+    setCountryNames(names: Record<string, string> | null): void
 }
 
 function mix(top: string, bottom: string, alpha: number): string {

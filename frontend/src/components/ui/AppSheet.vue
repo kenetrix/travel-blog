@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useLayout } from './useLayout'
 import { registerSheet } from './mapInsets'
+import { t } from '../../i18n'
 
 // Phone: bottom sheet that collapses to a peek. Tablet: side sheet.
 // Desktop: floating panel on the given side. Outside phones, `expanded`
@@ -111,7 +112,9 @@ onBeforeUnmount(() => unregister())
             role="button"
             tabindex="0"
             :aria-expanded="expanded"
-            :aria-label="expanded ? `Collapse ${label}` : `Expand ${label}`"
+            :aria-label="
+                t(expanded ? 'sheet.collapse' : 'sheet.expand', { label })
+            "
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
@@ -124,8 +127,8 @@ onBeforeUnmount(() => unregister())
             type="button"
             class="tab"
             :aria-expanded="expanded"
-            :aria-label="expanded ? `Hide ${label}` : `Show ${label}`"
-            :title="expanded ? `Hide ${label}` : `Show ${label}`"
+            :aria-label="t(expanded ? 'sheet.hide' : 'sheet.show', { label })"
+            :title="t(expanded ? 'sheet.hide' : 'sheet.show', { label })"
             @click="expanded = !expanded"
         >
             <svg

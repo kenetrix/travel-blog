@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch'
 import type { paths, components } from '../../generated/schema.gen'
+import { hasMessage, t, type MessageKey } from '../i18n'
 
 const TIMEOUT_MS = 8000
 
@@ -12,6 +13,8 @@ export class NetworkError extends Error {
         super('This needs a connection')
     }
 }
+
+export const offlineMessage = () => t('errors.offline')
 
 let reportReachable: (reachable: boolean) => void = () => {}
 
@@ -47,10 +50,14 @@ export const api = createClient<paths>({
 
 export type Schemas = components['schemas']
 
-// Readable message for a failed request: the problem detail if the server
-// sent one, otherwise the fallback
-export function problemMessage(error: unknown, fallback: string): string {
-    if (error instanceof NetworkError) return error.message
+// Readable message for a failed request: the translation of the problem's
+// code, else its English detail, else the fallback
+export function problemMessage(error: unknown, fallback: MessageKey): string {
+    if (error instanceof NetworkError) return offlineMessage()
     const problem = error as Partial<Schemas['Problem']> | undefined
-    return problem?.detail ?? fallback
+    const key = `errors.${problem?.code}`
+    if (problem?.code && problem.code !== 'unknown' && hasMessage(key)) {
+        return t(key, problem.params)
+    }
+    return problem?.detail ?? t(fallback)
 }

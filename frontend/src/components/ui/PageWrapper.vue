@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import OfflineBanner from './OfflineBanner.vue'
+import { t } from '../../i18n'
 
 withDefaults(
     defineProps<{ title: string; subtitle?: string; closable?: boolean }>(),
@@ -21,10 +22,10 @@ function back() {
             <button
                 v-if="closable"
                 class="back"
-                aria-label="Back to the map"
+                :aria-label="t('common.backToMap')"
                 @click="back"
             >
-                ←<span class="back-text"> Back</span>
+                ←<span class="back-text"> {{ t('common.back') }}</span>
             </button>
             <div class="titles">
                 <h1>{{ title }}</h1>

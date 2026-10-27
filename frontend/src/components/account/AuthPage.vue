@@ -2,8 +2,15 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTravelStore } from '../stores/store'
-import { LANGUAGES } from './options'
 import { vEnterNext } from '../ui/enterNext'
+import {
+    LANGUAGES,
+    chooseLanguage,
+    language,
+    t,
+    type Language,
+    type MessageKey,
+} from '../../i18n'
 
 const store = useTravelStore()
 const router = useRouter()
@@ -18,29 +25,40 @@ const password = ref('')
 const email = ref('')
 const firstName = ref('')
 const lastName = ref('')
-// Preselect the browser's language if it is one we offer
-const browserLanguage = navigator.language.split('-')[0]
-const language = ref(
-    LANGUAGES.some((l) => l.code === browserLanguage) ? browserLanguage : 'en'
-)
 
 const showPassword = ref(false)
 const capsLock = ref(false)
 
 // ?error= comes from a failed single sign-on; the codes are set by the backend
-const OIDC_ERRORS: Record<string, string> = {
-    oidc_failed: 'Single sign-on failed. Please try again.',
-    registration_closed:
-        'There is no account for this login, and registration is closed. Ask an administrator for an account.',
-    email_unverified:
-        'An account with this email already exists, but the provider has not verified your email address.',
-}
+const OIDC_ERRORS = [
+    'oidc_failed',
+    'registration_closed',
+    'email_unverified',
+] as const
+type OidcError = (typeof OIDC_ERRORS)[number]
 const oidcError = route.query.error
-const error = ref(
+// A key, so the message follows a language switch
+const errorKey = ref<MessageKey | null>(
     typeof oidcError === 'string'
-        ? (OIDC_ERRORS[oidcError] ?? OIDC_ERRORS.oidc_failed)
-        : ''
+        ? `oidcErrors.${OIDC_ERRORS.includes(oidcError as OidcError) ? (oidcError as OidcError) : 'oidc_failed'}`
+        : null
 )
+const errorText = ref('')
+const error = computed(() =>
+    errorKey.value ? t(errorKey.value) : errorText.value
+)
+
+function setError(text: string) {
+    errorKey.value = null
+    errorText.value = text
+}
+
+// The new account gets the provider's language, or else this page's
+const ssoHref = computed(() => `/api/auth/oidc/login?lang=${language.value}`)
+
+function onLanguage(e: Event) {
+    chooseLanguage((e.target as HTMLSelectElement).value as Language)
+}
 const busy = ref(false)
 
 // Single sign-on button and, if the server turned passwords off, no form
@@ -64,26 +82,26 @@ onMounted(async () => {
 })
 
 const title = computed(() => {
-    if (step.value === 'login') return 'Welcome back'
-    if (step.value === 'register') return 'Create your account'
-    return 'Log in or sign up'
+    if (step.value === 'login') return t('auth.titleLogin')
+    if (step.value === 'register') return t('auth.titleRegister')
+    return t('auth.titleStart')
 })
 
 const subtitle = computed(() => {
-    if (step.value === 'login') return 'Enter your password to continue.'
-    if (step.value === 'register') return 'This username is still free.'
-    return 'Your countries and flights, on every device.'
+    if (step.value === 'login') return t('auth.subtitleLogin')
+    if (step.value === 'register') return t('auth.subtitleRegister')
+    return t('auth.subtitleStart')
 })
 
 const buttonLabel = computed(() => {
     if (busy.value) {
-        if (step.value === 'login') return 'Logging in…'
-        if (step.value === 'register') return 'Creating account…'
-        return 'Checking…'
+        if (step.value === 'login') return t('auth.loggingIn')
+        if (step.value === 'register') return t('auth.creating')
+        return t('auth.checking')
     }
-    if (step.value === 'login') return 'Log in'
-    if (step.value === 'register') return 'Create account'
-    return 'Continue'
+    if (step.value === 'login') return t('auth.logIn')
+    if (step.value === 'register') return t('auth.createAccount')
+    return t('auth.continue')
 })
 
 const passwordLongEnough = computed(() => password.value.length >= MIN_PASSWORD)
@@ -96,7 +114,7 @@ async function checkUsername() {
     const name = username.value.trim().toLowerCase()
     const check = await store.checkUsername(name)
     if (typeof check === 'string') {
-        error.value = check
+        setError(check)
         return
     }
     username.value = name
@@ -109,14 +127,13 @@ async function checkUsername() {
         await nextTick()
         emailInput.value?.focus()
     } else {
-        error.value =
-            'There is no account with this username, and registration is closed. Ask an administrator for an account.'
+        errorKey.value = 'auth.noAccountClosed'
     }
 }
 
 async function submit() {
     busy.value = true
-    error.value = ''
+    setError('')
     if (step.value === 'username') {
         await checkUsername()
         busy.value = false
@@ -135,7 +152,7 @@ async function submit() {
               })
     busy.value = false
     if (failed) {
-        error.value = failed
+        setError(failed)
         password.value = ''
         await nextTick()
         passwordInput.value?.focus()
@@ -149,7 +166,7 @@ async function changeUsername() {
     step.value = 'username'
     password.value = ''
     showPassword.value = false
-    error.value = ''
+    setError('')
     await nextTick()
     usernameInput.value?.focus()
 }
@@ -160,7 +177,7 @@ async function changeUsername() {
         <button
             class="back"
             type="button"
-            aria-label="Back to the map"
+            :aria-label="t('common.backToMap')"
             @click="router.push({ name: 'home' })"
         >
             <svg
@@ -176,7 +193,7 @@ async function changeUsername() {
             >
                 <path d="M15 6l-6 6 6 6" />
             </svg>
-            <span class="back-text">Map</span>
+            <span class="back-text">{{ t('auth.map') }}</span>
         </button>
 
         <main class="card">
@@ -193,7 +210,7 @@ async function changeUsername() {
             </header>
 
             <p v-if="!store.canWrite" class="notice" role="status">
-                You are offline. Logging in needs a connection.
+                {{ t('auth.offline') }}
             </p>
 
             <p v-if="error" class="error" role="alert">
@@ -217,7 +234,7 @@ async function changeUsername() {
                 <a
                     class="btn sso"
                     :class="{ disabled: !store.canWrite }"
-                    href="/api/auth/oidc/login"
+                    :href="ssoHref"
                     :aria-disabled="!store.canWrite"
                     @click="!store.canWrite && $event.preventDefault()"
                 >
@@ -235,10 +252,10 @@ async function changeUsername() {
                         <circle cx="8" cy="15" r="4" />
                         <path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2" />
                     </svg>
-                    Continue with {{ sso.name }}
+                    {{ t('auth.continueWith', { name: sso.name }) }}
                 </a>
                 <div v-if="passwordLogin" class="divider">
-                    <span>or with your username</span>
+                    <span>{{ t('auth.orUsername') }}</span>
                 </div>
             </template>
 
@@ -254,7 +271,7 @@ async function changeUsername() {
                     class="field"
                     :class="{ 'visually-hidden': step !== 'username' }"
                 >
-                    <label for="username">Username</label>
+                    <label for="username">{{ t('auth.username') }}</label>
                     <input
                         id="username"
                         ref="usernameInput"
@@ -265,7 +282,7 @@ async function changeUsername() {
                         spellcheck="false"
                         enterkeyhint="next"
                         pattern="[a-zA-Z0-9_]{3,30}"
-                        title="3–30 letters, digits or _"
+                        :title="t('auth.usernameRule')"
                         :readonly="step !== 'username'"
                         :tabindex="step === 'username' ? undefined : -1"
                         required
@@ -278,14 +295,21 @@ async function changeUsername() {
                     </span>
                     <span class="who">@{{ username }}</span>
                     <button type="button" class="link" @click="changeUsername">
-                        {{ step === 'login' ? 'Not you?' : 'Change' }}
+                        {{
+                            step === 'login'
+                                ? t('auth.notYou')
+                                : t('auth.change')
+                        }}
                     </button>
                 </div>
 
                 <template v-if="step === 'register'">
                     <div class="field">
                         <label for="email">
-                            Email <span class="optional">optional</span>
+                            {{ t('auth.email') }}
+                            <span class="optional">{{
+                                t('common.optional')
+                            }}</span>
                         </label>
                         <input
                             id="email"
@@ -299,7 +323,7 @@ async function changeUsername() {
                     </div>
                     <div class="row">
                         <div class="field">
-                            <label for="first">First name</label>
+                            <label for="first">{{ t('auth.firstName') }}</label>
                             <input
                                 id="first"
                                 v-model="firstName"
@@ -307,7 +331,7 @@ async function changeUsername() {
                             />
                         </div>
                         <div class="field">
-                            <label for="last">Last name</label>
+                            <label for="last">{{ t('auth.lastName') }}</label>
                             <input
                                 id="last"
                                 v-model="lastName"
@@ -315,22 +339,10 @@ async function changeUsername() {
                             />
                         </div>
                     </div>
-                    <div class="field">
-                        <label for="language">Language</label>
-                        <select id="language" v-model="language">
-                            <option
-                                v-for="l in LANGUAGES"
-                                :key="l.code"
-                                :value="l.code"
-                            >
-                                {{ l.name }}
-                            </option>
-                        </select>
-                    </div>
                 </template>
 
                 <div v-if="step !== 'username'" class="field">
-                    <label for="password">Password</label>
+                    <label for="password">{{ t('auth.password') }}</label>
                     <div class="password">
                         <input
                             id="password"
@@ -357,7 +369,9 @@ async function changeUsername() {
                             type="button"
                             class="reveal"
                             :aria-label="
-                                showPassword ? 'Hide password' : 'Show password'
+                                showPassword
+                                    ? t('auth.hidePassword')
+                                    : t('auth.showPassword')
                             "
                             :aria-pressed="showPassword"
                             @click="showPassword = !showPassword"
@@ -382,14 +396,16 @@ async function changeUsername() {
                         </button>
                     </div>
                     <div id="password-hints" class="hints">
-                        <p v-if="capsLock" class="hint warn">Caps Lock is on</p>
+                        <p v-if="capsLock" class="hint warn">
+                            {{ t('auth.capsLock') }}
+                        </p>
                         <p
                             v-if="step === 'register'"
                             class="hint"
                             :class="{ ok: passwordLongEnough }"
                         >
-                            {{ passwordLongEnough ? '✓' : '•' }} At least
-                            {{ MIN_PASSWORD }} characters
+                            {{ passwordLongEnough ? '✓' : '•' }}
+                            {{ t('auth.minLength', { min: MIN_PASSWORD }) }}
                         </p>
                     </div>
                 </div>
@@ -404,6 +420,20 @@ async function changeUsername() {
                     {{ buttonLabel }}
                 </button>
             </form>
+
+            <!-- Also the language of an account registered here -->
+            <div class="language">
+                <label for="ui-language">{{ t('common.language') }}</label>
+                <select id="ui-language" :value="language" @change="onLanguage">
+                    <option
+                        v-for="l in LANGUAGES"
+                        :key="l.code"
+                        :value="l.code"
+                    >
+                        {{ l.name }}
+                    </option>
+                </select>
+            </div>
         </main>
     </div>
 </template>
@@ -684,6 +714,20 @@ select:focus {
 
 input[aria-invalid='true'] {
     border-color: #c0392b;
+}
+
+/* Small and below the form: most visitors keep the detected language */
+.language {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.language select {
+    width: auto;
+    min-height: 40px;
 }
 
 .row {

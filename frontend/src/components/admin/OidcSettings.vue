@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
+import { t } from '../../i18n'
 
 type OidcConfig = Schemas['OidcAdminConfig']
 
@@ -29,7 +30,7 @@ async function copyCallback() {
     try {
         await navigator.clipboard.writeText(shownCallback.value)
     } catch {
-        say('Could not copy; select the URL and copy it by hand', true)
+        say(t('oidc.copyFailed'), true)
         return
     }
     copied.value = true
@@ -44,17 +45,15 @@ const shownCallback = computed(() =>
         : callbackUrl
 )
 const status = computed(() => {
-    const source =
-        oidc.value?.source === 'env' ? 'environment variables' : 'settings'
+    const source = t(
+        oidc.value?.source === 'env' ? 'oidc.fromEnv' : 'oidc.fromSettings'
+    )
     if (!oidc.value || oidc.value.source === 'none') {
-        return { kind: 'off', text: 'Not configured' }
+        return { kind: 'off', text: t('oidc.notConfigured') }
     }
     return oidc.value.enabled
-        ? { kind: 'ok', text: `Active: the provider answers (from ${source})` }
-        : {
-              kind: 'bad',
-              text: `Not working: the provider cannot be reached (from ${source})`,
-          }
+        ? { kind: 'ok', text: t('oidc.active', { source }) }
+        : { kind: 'bad', text: t('oidc.broken', { source }) }
 })
 const oidcReadonly = computed(() => oidc.value?.source === 'env')
 
@@ -94,10 +93,10 @@ async function testOidc() {
     const { error } = await api.POST('/admin/oidc/test', { body: oidcBody() })
     oidcBusy.value = false
     if (error) {
-        say(problemMessage(error, 'The provider could not be reached'), true)
+        say(problemMessage(error, 'oidc.unreachable'), true)
         return
     }
-    say('The provider answered')
+    say(t('oidc.answered'))
 }
 
 async function saveOidc() {
@@ -105,14 +104,14 @@ async function saveOidc() {
     const { error } = await api.PUT('/admin/oidc', { body: oidcBody() })
     oidcBusy.value = false
     if (error) {
-        say(problemMessage(error, 'Could not save the configuration'), true)
+        say(problemMessage(error, 'oidc.saveFailed'), true)
         return
     }
     try {
         await reloadOidc()
-        say('Single sign-on saved and active')
+        say(t('oidc.saved'))
     } catch (e) {
-        say(problemMessage(e, 'Saved, but could not reload'), true)
+        say(problemMessage(e, 'oidc.savedReloadFailed'), true)
     }
 }
 
@@ -121,14 +120,14 @@ async function removeOidc() {
     const { error } = await api.DELETE('/admin/oidc')
     oidcBusy.value = false
     if (error) {
-        say(problemMessage(error, 'Could not remove the configuration'), true)
+        say(problemMessage(error, 'oidc.removeFailed'), true)
         return
     }
     try {
         await reloadOidc()
-        say('Single sign-on is off')
+        say(t('oidc.removed'))
     } catch (e) {
-        say(problemMessage(e, 'Removed, but could not reload'), true)
+        say(problemMessage(e, 'oidc.removedReloadFailed'), true)
     }
 }
 
@@ -136,7 +135,7 @@ onMounted(async () => {
     try {
         await reloadOidc()
     } catch (e) {
-        say(problemMessage(e, 'Could not load single sign-on'), true)
+        say(problemMessage(e, 'oidc.loadFailed'), true)
     }
 })
 </script>
@@ -153,25 +152,22 @@ onMounted(async () => {
                 :aria-label="status.text"
             />
         </h2>
-        <p v-if="oidcReadonly" class="note">
-            Set by environment variables (OIDC_*) on the server. Remove them
-            there to change it here.
-        </p>
-        <p v-else class="note">
-            Works with any OpenID Connect provider, for example Pocket ID.
-            Register this callback URL there:
+        <p class="note">
+            {{ oidcReadonly ? t('oidc.envNote') : t('oidc.callbackNote') }}
         </p>
         <button
             type="button"
             class="callback"
-            title="Copy to clipboard"
+            :title="t('oidc.copyTitle')"
             @click="copyCallback"
         >
             <code>{{ shownCallback }}</code>
-            <span class="copy">{{ copied ? 'Copied' : 'Copy' }}</span>
+            <span class="copy">{{
+                copied ? t('oidc.copied') : t('oidc.copy')
+            }}</span>
         </button>
         <form class="fields" @submit.prevent="saveOidc">
-            <label for="oidc-issuer">Issuer URL</label>
+            <label for="oidc-issuer">{{ t('oidc.issuer') }}</label>
             <input
                 id="oidc-issuer"
                 v-model="oidcForm.issuer"
@@ -180,7 +176,7 @@ onMounted(async () => {
                 :disabled="oidcReadonly"
                 required
             />
-            <label for="oidc-client">Client ID</label>
+            <label for="oidc-client">{{ t('oidc.clientId') }}</label>
             <input
                 id="oidc-client"
                 v-model="oidcForm.clientId"
@@ -189,19 +185,17 @@ onMounted(async () => {
                 :disabled="oidcReadonly"
                 required
             />
-            <label for="oidc-secret">Client secret</label>
+            <label for="oidc-secret">{{ t('oidc.clientSecret') }}</label>
             <input
                 id="oidc-secret"
                 v-model="oidcForm.clientSecret"
                 type="password"
                 autocomplete="new-password"
-                :placeholder="
-                    oidc.secretSet ? 'Set. Leave empty to keep it' : ''
-                "
+                :placeholder="oidc.secretSet ? t('oidc.secretSet') : ''"
                 :disabled="oidcReadonly"
                 :required="!oidc.secretSet"
             />
-            <label for="oidc-name">Button text (provider name)</label>
+            <label for="oidc-name">{{ t('oidc.buttonText') }}</label>
             <input
                 id="oidc-name"
                 v-model="oidcForm.name"
@@ -210,7 +204,7 @@ onMounted(async () => {
                 placeholder="SSO"
                 :disabled="oidcReadonly"
             />
-            <label for="oidc-scopes">Scopes</label>
+            <label for="oidc-scopes">{{ t('oidc.scopes') }}</label>
             <input
                 id="oidc-scopes"
                 v-model="oidcForm.scopes"
@@ -224,19 +218,16 @@ onMounted(async () => {
                     type="checkbox"
                     :disabled="oidcReadonly"
                 />
-                Turn off password login and registration
+                {{ t('oidc.disablePassword') }}
             </label>
-            <p class="note">
-                Saving checks that the provider can be reached first, so you
-                cannot lock yourself out.
-            </p>
+            <p class="note">{{ t('oidc.saveNote') }}</p>
             <div v-if="!oidcReadonly" class="actions">
                 <button
                     type="submit"
                     class="btn"
                     :disabled="oidcBusy || !store.canWrite"
                 >
-                    Save
+                    {{ t('common.save') }}
                 </button>
                 <button
                     type="button"
@@ -244,7 +235,7 @@ onMounted(async () => {
                     :disabled="oidcBusy || !store.canWrite"
                     @click="testOidc"
                 >
-                    Test
+                    {{ t('oidc.test') }}
                 </button>
                 <button
                     v-if="oidc.source === 'settings'"
@@ -253,7 +244,7 @@ onMounted(async () => {
                     :disabled="oidcBusy || !store.canWrite"
                     @click="removeOidc"
                 >
-                    Remove
+                    {{ t('common.remove') }}
                 </button>
             </div>
         </form>

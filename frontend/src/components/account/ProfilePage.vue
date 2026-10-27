@@ -6,17 +6,18 @@ import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
 import ProfileHeader from './ProfileHeader.vue'
 import { vEnterNext } from '../ui/enterNext'
-import { Countries } from '../countries/countries'
+import { Countries, byCountryName, countryName } from '../countries/countries'
 import { useTravelStore, type Settings } from '../stores/store'
-import { LANGUAGES, TIMEZONES } from './options'
+import { TIMEZONES } from './options'
+import { LANGUAGES, setLanguage, t, type Language } from '../../i18n'
 
 const store = useTravelStore()
 const tab = ref('profile')
-const tabs = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'preferences', label: 'Preferences' },
-    { id: 'security', label: 'Security' },
-]
+const tabs = computed(() => [
+    { id: 'profile', label: t('profile.tabProfile') },
+    { id: 'preferences', label: t('profile.tabPreferences') },
+    { id: 'security', label: t('profile.tabSecurity') },
+])
 const router = useRouter()
 
 // The store's toast lives in the map panels, under this page; confirm here
@@ -38,7 +39,7 @@ const form = ref({
     lastName: '',
     displayName: '',
     bio: '',
-    language: 'en',
+    language: 'en' as Language,
     timezone: 'UTC',
     homeCountry: '',
 })
@@ -67,29 +68,23 @@ watch(
     { immediate: true }
 )
 
-// Keep a language or time zone set elsewhere selectable
-const languages = computed(() =>
-    LANGUAGES.some((l) => l.code === form.value.language)
-        ? LANGUAGES
-        : [
-              ...LANGUAGES,
-              { code: form.value.language, name: form.value.language },
-          ]
-)
+// Keep a time zone set elsewhere selectable
 const timezones = computed(() =>
     TIMEZONES.includes(form.value.timezone)
         ? TIMEZONES
         : [form.value.timezone, ...TIMEZONES]
 )
-const countries = [...Countries].sort((a, b) => a.name.localeCompare(b.name))
+const countries = computed(() => [...Countries].sort(byCountryName))
 
 async function saveProfile() {
     profileError.value = ''
     const failed = await store.updateProfile(form.value)
     if (failed) profileError.value = failed
     else {
+        // Confirm in the language just picked
+        await setLanguage(form.value.language)
         reset()
-        say('Profile saved')
+        say(t('profile.saved'))
     }
 }
 
@@ -102,7 +97,7 @@ async function setSetting<K extends keyof Settings>(
 ) {
     const failed = await store.saveSettings({ ...store.settings, [key]: value })
     if (failed) say(failed, true)
-    else say('Settings saved')
+    else say(t('profile.settingsSaved'))
 }
 
 // --- Password ----------------------------------------------------------
@@ -123,7 +118,7 @@ async function changePassword() {
     }
     currentPassword.value = ''
     newPassword.value = ''
-    say('Password changed; other devices are logged out')
+    say(t('profile.passwordChanged'))
 }
 
 // --- Account -----------------------------------------------------------
@@ -149,12 +144,12 @@ async function deleteAccount() {
 
 <template>
     <PageWrapper
-        title="Account"
+        :title="t('profile.title')"
         :subtitle="store.profile ? `@${store.profile.username}` : undefined"
     >
         <template #actions>
             <button class="logout" :disabled="!store.canWrite" @click="logout">
-                Log out
+                {{ t('app.logout') }}
             </button>
         </template>
         <p
@@ -170,42 +165,50 @@ async function deleteAccount() {
             <template v-if="tab === 'profile'">
                 <ProfileHeader @say="say" />
                 <section class="panel">
-                    <h2>About you</h2>
+                    <h2>{{ t('profile.aboutYou') }}</h2>
                     <form class="fields" @submit.prevent="saveProfile">
                         <div class="row">
                             <div>
-                                <label for="first">First name</label>
+                                <label for="first">{{
+                                    t('auth.firstName')
+                                }}</label>
                                 <input id="first" v-model="form.firstName" />
                             </div>
                             <div>
-                                <label for="last">Last name</label>
+                                <label for="last">{{
+                                    t('auth.lastName')
+                                }}</label>
                                 <input id="last" v-model="form.lastName" />
                             </div>
                         </div>
-                        <label for="display">Display name</label>
+                        <label for="display">{{
+                            t('profile.displayName')
+                        }}</label>
                         <input
                             id="display"
                             v-model="form.displayName"
-                            placeholder="Shown on your public profile"
+                            :placeholder="t('profile.displayNameHint')"
                         />
-                        <label for="username">Username</label>
+                        <label for="username">{{ t('auth.username') }}</label>
                         <input
                             id="username"
                             v-model="form.username"
                             pattern="[a-z0-9_]{3,30}"
-                            title="3–30 lowercase letters, digits or _"
+                            :title="t('profile.usernameRule')"
                         />
-                        <label for="email">Email</label>
+                        <label for="email">{{ t('auth.email') }}</label>
                         <input id="email" v-model="form.email" type="email" />
 
-                        <label for="bio">About me</label>
+                        <label for="bio">{{ t('profile.aboutMe') }}</label>
                         <textarea id="bio" v-model="form.bio" rows="3" />
                         <div class="row">
                             <div>
-                                <label for="language">Language</label>
+                                <label for="language">{{
+                                    t('common.language')
+                                }}</label>
                                 <select id="language" v-model="form.language">
                                     <option
-                                        v-for="l in languages"
+                                        v-for="l in LANGUAGES"
                                         :key="l.code"
                                         :value="l.code"
                                     >
@@ -214,7 +217,9 @@ async function deleteAccount() {
                                 </select>
                             </div>
                             <div>
-                                <label for="timezone">Time zone</label>
+                                <label for="timezone">{{
+                                    t('profile.timezone')
+                                }}</label>
                                 <select id="timezone" v-model="form.timezone">
                                     <option
                                         v-for="tz in timezones"
@@ -226,15 +231,17 @@ async function deleteAccount() {
                                 </select>
                             </div>
                         </div>
-                        <label for="home-country">Home country</label>
+                        <label for="home-country">{{
+                            t('profile.homeCountry')
+                        }}</label>
                         <select id="home-country" v-model="form.homeCountry">
-                            <option value="">Not set</option>
+                            <option value="">{{ t('common.notSet') }}</option>
                             <option
                                 v-for="c in countries"
                                 :key="c.alpha3"
                                 :value="c.alpha3"
                             >
-                                {{ c.name }}
+                                {{ countryName(c) }}
                             </option>
                         </select>
                         <p v-if="profileError" class="error" role="alert">
@@ -245,16 +252,16 @@ async function deleteAccount() {
                             type="submit"
                             :disabled="!store.canWrite"
                         >
-                            Save profile
+                            {{ t('profile.saveProfile') }}
                         </button>
                     </form>
                 </section>
             </template>
             <template v-else-if="tab === 'preferences'">
                 <section class="panel">
-                    <h2>Settings</h2>
+                    <h2>{{ t('profile.settings') }}</h2>
                     <div class="fields">
-                        <label for="unit">Distances in</label>
+                        <label for="unit">{{ t('profile.distances') }}</label>
                         <select
                             id="unit"
                             :disabled="!store.canWrite"
@@ -267,10 +274,12 @@ async function deleteAccount() {
                                 )
                             "
                         >
-                            <option value="km">Kilometers</option>
-                            <option value="mi">Miles</option>
+                            <option value="km">
+                                {{ t('profile.kilometers') }}
+                            </option>
+                            <option value="mi">{{ t('profile.miles') }}</option>
                         </select>
-                        <label for="theme">Theme</label>
+                        <label for="theme">{{ t('profile.theme') }}</label>
                         <select
                             id="theme"
                             :disabled="!store.canWrite"
@@ -283,11 +292,17 @@ async function deleteAccount() {
                                 )
                             "
                         >
-                            <option value="system">Like the system</option>
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
+                            <option value="system">
+                                {{ t('profile.themeSystem') }}
+                            </option>
+                            <option value="light">
+                                {{ t('profile.themeLight') }}
+                            </option>
+                            <option value="dark">
+                                {{ t('profile.themeDark') }}
+                            </option>
                         </select>
-                        <label for="view">Start with</label>
+                        <label for="view">{{ t('profile.startWith') }}</label>
                         <select
                             id="view"
                             :disabled="!store.canWrite"
@@ -300,12 +315,16 @@ async function deleteAccount() {
                                 )
                             "
                         >
-                            <option value="countries">Countries</option>
-                            <option value="flights">Flights</option>
+                            <option value="countries">
+                                {{ t('app.countries') }}
+                            </option>
+                            <option value="flights">
+                                {{ t('app.flights') }}
+                            </option>
                         </select>
-                        <label for="default-visibility"
-                            >New countries and flights</label
-                        >
+                        <label for="default-visibility">{{
+                            t('profile.newItems')
+                        }}</label>
                         <select
                             id="default-visibility"
                             :disabled="!store.canWrite"
@@ -318,21 +337,25 @@ async function deleteAccount() {
                                 )
                             "
                         >
-                            <option value="private">🔒 Only me</option>
-                            <option value="public">🌐 Public</option>
+                            <option value="private">
+                                {{ t('common.onlyMe') }}
+                            </option>
+                            <option value="public">
+                                {{ t('common.public') }}
+                            </option>
                         </select>
                     </div>
                 </section>
             </template>
             <template v-else>
                 <section class="panel">
-                    <h2>Password</h2>
+                    <h2>{{ t('profile.password') }}</h2>
                     <form
                         v-enter-next
                         class="fields"
                         @submit.prevent="changePassword"
                     >
-                        <label for="current">Current password</label>
+                        <label for="current">{{ t('password.current') }}</label>
                         <input
                             id="current"
                             v-model="currentPassword"
@@ -340,7 +363,7 @@ async function deleteAccount() {
                             autocomplete="current-password"
                             required
                         />
-                        <label for="new">New password</label>
+                        <label for="new">{{ t('password.new') }}</label>
                         <input
                             id="new"
                             v-model="newPassword"
@@ -357,23 +380,20 @@ async function deleteAccount() {
                             type="submit"
                             :disabled="!store.canWrite"
                         >
-                            Change password
+                            {{ t('password.change') }}
                         </button>
                     </form>
                 </section>
                 <section class="panel danger-zone">
-                    <h2>Delete account</h2>
-                    <p class="note">
-                        Removes your account with all countries, flights and
-                        photos.
-                    </p>
+                    <h2>{{ t('profile.deleteAccount') }}</h2>
+                    <p class="note">{{ t('profile.deleteNote') }}</p>
                     <div class="actions">
                         <button
                             class="btn danger"
                             :disabled="!store.canWrite"
                             @click="confirmDelete = true"
                         >
-                            Delete account
+                            {{ t('profile.deleteAccount') }}
                         </button>
                     </div>
                 </section>
@@ -384,15 +404,15 @@ async function deleteAccount() {
              outside the app and also works offline from the precache -->
         <p class="legal">
             <a href="/third-party-licenses.txt" target="_blank" rel="noopener">
-                Third-party licenses
+                {{ t('profile.licenses') }}
             </a>
         </p>
 
         <ConfirmModal
             v-if="confirmDelete"
-            title="Delete account"
-            message="This deletes your account with all countries, flights and photos. It cannot be undone."
-            confirm-label="Delete"
+            :title="t('profile.deleteAccount')"
+            :message="t('profile.deleteConfirm')"
+            :confirm-label="t('common.delete')"
             @confirm="deleteAccount"
             @cancel="confirmDelete = false"
         />

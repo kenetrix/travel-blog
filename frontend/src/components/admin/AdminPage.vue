@@ -6,15 +6,18 @@ import TabBar from '../ui/TabBar.vue'
 import OidcSettings from './OidcSettings.vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
-import { OFFLINE_HINT } from '../ui/offline'
+import { t } from '../../i18n'
 
 type AdminUser = Schemas['AdminUser']
 
 const store = useTravelStore()
 const tab = ref('users')
 const tabs = computed(() => [
-    { id: 'users', label: `Users (${users.value.length})` },
-    { id: 'registration', label: 'Registration' },
+    {
+        id: 'users',
+        label: t('admin.usersCount', { count: users.value.length }),
+    },
+    { id: 'registration', label: t('admin.registration') },
 ])
 
 const users = ref<AdminUser[]>([])
@@ -43,7 +46,7 @@ async function load() {
         registrationOpen.value = settings.data.registrationOpen
         loaded.value = true
     } catch (e) {
-        say(problemMessage(e, 'Could not load the administration'), true)
+        say(problemMessage(e, 'admin.loadFailed'), true)
     }
 }
 
@@ -66,10 +69,10 @@ async function setRegistration(open: boolean) {
     })
     if (error) {
         registrationOpen.value = before
-        say(problemMessage(error, 'Could not save the setting'), true)
+        say(problemMessage(error, 'admin.settingFailed'), true)
         return
     }
-    say(open ? 'Registration is open' : 'Registration is closed')
+    say(t(open ? 'admin.registrationOpen' : 'admin.registrationClosed'))
 }
 
 async function setRole(user: AdminUser, role: AdminUser['role']) {
@@ -78,14 +81,16 @@ async function setRole(user: AdminUser, role: AdminUser['role']) {
         body: { role },
     })
     if (error || !data) {
-        say(problemMessage(error, 'Could not change the role'), true)
+        say(problemMessage(error, 'admin.roleFailed'), true)
         // Show the role the server still has
         await load()
         return
     }
     users.value = users.value.map((u) => (u.id === data.id ? data : u))
     say(
-        `@${data.username} is now ${data.role === 'admin' ? 'an administrator' : 'a user'}`
+        t(data.role === 'admin' ? 'admin.nowAdmin' : 'admin.nowUser', {
+            name: data.username,
+        })
     )
 }
 
@@ -100,14 +105,12 @@ async function resetPassword(user: AdminUser) {
         body: { newPassword: newPassword.value },
     })
     if (error) {
-        say(problemMessage(error, 'Could not reset the password'), true)
+        say(problemMessage(error, 'admin.resetFailed'), true)
         return
     }
     resetting.value = null
     newPassword.value = ''
-    say(
-        `@${user.username} is logged out everywhere and has to choose a new password at the next login`
-    )
+    say(t('admin.passwordReset', { name: user.username }))
     await load()
 }
 
@@ -119,24 +122,21 @@ async function deleteUser() {
         params: { path: { id: user.id } },
     })
     if (error) {
-        say(problemMessage(error, 'Could not delete the account'), true)
+        say(problemMessage(error, 'admin.deleteFailed'), true)
         return
     }
     users.value = users.value.filter((u) => u.id !== user.id)
-    say(`Deleted @${user.username}`)
+    say(t('admin.deleted', { name: user.username }))
 }
 </script>
 
 <template>
-    <PageWrapper
-        title="Administration"
-        subtitle="Users, registration and single sign-on"
-    >
+    <PageWrapper :title="t('admin.title')" :subtitle="t('admin.subtitle')">
         <p
             v-if="!store.isAdmin && store.authState === 'ready'"
             class="page-error"
         >
-            Only administrators can open this page.
+            {{ t('admin.onlyAdmins') }}
         </p>
         <template v-else>
             <p
@@ -149,12 +149,12 @@ async function deleteUser() {
             </p>
 
             <p v-if="!store.canWrite" class="toast offline-note">
-                {{ OFFLINE_HINT }}. The administration is not available offline.
+                {{ t('common.offlineHint') }}. {{ t('admin.offline') }}
             </p>
             <TabBar v-model="tab" :tabs="tabs" />
             <template v-if="tab === 'users'">
                 <section class="panel">
-                    <h2>Users</h2>
+                    <h2>{{ t('admin.users') }}</h2>
                     <ul class="users">
                         <li v-for="user in users" :key="user.id">
                             <div class="row">
@@ -170,13 +170,17 @@ async function deleteUser() {
                                         v-if="user.mustChangePassword"
                                         class="tag"
                                     >
-                                        must change password
+                                        {{ t('admin.mustChange') }}
                                     </span>
                                 </div>
                                 <select
                                     :value="user.role"
                                     :disabled="!store.canWrite"
-                                    :aria-label="`Role of ${user.username}`"
+                                    :aria-label="
+                                        t('admin.roleOf', {
+                                            name: user.username,
+                                        })
+                                    "
                                     @change="
                                         setRole(
                                             user,
@@ -185,8 +189,12 @@ async function deleteUser() {
                                         )
                                     "
                                 >
-                                    <option value="user">User</option>
-                                    <option value="admin">Administrator</option>
+                                    <option value="user">
+                                        {{ t('admin.roleUser') }}
+                                    </option>
+                                    <option value="admin">
+                                        {{ t('admin.roleAdmin') }}
+                                    </option>
                                 </select>
                                 <div
                                     v-if="
@@ -201,7 +209,7 @@ async function deleteUser() {
                                         :disabled="!store.canWrite"
                                         @click="startReset(user)"
                                     >
-                                        Reset password
+                                        {{ t('admin.resetPassword') }}
                                     </button>
                                     <button
                                         type="button"
@@ -209,7 +217,7 @@ async function deleteUser() {
                                         :disabled="!store.canWrite"
                                         @click="toDelete = user"
                                     >
-                                        Delete
+                                        {{ t('common.delete') }}
                                     </button>
                                 </div>
                             </div>
@@ -224,8 +232,12 @@ async function deleteUser() {
                                     minlength="10"
                                     maxlength="72"
                                     autocomplete="off"
-                                    placeholder="Temporary password, at least 10 characters"
-                                    :aria-label="`Temporary password for ${user.username}`"
+                                    :placeholder="t('admin.tempPassword')"
+                                    :aria-label="
+                                        t('admin.tempPasswordFor', {
+                                            name: user.username,
+                                        })
+                                    "
                                     required
                                 />
                                 <button
@@ -233,7 +245,7 @@ async function deleteUser() {
                                     class="btn"
                                     :disabled="!store.canWrite"
                                 >
-                                    Set
+                                    {{ t('admin.set') }}
                                 </button>
                             </form>
                         </li>
@@ -242,7 +254,7 @@ async function deleteUser() {
             </template>
             <template v-else>
                 <section class="panel">
-                    <h2>Registration</h2>
+                    <h2>{{ t('admin.registration') }}</h2>
                     <label class="check">
                         <input
                             type="checkbox"
@@ -254,12 +266,9 @@ async function deleteUser() {
                                 )
                             "
                         />
-                        Let visitors create their own account
+                        {{ t('admin.letVisitors') }}
                     </label>
-                    <p class="note">
-                        When closed, only administrators can add people, and
-                        only existing accounts can log in.
-                    </p>
+                    <p class="note">{{ t('admin.closedNote') }}</p>
                 </section>
                 <OidcSettings @say="say" />
             </template>
@@ -267,9 +276,9 @@ async function deleteUser() {
 
         <ConfirmModal
             v-if="toDelete"
-            title="Delete account"
-            :message="`This deletes @${toDelete.username} with all countries, flights and photos. It cannot be undone.`"
-            confirm-label="Delete"
+            :title="t('profile.deleteAccount')"
+            :message="t('admin.deleteConfirm', { name: toDelete.username })"
+            :confirm-label="t('common.delete')"
             @confirm="deleteUser"
             @cancel="toDelete = null"
         />

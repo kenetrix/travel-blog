@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTravelStore } from '../stores/store'
+import { t } from '../../i18n'
 
 // inline: in the flow of a page instead of floating over the map
 defineProps<{ inline?: boolean }>()
@@ -14,10 +15,7 @@ const store = useTravelStore()
         :class="{ inline }"
         role="status"
     >
-        <template v-if="inline">
-            Offline · showing your last saved data, changes are paused
-        </template>
-        <template v-else>Offline · read-only</template>
+        {{ inline ? t('common.offlineBanner') : t('common.offlineShort') }}
     </p>
 </template>
 
