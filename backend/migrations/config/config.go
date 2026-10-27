@@ -5,5 +5,5 @@ package config
 
 import "embed"
 
-//go:embed 001_init
+//go:embed *.sql
 var FS embed.FS
