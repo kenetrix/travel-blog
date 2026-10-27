@@ -1,0 +1,52 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema: { type: string, format: uuid }
+get:
+  tags: [trips]
+  operationId: getTrip
+  summary: A trip with its notes and stops
+  responses:
+    '200':
+      description: The trip
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/trip.yaml#/Trip' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }
+put:
+  tags: [trips]
+  operationId: replaceTrip
+  summary: Replace a trip with its stops
+  description: |
+    Saved in one transaction: stops with an `id` are updated, the others
+    created, and stops missing from the list deleted with their photos.
+    Without `visibility`, the trip keeps its own.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/trip.yaml#/TripInput' }
+  responses:
+    '200':
+      description: Saved
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/trip.yaml#/Trip' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }
+delete:
+  tags: [trips]
+  operationId: deleteTrip
+  summary: Remove a trip with its stops and their photos
+  responses:
+    '204':
+      description: Deleted
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+    '404': { $ref: '../components/responses.yaml#/NotFound' }

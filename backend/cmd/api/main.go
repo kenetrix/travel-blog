@@ -47,6 +47,7 @@ func main() {
 	users := sqlite.NewUserRepo(db)
 	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
+	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 
 	// On first start (or after an update without administrator) the installation
 	// receives an administrator with a generated password
@@ -83,7 +84,7 @@ func main() {
 		provider.Set(cfg)
 	}
 
-	r := router.New(handler.New(travel, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
+	r := router.New(handler.New(travel, trips, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
 		auth.Sessions(accounts, asUser...), provider.Routes)
 
 	// Listen on localhost only - avoids the Windows firewall dialog on every go run

@@ -23,13 +23,25 @@ type CountryEntryRepository interface {
 	Delete(user domain.UserID, iso string) error
 }
 
+// LocationRepository gives access to single stops; trips write them (TripRepository).
 type LocationRepository interface {
-	ListByCountry(user domain.UserID, countryID string) ([]domain.Location, error)
 	// Get returns nil if the user has no such location.
 	Get(user domain.UserID, id string) (*domain.Location, error)
-	Create(user domain.UserID, l domain.Location) error
-	Update(user domain.UserID, l domain.Location) (bool, error)
-	Delete(user domain.UserID, id string) (bool, error)
+}
+
+type TripRepository interface {
+	// List returns all trips of the user, oldest first.
+	List(user domain.UserID) ([]domain.TripSummary, error)
+	// Get returns nil if the user has no such trip; stops are in visiting order.
+	Get(user domain.UserID, id string) (*domain.Trip, error)
+	// Create stores a trip with its stops.
+	Create(user domain.UserID, t domain.Trip) error
+	// Replace overwrites a trip and its stops in one transaction: stops with a known
+	// id are updated, others created, and missing ones deleted. It returns the storage
+	// keys of the photos of deleted stops, and found=false if the user has no such trip.
+	Replace(user domain.UserID, t domain.Trip) (found bool, removedPhotos []string, err error)
+	// Delete removes a trip with its stops and returns the storage keys of their photos.
+	Delete(user domain.UserID, id string) (found bool, removedPhotos []string, err error)
 }
 
 // PhotoRepository checks ownership via the location of the photo.

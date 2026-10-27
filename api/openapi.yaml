@@ -12,19 +12,19 @@ info:
     request; no endpoint takes a user ID. Without a session, protected
     endpoints answer 401.
 
-    Visibility: country entries, flights and locations are `private` or
-    `public`. New ones get the user's default visibility. Public data of a
+    Visibility: country entries, flights and trips (with their stops) are
+    `private` or `public`. New ones get the user's default visibility. Public data of a
     user with a public profile can be read by anyone via `/public/{username}`.
 
     Designed for minimal traffic:
     - the server stores only the user's data (account, profile, settings,
-      country entries, flights) and enforces the rules on it (validation,
+      country entries, flights, trips) and enforces the rules on it (validation,
       normalization, duplicate routes, flight → visited promotion)
     - reference data (countries, facts, bounds, airports) lives only in the
       client, together with search and derived values (distances, stats,
       tags); the server checks codes by format, not against a country or
       airport list
-    - the client loads `GET /user`, `GET /countries` and `GET /flights` in
+    - the client loads `GET /user`, `GET /countries`, `GET /flights` and `GET /trips` in
       parallel at start (each cacheable with its own `ETag`; country texts
       are left out and fetched per country via `GET /countries/{iso}`) and
       applies its writes locally; write responses carry only what the
@@ -34,6 +34,7 @@ servers:
 tags:
   - name: countries
   - name: flights
+  - name: trips
   - name: account
   - name: public
   - name: admin
@@ -47,6 +48,9 @@ paths:
 
   /flights: { $ref: './paths/flights.yaml' }
   /flights/{id}: { $ref: './paths/flights_{id}.yaml' }
+
+  /trips: { $ref: './paths/trips.yaml' }
+  /trips/{id}: { $ref: './paths/trips_{id}.yaml' }
 
   /auth/register: { $ref: './paths/auth_register.yaml' }
   /auth/login: { $ref: './paths/auth_login.yaml' }
@@ -105,6 +109,12 @@ components:
     FlightUpdate: { $ref: './components/schemas/flight.yaml#/FlightUpdate' }
     Flight: { $ref: './components/schemas/flight.yaml#/Flight' }
     FlightCreated: { $ref: './components/schemas/flight.yaml#/FlightCreated' }
+
+    TripStopInput: { $ref: './components/schemas/trip.yaml#/TripStopInput' }
+    TripInput: { $ref: './components/schemas/trip.yaml#/TripInput' }
+    TripStop: { $ref: './components/schemas/trip.yaml#/TripStop' }
+    TripSummary: { $ref: './components/schemas/trip.yaml#/TripSummary' }
+    Trip: { $ref: './components/schemas/trip.yaml#/Trip' }
 
     Profile: { $ref: './components/schemas/account.yaml#/Profile' }
     ProfileUpdate: { $ref: './components/schemas/account.yaml#/ProfileUpdate' }

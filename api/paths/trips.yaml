@@ -1,0 +1,41 @@
+get:
+  tags: [trips]
+  operationId: listTrips
+  summary: The user's trips
+  parameters:
+    - $ref: '../components/parameters.yaml#/IfNoneMatch'
+  responses:
+    '200':
+      description: Oldest first, without notes and stops
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema:
+            type: array
+            items: { $ref: '../components/schemas/trip.yaml#/TripSummary' }
+    '304':
+      description: The client's copy is current
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }
+post:
+  tags: [trips]
+  operationId: createTrip
+  summary: Add a trip with its stops
+  description: Without `visibility`, the trip gets the user's default. Stops take the trip's visibility.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema: { $ref: '../components/schemas/trip.yaml#/TripInput' }
+  responses:
+    '201':
+      description: Created
+      headers:
+        ETag: { $ref: '../components/headers.yaml#/ETag' }
+      content:
+        application/json:
+          schema: { $ref: '../components/schemas/trip.yaml#/Trip' }
+    '400': { $ref: '../components/responses.yaml#/BadRequest' }
+    '401': { $ref: '../components/responses.yaml#/Unauthorized' }

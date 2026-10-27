@@ -7,7 +7,7 @@ Never edit generated files.
 | --------------------- | ------------------------------------------------------------------------------ |
 | `openapi.yaml`        | Root: info, tags, security, path list, component registry                      |
 | `paths/`              | One file per path, named after it (`/user/profile` → `user_profile.yaml`)          |
-| `components/schemas/` | Schemas grouped by domain (`common`, `country`, `flight`, `account`, `travel`) |
+| `components/schemas/` | Schemas grouped by domain (`common`, `country`, `flight`, `trip`, `account`, `travel`) |
 | `components/*.yaml`   | Shared parameters, headers and responses                                       |
 
 New schemas, parameters, headers and responses go into their file under

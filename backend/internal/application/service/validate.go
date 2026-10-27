@@ -165,10 +165,9 @@ func checkFlightUpdate(u *domain.FlightUpdate) error {
 		}
 		u.Number = &number
 	}
-	if u.Date != nil && *u.Date != "" {
-		d, err := time.Parse(time.DateOnly, *u.Date)
-		if err != nil || d.Year() < 1900 || d.Year() > 2100 {
-			return newError(ErrInvalid, "invalid_date", fmt.Sprintf("date %q must be a day between 1900 and 2100 (YYYY-MM-DD)", *u.Date), "value", *u.Date)
+	if u.Date != nil {
+		if err := checkDate(*u.Date); err != nil {
+			return err
 		}
 	}
 	if u.DurationMinutes != nil && (*u.DurationMinutes < 0 || *u.DurationMinutes > maxFlightMinutes) {
@@ -180,6 +179,18 @@ func checkFlightUpdate(u *domain.FlightUpdate) error {
 			return err
 		}
 		u.Aircraft = &aircraft
+	}
+	return nil
+}
+
+// checkDate accepts an empty string (no date) or a day between 1900 and 2100.
+func checkDate(s string) error {
+	if s == "" {
+		return nil
+	}
+	d, err := time.Parse(time.DateOnly, s)
+	if err != nil || d.Year() < 1900 || d.Year() > 2100 {
+		return newError(ErrInvalid, "invalid_date", fmt.Sprintf("date %q must be a day between 1900 and 2100 (YYYY-MM-DD)", s), "value", s)
 	}
 	return nil
 }

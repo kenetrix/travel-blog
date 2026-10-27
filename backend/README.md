@@ -49,12 +49,13 @@ from the request context (`internal/adapter/http/auth`).
   only holds the SHA-256 hash of the token.
 - Profile (name, language, time zone, home country, home airport, ...) and settings
   (unit, theme, start view, visibility) come with `GET /api/user`; countries and
-  flights come with `GET /api/countries` and `GET /api/flights`, each with its own ETag.
-- Visibility: entries, flights and locations are `private` or `public`; photos inherit
-  the one of their location. With a public profile, `GET /api/public/{username}` shows
-  the public data.
+  flights come with `GET /api/countries` and `GET /api/flights`, each with its own ETag;
+  trips likewise with `GET /api/trips`, a single trip with its stops via `GET /api/trips/{id}`.
+- Visibility: entries, flights and trips are `private` or `public`; the stops of a trip
+  (`locations`) take the trip's, and photos inherit the one of their stop. With a public
+  profile, `GET /api/public/{username}` shows the public entries and flights.
 - Photos live in `data/photos/<user>/<uuid>.<ext>`; access checks ownership via the
-  location. Deleting photos, locations and accounts deletes their files too.
+  stop. Deleting photos, stops, trips and accounts deletes their files too.
 
 ## OpenID Connect login
 

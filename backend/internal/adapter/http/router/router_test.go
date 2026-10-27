@@ -48,7 +48,8 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 	users := sqlite.NewUserRepo(db)
 	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
-	return router.New(handler.New(travel, accounts), auth.Sessions(accounts)), accounts
+	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
+	return router.New(handler.New(travel, trips, accounts), auth.Sessions(accounts)), accounts
 }
 
 func do(t *testing.T, h http.Handler, method, path, body string, header map[string]string) *httptest.ResponseRecorder {

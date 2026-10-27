@@ -17,10 +17,7 @@ func TestPhotosBelongToTheirUser(t *testing.T) {
 	alice, _ := e.register(t, "alice")
 	bob, _ := e.register(t, "bob")
 
-	loc, err := e.locations.Add(alice, domain.Location{CountryID: "JPN", Name: "Kyoto"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	loc := e.addStop(t, alice, "Kyoto")
 	if loc.Visibility != domain.Private {
 		t.Errorf("location visibility = %s", loc.Visibility)
 	}
@@ -68,23 +65,23 @@ func TestPhotosBelongToTheirUser(t *testing.T) {
 func TestPhotoFilesFollowTheirRecords(t *testing.T) {
 	e := newEnv(t)
 	alice, _ := e.register(t, "alice")
-	loc, _ := e.locations.Add(alice, domain.Location{CountryID: "JPN", Name: "Kyoto"})
+	loc := e.addStop(t, alice, "Kyoto")
 	p, err := e.photos.Upload(alice, loc.ID, "image/png", strings.NewReader("a"), "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	file := filepath.Join(e.photoDir, p.StorageKey)
 
-	// Deleting the location deletes its photo files
-	if err := e.locations.Delete(alice, loc.ID); err != nil {
+	// Deleting the trip deletes the photo files of its stops
+	if err := e.trips.DeleteTrip(alice, loc.TripID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Errorf("file left after deleting the location: %v", err)
+		t.Errorf("file left after deleting the trip: %v", err)
 	}
 
 	// Deleting the account deletes all of its files
-	loc, _ = e.locations.Add(alice, domain.Location{CountryID: "JPN", Name: "Nara"})
+	loc = e.addStop(t, alice, "Nara")
 	if _, err := e.photos.Upload(alice, loc.ID, "image/png", strings.NewReader("b"), "", ""); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +95,7 @@ func TestPhotoFilesFollowTheirRecords(t *testing.T) {
 
 func TestPhotoSizeLimit(t *testing.T) {
 	e := newEnv(t)
-	loc, _ := e.locations.Add(local, domain.Location{CountryID: "JPN", Name: "Kyoto"})
+	loc := e.addStop(t, local, "Kyoto")
 	big := io.LimitReader(zeros{}, service.MaxPhotoBytes+1)
 	if _, err := e.photos.Upload(local, loc.ID, "image/jpeg", big, "", ""); !errors.Is(err, service.ErrInvalid) {
 		t.Errorf("oversized photo: %v", err)

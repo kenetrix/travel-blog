@@ -94,8 +94,14 @@ translates those under `oidcErrors.*`.
 | `invalid_flight_number` | 400    | `value`         | Not an airline code and up to four digits  |
 | `invalid_date`          | 400    | `value`         | Not a day between 1900 and 2100            |
 | `invalid_duration`      | 400    | `max`           | Duration outside 1 to `max` minutes        |
-| `name_required`         | 400    |                 | Location without a name                    |
-| `location_not_found`    | 404    |                 | No such location                           |
+| `title_required`        | 400    |                 | Trip without a title                       |
+| `invalid_date_range`    | 400    |                 | The trip ends before it starts             |
+| `too_many_stops`        | 400    | `max`           | Trip with more than `max` stops            |
+| `name_required`         | 400    |                 | Stop without a name                        |
+| `invalid_coordinates`   | 400    |                 | Latitude or longitude out of range         |
+| `unknown_stop`          | 400    | `value`         | Stop ID that is not part of the trip       |
+| `trip_not_found`        | 404    |                 | No such trip                               |
+| `location_not_found`    | 404    |                 | No such stop                               |
 | `unsupported_image`     | 400    | `value`         | Image type not supported                   |
 | `photo_too_large`       | 400    | `max`           | Photo over `max` MB                        |
 | `photo_not_found`       | 404    |                 | No such photo                              |

@@ -1,0 +1,97 @@
+TripStopInput:
+  type: object
+  required: [name, country, lat, lng]
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: A stop of this trip to keep; without it, the stop is new
+    name: { type: string, maxLength: 120, example: Vienna }
+    country:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      description: Alpha-3 code of the country at the stop
+      example: AUT
+    lat: { type: number, format: double, minimum: -90, maximum: 90, example: 48.2082 }
+    lng: { type: number, format: double, minimum: -180, maximum: 180, example: 16.3738 }
+    arrival:
+      type: string
+      pattern: '^(\d{4}-\d{2}-\d{2})?$'
+      description: Day of arrival (YYYY-MM-DD); empty for none
+    notes: { type: string, maxLength: 4000 }
+
+TripInput:
+  type: object
+  description: |
+    The whole trip. Stops are in visiting order; stops of the trip that are
+    missing here are deleted with their photos.
+  required: [title, stops]
+  properties:
+    title: { type: string, maxLength: 120, example: Danube 2024 }
+    startsOn:
+      type: string
+      pattern: '^(\d{4}-\d{2}-\d{2})?$'
+      description: First day (YYYY-MM-DD); empty for none
+    endsOn:
+      type: string
+      pattern: '^(\d{4}-\d{2}-\d{2})?$'
+      description: Last day (YYYY-MM-DD), not before `startsOn`; empty for none
+    notes: { type: string, maxLength: 4000 }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    stops:
+      type: array
+      maxItems: 200
+      items: { $ref: '#/TripStopInput' }
+
+TripStop:
+  type: object
+  required: [id, name, country, lat, lng, notes]
+  properties:
+    id: { type: string, format: uuid }
+    name: { type: string, example: Vienna }
+    country: { type: string, description: Alpha-3 code, example: AUT }
+    lat: { type: number, format: double, example: 48.2082 }
+    lng: { type: number, format: double, example: 16.3738 }
+    arrival: { type: string, format: date, example: '2024-05-01' }
+    notes: { type: string }
+
+TripSummary:
+  type: object
+  required: [id, title, visibility, countries, stopCount, createdAt, updatedAt]
+  properties:
+    id: { type: string, format: uuid }
+    title: { type: string, example: Danube 2024 }
+    startsOn: { type: string, format: date, example: '2024-05-01' }
+    endsOn: { type: string, format: date, example: '2024-05-14' }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    countries:
+      type: array
+      description: Alpha-3 codes of the stops' countries, in the order they are first reached
+      items: { type: string }
+      example: [AUT, SVK, HUN]
+    stopCount: { type: integer, example: 4 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+Trip:
+  type: object
+  description: A trip with its notes and stops; the other fields are those of `TripSummary`
+  required: [id, title, visibility, countries, stopCount, createdAt, updatedAt, notes, stops]
+  properties:
+    id: { type: string, format: uuid }
+    title: { type: string, example: Danube 2024 }
+    startsOn: { type: string, format: date, example: '2024-05-01' }
+    endsOn: { type: string, format: date, example: '2024-05-14' }
+    visibility: { $ref: './common.yaml#/Visibility' }
+    countries:
+      type: array
+      items: { type: string }
+      example: [AUT, SVK, HUN]
+    stopCount: { type: integer, example: 4 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    notes: { type: string }
+    stops:
+      type: array
+      description: In visiting order
+      items: { $ref: '#/TripStop' }

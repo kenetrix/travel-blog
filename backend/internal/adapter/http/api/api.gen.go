@@ -563,6 +563,118 @@ type SettingsDistanceUnit string
 // SettingsTheme defines model for Settings.Theme.
 type SettingsTheme string
 
+// Trip A trip with its notes and stops; the other fields are those of `TripSummary`
+type Trip struct {
+	// Countries Example: ["AUT","SVK","HUN"]
+	Countries []string  `json:"countries"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// EndsOn Example: 2024-05-14
+	EndsOn *openapi_types.Date `json:"endsOn,omitempty"`
+	Id     openapi_types.UUID  `json:"id"`
+	Notes  string              `json:"notes"`
+
+	// StartsOn Example: 2024-05-01
+	StartsOn *openapi_types.Date `json:"startsOn,omitempty"`
+
+	// StopCount Example: 4
+	StopCount int `json:"stopCount"`
+
+	// Stops In visiting order
+	Stops []TripStop `json:"stops"`
+
+	// Title Example: Danube 2024
+	Title      string     `json:"title"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	Visibility Visibility `json:"visibility"`
+}
+
+// TripInput The whole trip. Stops are in visiting order; stops of the trip that are
+// missing here are deleted with their photos.
+type TripInput struct {
+	// EndsOn Last day (YYYY-MM-DD), not before `startsOn`; empty for none
+	EndsOn *string `json:"endsOn,omitempty"`
+	Notes  *string `json:"notes,omitempty"`
+
+	// StartsOn First day (YYYY-MM-DD); empty for none
+	StartsOn *string         `json:"startsOn,omitempty"`
+	Stops    []TripStopInput `json:"stops"`
+
+	// Title Example: Danube 2024
+	Title      string      `json:"title"`
+	Visibility *Visibility `json:"visibility,omitempty"`
+}
+
+// TripStop defines model for TripStop.
+type TripStop struct {
+	// Arrival Example: 2024-05-01
+	Arrival *openapi_types.Date `json:"arrival,omitempty"`
+
+	// Country Alpha-3 code
+	//
+	// Example: AUT
+	Country string             `json:"country"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// Lat Example: 48.2082
+	Lat float64 `json:"lat"`
+
+	// Lng Example: 16.3738
+	Lng float64 `json:"lng"`
+
+	// Name Example: Vienna
+	Name  string `json:"name"`
+	Notes string `json:"notes"`
+}
+
+// TripStopInput defines model for TripStopInput.
+type TripStopInput struct {
+	// Arrival Day of arrival (YYYY-MM-DD); empty for none
+	Arrival *string `json:"arrival,omitempty"`
+
+	// Country Alpha-3 code of the country at the stop
+	//
+	// Example: AUT
+	Country string `json:"country"`
+
+	// Id A stop of this trip to keep; without it, the stop is new
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Lat Example: 48.2082
+	Lat float64 `json:"lat"`
+
+	// Lng Example: 16.3738
+	Lng float64 `json:"lng"`
+
+	// Name Example: Vienna
+	Name  string  `json:"name"`
+	Notes *string `json:"notes,omitempty"`
+}
+
+// TripSummary defines model for TripSummary.
+type TripSummary struct {
+	// Countries Alpha-3 codes of the stops' countries, in the order they are first reached
+	//
+	// Example: ["AUT","SVK","HUN"]
+	Countries []string  `json:"countries"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// EndsOn Example: 2024-05-14
+	EndsOn *openapi_types.Date `json:"endsOn,omitempty"`
+	Id     openapi_types.UUID  `json:"id"`
+
+	// StartsOn Example: 2024-05-01
+	StartsOn *openapi_types.Date `json:"startsOn,omitempty"`
+
+	// StopCount Example: 4
+	StopCount int `json:"stopCount"`
+
+	// Title Example: Danube 2024
+	Title      string     `json:"title"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	Visibility Visibility `json:"visibility"`
+}
+
 // UsernameCheck defines model for UsernameCheck.
 type UsernameCheck struct {
 	// Exists Whether an account with this username exists
@@ -608,6 +720,12 @@ type ListFlightsParams struct {
 	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
 }
 
+// ListTripsParams defines parameters for ListTrips.
+type ListTripsParams struct {
+	// IfNoneMatch ETag of the client's cached copy
+	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
+}
+
 // GetAccountParams defines parameters for GetAccount.
 type GetAccountParams struct {
 	// IfNoneMatch ETag of the client's cached copy
@@ -643,6 +761,12 @@ type CreateFlightJSONRequestBody = FlightInput
 
 // UpdateFlightJSONRequestBody defines body for UpdateFlight for application/json ContentType.
 type UpdateFlightJSONRequestBody = FlightUpdate
+
+// CreateTripJSONRequestBody defines body for CreateTrip for application/json ContentType.
+type CreateTripJSONRequestBody = TripInput
+
+// ReplaceTripJSONRequestBody defines body for ReplaceTrip for application/json ContentType.
+type ReplaceTripJSONRequestBody = TripInput
 
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = PasswordChange
@@ -724,6 +848,21 @@ type ServerInterface interface {
 	// GetPublicTravel Public profile and public data of a user
 	// (GET /public/{username})
 	GetPublicTravel(w http.ResponseWriter, r *http.Request, username string)
+	// ListTrips The user's trips
+	// (GET /trips)
+	ListTrips(w http.ResponseWriter, r *http.Request, params ListTripsParams)
+	// CreateTrip Add a trip with its stops
+	// (POST /trips)
+	CreateTrip(w http.ResponseWriter, r *http.Request)
+	// DeleteTrip Remove a trip with its stops and their photos
+	// (DELETE /trips/{id})
+	DeleteTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetTrip A trip with its notes and stops
+	// (GET /trips/{id})
+	GetTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// ReplaceTrip Replace a trip with its stops
+	// (PUT /trips/{id})
+	ReplaceTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// DeleteAccount Delete the account with all data and photos
 	// (DELETE /user)
 	DeleteAccount(w http.ResponseWriter, r *http.Request)
@@ -1234,6 +1373,139 @@ func (siw *ServerInterfaceWrapper) GetPublicTravel(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListTrips operation middleware
+func (siw *ServerInterfaceWrapper) ListTrips(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTripsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-None-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-None-Match")]; found {
+		var IfNoneMatch IfNoneMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-None-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-None-Match", valueList[0], &IfNoneMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-None-Match", Err: err})
+			return
+		}
+
+		params.IfNoneMatch = &IfNoneMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTrips(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateTrip operation middleware
+func (siw *ServerInterfaceWrapper) CreateTrip(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateTrip(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteTrip operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTrip(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteTrip(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTrip operation middleware
+func (siw *ServerInterfaceWrapper) GetTrip(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTrip(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceTrip operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceTrip(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceTrip(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteAccount operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
@@ -1458,6 +1730,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/flights", wrapper.CreateFlight)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/flights/{id}", wrapper.DeleteFlight)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/flights/{id}", wrapper.UpdateFlight)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/trips", wrapper.ListTrips)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/trips", wrapper.CreateTrip)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/trips/{id}", wrapper.DeleteTrip)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/trips/{id}", wrapper.GetTrip)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/trips/{id}", wrapper.ReplaceTrip)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register", wrapper.Register)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/users/{username}", wrapper.CheckUsername)
@@ -2951,6 +3228,325 @@ func (response GetPublicTravel404ApplicationProblemPlusJSONResponse) VisitGetPub
 	return err
 }
 
+type ListTripsRequestObject struct {
+	Params ListTripsParams
+}
+
+type ListTripsResponseObject interface {
+	VisitListTripsResponse(w http.ResponseWriter) error
+}
+
+type ListTrips200ResponseHeaders struct {
+	ETag *string
+}
+
+type ListTrips200JSONResponse struct {
+	Body    []TripSummary
+	Headers ListTrips200ResponseHeaders
+}
+
+func (response ListTrips200JSONResponse) VisitListTripsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTrips304ResponseHeaders struct {
+	ETag *string
+}
+
+type ListTrips304Response struct {
+	Headers ListTrips304ResponseHeaders
+}
+
+func (response ListTrips304Response) VisitListTripsResponse(w http.ResponseWriter) error {
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(304)
+	return nil
+}
+
+type ListTrips401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListTrips401ApplicationProblemPlusJSONResponse) VisitListTripsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTripRequestObject struct {
+	Body *CreateTripJSONRequestBody
+}
+
+type CreateTripResponseObject interface {
+	VisitCreateTripResponse(w http.ResponseWriter) error
+}
+
+type CreateTrip201ResponseHeaders struct {
+	ETag *string
+}
+
+type CreateTrip201JSONResponse struct {
+	Body    Trip
+	Headers CreateTrip201ResponseHeaders
+}
+
+func (response CreateTrip201JSONResponse) VisitCreateTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTrip400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CreateTrip400ApplicationProblemPlusJSONResponse) VisitCreateTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTrip401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response CreateTrip401ApplicationProblemPlusJSONResponse) VisitCreateTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteTripRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteTripResponseObject interface {
+	VisitDeleteTripResponse(w http.ResponseWriter) error
+}
+
+type DeleteTrip204ResponseHeaders struct {
+	ETag *string
+}
+
+type DeleteTrip204Response struct {
+	Headers DeleteTrip204ResponseHeaders
+}
+
+func (response DeleteTrip204Response) VisitDeleteTripResponse(w http.ResponseWriter) error {
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteTrip401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTrip401ApplicationProblemPlusJSONResponse) VisitDeleteTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteTrip404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTrip404ApplicationProblemPlusJSONResponse) VisitDeleteTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTripRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetTripResponseObject interface {
+	VisitGetTripResponse(w http.ResponseWriter) error
+}
+
+type GetTrip200JSONResponse Trip
+
+func (response GetTrip200JSONResponse) VisitGetTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrip401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetTrip401ApplicationProblemPlusJSONResponse) VisitGetTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrip404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetTrip404ApplicationProblemPlusJSONResponse) VisitGetTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceTripRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *ReplaceTripJSONRequestBody
+}
+
+type ReplaceTripResponseObject interface {
+	VisitReplaceTripResponse(w http.ResponseWriter) error
+}
+
+type ReplaceTrip200ResponseHeaders struct {
+	ETag *string
+}
+
+type ReplaceTrip200JSONResponse struct {
+	Body    Trip
+	Headers ReplaceTrip200ResponseHeaders
+}
+
+func (response ReplaceTrip200JSONResponse) VisitReplaceTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceTrip400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplaceTrip400ApplicationProblemPlusJSONResponse) VisitReplaceTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceTrip401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplaceTrip401ApplicationProblemPlusJSONResponse) VisitReplaceTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceTrip404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ReplaceTrip404ApplicationProblemPlusJSONResponse) VisitReplaceTripResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteAccountRequestObject struct {
 }
 
@@ -3323,6 +3919,21 @@ type StrictServerInterface interface {
 	// GetPublicTravel Public profile and public data of a user
 	// (GET /public/{username})
 	GetPublicTravel(ctx context.Context, request GetPublicTravelRequestObject) (GetPublicTravelResponseObject, error)
+	// ListTrips The user's trips
+	// (GET /trips)
+	ListTrips(ctx context.Context, request ListTripsRequestObject) (ListTripsResponseObject, error)
+	// CreateTrip Add a trip with its stops
+	// (POST /trips)
+	CreateTrip(ctx context.Context, request CreateTripRequestObject) (CreateTripResponseObject, error)
+	// DeleteTrip Remove a trip with its stops and their photos
+	// (DELETE /trips/{id})
+	DeleteTrip(ctx context.Context, request DeleteTripRequestObject) (DeleteTripResponseObject, error)
+	// GetTrip A trip with its notes and stops
+	// (GET /trips/{id})
+	GetTrip(ctx context.Context, request GetTripRequestObject) (GetTripResponseObject, error)
+	// ReplaceTrip Replace a trip with its stops
+	// (PUT /trips/{id})
+	ReplaceTrip(ctx context.Context, request ReplaceTripRequestObject) (ReplaceTripResponseObject, error)
 	// DeleteAccount Delete the account with all data and photos
 	// (DELETE /user)
 	DeleteAccount(ctx context.Context, request DeleteAccountRequestObject) (DeleteAccountResponseObject, error)
@@ -4016,6 +4627,148 @@ func (sh *strictHandler) GetPublicTravel(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPublicTravelResponseObject); ok {
 		if err := validResponse.VisitGetPublicTravelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTrips operation middleware
+func (sh *strictHandler) ListTrips(w http.ResponseWriter, r *http.Request, params ListTripsParams) {
+	var request ListTripsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTrips(ctx, request.(ListTripsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTrips")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTripsResponseObject); ok {
+		if err := validResponse.VisitListTripsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateTrip operation middleware
+func (sh *strictHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
+	var request CreateTripRequestObject
+
+	var body CreateTripJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateTrip(ctx, request.(CreateTripRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateTrip")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateTripResponseObject); ok {
+		if err := validResponse.VisitCreateTripResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteTrip operation middleware
+func (sh *strictHandler) DeleteTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteTripRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteTrip(ctx, request.(DeleteTripRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteTrip")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteTripResponseObject); ok {
+		if err := validResponse.VisitDeleteTripResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTrip operation middleware
+func (sh *strictHandler) GetTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetTripRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTrip(ctx, request.(GetTripRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTrip")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTripResponseObject); ok {
+		if err := validResponse.VisitGetTripResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplaceTrip operation middleware
+func (sh *strictHandler) ReplaceTrip(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ReplaceTripRequestObject
+
+	request.Id = id
+
+	var body ReplaceTripJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplaceTrip(ctx, request.(ReplaceTripRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplaceTrip")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplaceTripResponseObject); ok {
+		if err := validResponse.VisitReplaceTripResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

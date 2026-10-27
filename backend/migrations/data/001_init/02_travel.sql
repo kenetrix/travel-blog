@@ -25,15 +25,34 @@ CREATE TABLE flights (
 	UNIQUE (user_id, from_iata, to_iata)
 );
 
+-- A trip's countries are derived from its stops; it has no country of its own.
+CREATE TABLE trips (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	title TEXT NOT NULL,
+	starts_on TEXT, -- YYYY-MM-DD
+	ends_on TEXT, -- YYYY-MM-DD
+	notes TEXT NOT NULL DEFAULT '',
+	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
+	created_at TEXT NOT NULL, -- RFC 3339
+	updated_at TEXT NOT NULL -- RFC 3339
+);
+CREATE INDEX trips_user ON trips (user_id);
+
+-- Locations are the stops of a trip, in visiting order (position). Their visibility
+-- follows the trip's.
 CREATE TABLE locations (
 	id TEXT PRIMARY KEY,
 	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	trip_id TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+	position INTEGER NOT NULL,
 	country_id TEXT NOT NULL, -- ISO 3166 alpha-3
 	name TEXT NOT NULL,
 	lat REAL NOT NULL,
 	lng REAL NOT NULL,
-	visited_at TEXT,
+	visited_at TEXT, -- YYYY-MM-DD, arrival
 	notes TEXT NOT NULL DEFAULT '',
-	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public'))
+	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
+	UNIQUE (trip_id, position)
 );
 CREATE INDEX locations_user_country ON locations (user_id, country_id);

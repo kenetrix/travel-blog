@@ -23,6 +23,7 @@ import (
 // always for the user that auth put in the context.
 type Handler struct {
 	travel     *service.TravelService
+	trips      *service.TripService
 	accounts   *service.AccountService
 	oidc       OIDC
 	oidcConfig OIDCConfig
@@ -44,8 +45,8 @@ func WithOIDC(o OIDC) Option {
 
 var _ api.StrictServerInterface = (*Handler)(nil)
 
-func New(travel *service.TravelService, accounts *service.AccountService, opts ...Option) *Handler {
-	h := &Handler{travel: travel, accounts: accounts}
+func New(travel *service.TravelService, trips *service.TripService, accounts *service.AccountService, opts ...Option) *Handler {
+	h := &Handler{travel: travel, trips: trips, accounts: accounts}
 	for _, o := range opts {
 		o(h)
 	}

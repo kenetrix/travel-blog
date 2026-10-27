@@ -25,7 +25,7 @@ type env struct {
 	photoDir  string
 	accounts  *service.AccountService
 	travel    *service.TravelService
-	locations *service.LocationService
+	trips     *service.TripService
 	photos    *service.PhotoService
 }
 
@@ -66,9 +66,22 @@ func newEnv(t *testing.T) *env {
 		photoDir:  photoDir,
 		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings),
 		travel:    service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users),
-		locations: service.NewLocationService(locationRepo, photoRepo, files, users),
+		trips:     service.NewTripService(sqlite.NewTripRepo(db), files, users),
 		photos:    service.NewPhotoService(locationRepo, photoRepo, files),
 	}
+}
+
+// addStop creates a trip with one stop and returns that stop.
+func (e *env) addStop(t *testing.T, user domain.UserID, name string) domain.Location {
+	t.Helper()
+	trip, err := e.trips.CreateTrip(user, service.TripInput{
+		Title: name,
+		Stops: []domain.Location{{CountryID: "JPN", Name: name, Lat: 35, Lng: 135.7}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return trip.Stops[0]
 }
 
 // register creates a user and returns ID and session token.
