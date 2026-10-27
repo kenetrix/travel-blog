@@ -57,6 +57,7 @@
 - Optional single sign-on with any OpenID Connect provider, e.g. [Pocket ID](docs/oidc.md)
 - Profile with home country and home airport
 - Settings for km / mi, theme and start view
+- English, German, Spanish and Russian: the profile language wins, otherwise the browser's; visitors pick one on the login page. Country, capital and airport names, dates and numbers follow the language
 
 </td>
 <td width="50%" valign="top">
@@ -316,6 +317,7 @@ travel-blog/
 | Build the frontend       | `npm --prefix frontend run build`             |
 | Format frontend code     | `cd frontend && npx prettier --write <files>` |
 | Regenerate the PWA icons | `npm --prefix frontend run generate:icons`    |
+| Refresh translated names | `cd frontend && node scripts/i18n-data.ts`    |
 
 More detail lives next to the code: [`api/`](api/README.md) · [`backend/`](backend/README.md) · [`frontend/`](frontend/README.md) · [`proxmox/`](proxmox/README.md) (LXC helper script)
 
