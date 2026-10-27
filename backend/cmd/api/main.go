@@ -30,7 +30,7 @@ func main() {
 	}
 	defer db.Close()
 
-	// Settings of the installation live apart from the travel data
+	// Settings and user accounts live apart from the travel data
 	configDB, err := sqlite.NewDB("./data/config.db", configmigrations.FS)
 	if err != nil {
 		log.Fatalf("config db init failed: %v", err)
@@ -44,8 +44,8 @@ func main() {
 	}
 	defer files.Close()
 
-	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
+	users := sqlite.NewUserRepo(configDB)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 

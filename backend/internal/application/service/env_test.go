@@ -50,7 +50,7 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { files.Close() })
 
-	users := sqlite.NewUserRepo(db)
+	users := sqlite.NewUserRepo(configDB)
 	locationRepo := sqlite.NewLocationRepo(db)
 	photoRepo := sqlite.NewPhotoRepo(db)
 	if err := users.Create(domain.User{
@@ -64,7 +64,7 @@ func newEnv(t *testing.T) *env {
 		configDB:  configDB,
 		settings:  settings,
 		photoDir:  photoDir,
-		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings),
+		accounts:  service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings),
 		travel:    service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users),
 		trips:     service.NewTripService(sqlite.NewTripRepo(db), files, users),
 		photos:    service.NewPhotoService(locationRepo, photoRepo, files),

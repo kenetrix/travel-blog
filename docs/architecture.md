@@ -52,7 +52,7 @@ flowchart TB
     Services --> Domain["Domain<br/>user · country · flight · photo · visibility"]
 
     subgraph Adapters["Driven adapters"]
-        SQLite[("SQLite<br/>travel-blog.db · config.db")]
+        SQLite[("SQLite<br/>travel-blog.db (travel data)<br/>config.db (accounts · settings)")]
         Files[("Local photo storage")]
     end
 

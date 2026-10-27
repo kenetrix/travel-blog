@@ -1,5 +1,7 @@
+-- user_id refers to an account in the configuration database, so no foreign key:
+-- UserDataRepo.DeleteAll removes a user's rows.
 CREATE TABLE country_entries (
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL,
 	iso TEXT NOT NULL,
 	status TEXT NOT NULL CHECK (status IN ('visited', 'wishlist')),
 	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
@@ -13,7 +15,7 @@ CREATE TABLE country_entries (
 
 CREATE TABLE flights (
 	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL,
 	from_iata TEXT NOT NULL,
 	to_iata TEXT NOT NULL,
 	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
@@ -28,7 +30,7 @@ CREATE TABLE flights (
 -- A trip's countries are derived from its stops; it has no country of its own.
 CREATE TABLE trips (
 	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL,
 	title TEXT NOT NULL,
 	starts_on TEXT, -- YYYY-MM-DD
 	ends_on TEXT, -- YYYY-MM-DD
@@ -43,7 +45,7 @@ CREATE INDEX trips_user ON trips (user_id);
 -- follows the trip's.
 CREATE TABLE locations (
 	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL,
 	trip_id TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
 	position INTEGER NOT NULL,
 	country_id TEXT NOT NULL, -- ISO 3166 alpha-3

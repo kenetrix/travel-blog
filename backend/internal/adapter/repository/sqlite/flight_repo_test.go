@@ -16,10 +16,6 @@ func TestFlightDetails(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	if _, err := db.Exec(`INSERT INTO users (id, username, password_hash, created_at)
-		VALUES ('u1', 'alice', 'x', '2026-01-01T00:00:00Z')`); err != nil {
-		t.Fatal(err)
-	}
 	repo := sqlite.NewFlightRepo(db)
 	user := domain.UserID("u1")
 

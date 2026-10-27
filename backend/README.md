@@ -29,12 +29,16 @@ swapping SQLite for Postgres only affects internal/adapter/repository.
 
 Migrations in `migrations/data/` only go forward and are tracked by SQLite's `user_version`.
 Each top-level `.sql` file or folder is one migration, in name order. The folder `001_init/` is
-schema version 1, split by area (accounts, travel data, photos, OIDC). Until the `v1.0.0` tag
+schema version 1, split by area (travel data, photos). Until the `v1.0.0` tag
 exists, change it in place and recreate the test database; from `v1.0.0` on,
 add `002_<name>.sql`, `003_...` as usual and never edit older ones.
 
-Settings of the installation (registration, single sign-on) live in a second database,
-`data/config.db`, with its own migrations in `migrations/config/` under the same rules.
+Settings of the installation (registration, single sign-on) and the user accounts (users,
+their settings, sessions and OIDC identities) live in a second database, `data/config.db`,
+with its own migrations in `migrations/config/` under the same rules. Deleting
+`data/travel-blog.db` therefore keeps all accounts. The databases cannot reference each other, so
+`user_id` in the travel data has no foreign key and `UserDataRepo.DeleteAll` removes a user's
+rows when the account is deleted.
 Before pending migrations run on an existing database, a consistent copy is saved next to
 it as `<db>.bak-v<version>`; to roll back, stop the app and put that file back.
 

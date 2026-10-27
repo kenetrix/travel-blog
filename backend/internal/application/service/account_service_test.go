@@ -84,7 +84,7 @@ func TestExpiredSession(t *testing.T) {
 	e := newEnv(t)
 	_, token := e.register(t, "alice")
 	// Fast-forward past the session lifetime
-	if _, err := e.db.Exec(`UPDATE sessions SET expires_at = '2000-01-01T00:00:00Z'`); err != nil {
+	if _, err := e.configDB.Exec(`UPDATE sessions SET expires_at = '2000-01-01T00:00:00Z'`); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, err := e.accounts.Authenticate(token); ok || err != nil {
@@ -203,8 +203,14 @@ func TestChangePassword(t *testing.T) {
 func TestDeleteAccount(t *testing.T) {
 	e := newEnv(t)
 	alice, token := e.register(t, "alice")
+	e.addStop(t, alice, "Vienna")
 	if err := e.accounts.DeleteAccount(alice); err != nil {
 		t.Fatal(err)
+	}
+	// The travel data sits in another database, which has no foreign key to the account
+	var rows int
+	if err := e.db.QueryRow(`SELECT (SELECT COUNT(*) FROM trips) + (SELECT COUNT(*) FROM locations)`).Scan(&rows); err != nil || rows != 0 {
+		t.Errorf("travel data survived account deletion: %d rows, %v", rows, err)
 	}
 	if _, ok, _ := e.accounts.Authenticate(token); ok {
 		t.Error("session survived account deletion")

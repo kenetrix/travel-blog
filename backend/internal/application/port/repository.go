@@ -92,8 +92,15 @@ type UserRepository interface {
 	UpdateProfile(id domain.UserID, p domain.Profile) error
 	Settings(id domain.UserID) (domain.Settings, error)
 	SaveSettings(id domain.UserID, s domain.Settings) error
-	// Delete removes the user with all data (via foreign keys).
+	// Delete removes the account with its settings, sessions and identities (via
+	// foreign keys), not the travel data.
 	Delete(id domain.UserID) error
+}
+
+// UserDataRepository holds the travel data of the users, in a database of its own.
+type UserDataRepository interface {
+	// DeleteAll removes the user's countries, flights, trips, stops and photo records.
+	DeleteAll(user domain.UserID) error
 }
 
 type SessionRepository interface {

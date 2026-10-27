@@ -24,6 +24,7 @@ const SessionTTL = 30 * 24 * time.Hour
 type AccountService struct {
 	users    port.UserRepository
 	sessions port.SessionRepository
+	data     port.UserDataRepository
 	files    port.FileStorage
 	settings port.AppSettingsRepository
 	now      func() time.Time
@@ -36,8 +37,8 @@ type AccountService struct {
 	initialAdminFile string
 }
 
-func NewAccountService(users port.UserRepository, sessions port.SessionRepository, files port.FileStorage, settings port.AppSettingsRepository) *AccountService {
-	s := &AccountService{users: users, sessions: sessions, files: files, settings: settings, now: time.Now, hashCost: bcrypt.DefaultCost}
+func NewAccountService(users port.UserRepository, sessions port.SessionRepository, data port.UserDataRepository, files port.FileStorage, settings port.AppSettingsRepository) *AccountService {
+	s := &AccountService{users: users, sessions: sessions, data: data, files: files, settings: settings, now: time.Now, hashCost: bcrypt.DefaultCost}
 	s.dummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy password"), s.hashCost)
 	return s
 }
@@ -365,10 +366,13 @@ func (s *AccountService) MustChangePassword(user domain.UserID) bool {
 
 // DeleteAccount removes the user with all data and photos.
 func (s *AccountService) DeleteAccount(user domain.UserID) error {
-	// Data first (foreign keys also remove sessions, entries, flights, locations and photo
-	// records), then files: if deleting files fails, only orphaned files remain.
+	// The account first, then its travel data and files: if one of those fails, only
+	// orphaned rows or files that nobody can reach remain.
 	if err := s.users.Delete(user); err != nil {
 		return err
+	}
+	if err := s.data.DeleteAll(user); err != nil {
+		log.Printf("delete data of user %s: %v", user, err)
 	}
 	if err := s.files.DeleteAll(user); err != nil {
 		log.Printf("delete files of user %s: %v", user, err)

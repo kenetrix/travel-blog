@@ -45,8 +45,8 @@ func newStack(t *testing.T) (http.Handler, *service.AccountService) {
 	}
 	t.Cleanup(func() { files.Close() })
 
-	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
+	users := sqlite.NewUserRepo(configDB)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 	return router.New(handler.New(travel, trips, accounts), auth.Sessions(accounts)), accounts

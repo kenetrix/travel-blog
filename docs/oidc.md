@@ -15,7 +15,7 @@ applies the settings at once, no restart needed. If the provider cannot be
 reached, nothing is saved, so a typo cannot lock you out.
 
 The settings are saved in `data/config.db`, a database of its own that also holds other
-settings of the installation and is not part of the travel database (`data/travel-blog.db`).
+settings and the user accounts of the installation and is not part of the travel database (`data/travel-blog.db`).
 The client secret is stored there in plain text, as SQLite is not encrypted: the file
 is readable by its owner only (0600), so keep it out of shared backups. The secret
 is never shown again in the app; leave the field empty to keep it. If you prefer not to

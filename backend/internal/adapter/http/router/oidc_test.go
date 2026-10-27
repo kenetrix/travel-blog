@@ -44,8 +44,8 @@ func newOIDCServer(t *testing.T, opts ...handler.Option) http.Handler {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { files.Close() })
-	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
+	users := sqlite.NewUserRepo(configDB)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 	extra := func(mux *http.ServeMux) {
@@ -129,8 +129,8 @@ func TestAdminOIDCConfigAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { files.Close() })
-	users := sqlite.NewUserRepo(db)
-	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(db), files, settings)
+	users := sqlite.NewUserRepo(configDB)
+	accounts := service.NewAccountService(users, sqlite.NewSessionRepo(configDB), sqlite.NewUserDataRepo(db), files, settings)
 	travel := service.NewTravelService(sqlite.NewCountryEntryRepo(db), sqlite.NewFlightRepo(db), users)
 	trips := service.NewTripService(sqlite.NewTripRepo(db), files, users)
 	svc := service.NewOIDCConfigService(accounts, settings, &fakeRuntime{}, nil)
@@ -152,7 +152,7 @@ func TestAdminOIDCConfigAPI(t *testing.T) {
 		t.Errorf("put as user: %d", rec.Code)
 	}
 
-	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE username = 'alice'`); err != nil {
+	if _, err := configDB.Exec(`UPDATE users SET role = 'admin' WHERE username = 'alice'`); err != nil {
 		t.Fatal(err)
 	}
 	if rec := do(t, h, "POST", "/api/admin/oidc/test", body, alice); rec.Code != http.StatusNoContent {
