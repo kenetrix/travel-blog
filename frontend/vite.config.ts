@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -28,8 +29,23 @@ const csp = [
     "frame-ancestors 'none'",
 ].join('; ')
 
+// The release workflow passes the tag; elsewhere ask git
+function appVersion(): string {
+    if (process.env.APP_VERSION) return process.env.APP_VERSION
+    try {
+        return execSync('git describe --tags --always --dirty', {
+            stdio: ['ignore', 'pipe', 'ignore'],
+        })
+            .toString()
+            .trim()
+    } catch {
+        return 'dev'
+    }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+    define: { __APP_VERSION__: JSON.stringify(appVersion()) },
     server: { proxy, headers },
     preview: {
         proxy,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import PageWrapper from '../ui/PageWrapper.vue'
+import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
 import OidcSettings from './OidcSettings.vue'
@@ -273,6 +274,8 @@ async function deleteUser() {
                 <OidcSettings @say="say" />
             </template>
         </template>
+
+        <LegalFooter />
 
         <ConfirmModal
             v-if="toDelete"
