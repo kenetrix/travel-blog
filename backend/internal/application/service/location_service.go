@@ -33,7 +33,7 @@ func (s *LocationService) Add(user domain.UserID, l domain.Location) (domain.Loc
 	}
 	l.Name = strings.TrimSpace(l.Name)
 	if l.Name == "" {
-		return domain.Location{}, fmt.Errorf("%w: name is required", ErrInvalid)
+		return domain.Location{}, newError(ErrInvalid, "name_required", "name is required")
 	}
 	if l.Visibility == "" {
 		settings, err := s.users.Settings(user)
@@ -60,7 +60,7 @@ func (s *LocationService) Delete(user domain.UserID, id string) error {
 		return err
 	}
 	if !found {
-		return fmt.Errorf("%w: location %s", ErrNotFound, id)
+		return newError(ErrNotFound, "location_not_found", fmt.Sprintf("location %s", id))
 	}
 	for _, p := range photos {
 		if err := s.files.Delete(p.StorageKey); err != nil {

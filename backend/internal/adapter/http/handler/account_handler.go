@@ -11,11 +11,11 @@ import (
 	"travel-blog/backend/internal/domain"
 )
 
-func deref(s *string) string {
+func deref[T ~string](s *T) string {
 	if s == nil {
 		return ""
 	}
-	return *s
+	return string(*s)
 }
 
 func (h *Handler) Register(_ context.Context, req api.RegisterRequestObject) (api.RegisterResponseObject, error) {
@@ -133,7 +133,7 @@ func (h *Handler) UpdateProfile(ctx context.Context, req api.UpdateProfileReques
 		LastName:    in.LastName,
 		DisplayName: in.DisplayName,
 		Bio:         in.Bio,
-		Language:    in.Language,
+		Language:    (*string)(in.Language),
 		Timezone:    in.Timezone,
 		HomeCountry: in.HomeCountry,
 		Color:       in.Color,

@@ -55,7 +55,7 @@ func (s *TravelService) Country(user domain.UserID, iso string) (domain.CountryE
 		return domain.CountryEntry{}, err
 	}
 	if e == nil {
-		return domain.CountryEntry{}, fmt.Errorf("%w: country %s", ErrNotFound, iso)
+		return domain.CountryEntry{}, newError(ErrNotFound, "country_not_found", fmt.Sprintf("country %s", iso))
 	}
 	return *e, nil
 }
@@ -63,7 +63,7 @@ func (s *TravelService) Country(user domain.UserID, iso string) (domain.CountryE
 // PublicTravel returns profile and public data of a user, but only if their profile is
 // public; otherwise ErrNotFound, so it does not reveal whether the user exists.
 func (s *TravelService) PublicTravel(username string) (domain.Profile, []domain.CountryEntry, []domain.Flight, error) {
-	notFound := fmt.Errorf("%w: user %s", ErrNotFound, username)
+	notFound := newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", username))
 	u, err := s.users.GetByUsername(strings.ToLower(username))
 	if err != nil {
 		return domain.Profile{}, nil, nil, err
@@ -101,7 +101,7 @@ func (s *TravelService) SaveCountry(user domain.UserID, iso string, status domai
 		return nil, err
 	}
 	if d.Rating < 0 || d.Rating > 5 {
-		return nil, fmt.Errorf("%w: rating must be between 0 and 5", ErrInvalid)
+		return nil, newError(ErrInvalid, "invalid_rating", "rating must be between 0 and 5")
 	}
 	if visibility != nil {
 		if err := checkVisibility(*visibility); err != nil {
@@ -114,7 +114,7 @@ func (s *TravelService) SaveCountry(user domain.UserID, iso string, status domai
 		return nil, s.entries.Delete(user, iso)
 	case domain.StatusVisited, domain.StatusWishlist:
 	default:
-		return nil, fmt.Errorf("%w: unknown status %q", ErrInvalid, status)
+		return nil, newError(ErrInvalid, "invalid_status", fmt.Sprintf("unknown status %q", status), "value", string(status))
 	}
 
 	e := domain.CountryEntry{
@@ -156,7 +156,7 @@ func (s *TravelService) CreateFlight(user domain.UserID, from, to string, countr
 		}
 	}
 	if len(countries) > 2 {
-		return domain.Flight{}, nil, fmt.Errorf("%w: a flight touches at most two countries", ErrInvalid)
+		return domain.Flight{}, nil, newError(ErrInvalid, "too_many_countries", "a flight touches at most two countries")
 	}
 	for _, iso := range countries {
 		if err := checkCode("country", iso); err != nil {
@@ -170,14 +170,14 @@ func (s *TravelService) CreateFlight(user domain.UserID, from, to string, countr
 		}
 	}
 	if from == to {
-		return domain.Flight{}, nil, ErrSameAirport
+		return domain.Flight{}, nil, newError(ErrSameAirport, "same_airport", "departure and arrival are the same airport")
 	}
 	exists, err := s.flights.RouteExists(user, from, to)
 	if err != nil {
 		return domain.Flight{}, nil, err
 	}
 	if exists {
-		return domain.Flight{}, nil, fmt.Errorf("%w: flight %s → %s", ErrDuplicate, from, to)
+		return domain.Flight{}, nil, newError(ErrDuplicate, "flight_exists", fmt.Sprintf("flight %s → %s", from, to), "from", from, "to", to)
 	}
 
 	def, err := s.defaultVisibility(user)
@@ -224,7 +224,7 @@ func (s *TravelService) markVisited(user domain.UserID, iso string, def domain.V
 // UpdateFlight changes the given fields of a flight; empty values clear them.
 func (s *TravelService) UpdateFlight(user domain.UserID, id string, u domain.FlightUpdate) error {
 	if u.Empty() {
-		return fmt.Errorf("%w: nothing to change", ErrInvalid)
+		return newError(ErrInvalid, "nothing_to_change", "nothing to change")
 	}
 	if err := checkFlightUpdate(&u); err != nil {
 		return err
@@ -234,7 +234,7 @@ func (s *TravelService) UpdateFlight(user domain.UserID, id string, u domain.Fli
 		return err
 	}
 	if !found {
-		return fmt.Errorf("%w: flight %s", ErrNotFound, id)
+		return newError(ErrNotFound, "flight_not_found", fmt.Sprintf("flight %s", id))
 	}
 	return nil
 }
@@ -246,7 +246,7 @@ func (s *TravelService) DeleteFlight(user domain.UserID, id string) error {
 		return err
 	}
 	if !found {
-		return fmt.Errorf("%w: flight %s", ErrNotFound, id)
+		return newError(ErrNotFound, "flight_not_found", fmt.Sprintf("flight %s", id))
 	}
 	return nil
 }

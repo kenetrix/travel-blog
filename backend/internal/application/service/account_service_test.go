@@ -101,7 +101,7 @@ func TestUpdateProfile(t *testing.T) {
 	p, err := a.UpdateProfile(alice, domain.ProfileUpdate{
 		FirstName:   ptr(" Alice "),
 		Bio:         ptr("Loves trains."),
-		Language:    ptr("en-GB"),
+		Language:    ptr("es"),
 		Timezone:    ptr("Europe/Berlin"),
 		HomeCountry: ptr("DEU"),
 		DisplayName: ptr(""),
@@ -120,6 +120,8 @@ func TestUpdateProfile(t *testing.T) {
 		{Timezone: ptr("Mars/Olympus")},
 		{Timezone: ptr("Local")},
 		{Language: ptr("german")},
+		{Language: ptr("en-GB")},
+		{Language: ptr("fr")},
 		{HomeCountry: ptr("de")},
 		{Email: ptr("nope")},
 		{Username: ptr("a b")},
@@ -134,6 +136,19 @@ func TestUpdateProfile(t *testing.T) {
 	}
 	if _, err := a.UpdateProfile(alice, domain.ProfileUpdate{Email: ptr("bob@example.com")}); !errors.Is(err, service.ErrConflict) {
 		t.Errorf("taken email: %v", err)
+	}
+}
+
+func TestInvalidLanguageCode(t *testing.T) {
+	e := newEnv(t)
+	alice, _ := e.register(t, "alice")
+	_, err := e.accounts.UpdateProfile(alice, domain.ProfileUpdate{Language: ptr("fr")})
+	var se *service.Error
+	if !errors.As(err, &se) || se.Code != "invalid_language" || se.Params["value"] != "fr" {
+		t.Fatalf("err = %#v", err)
+	}
+	if !errors.Is(err, service.ErrInvalid) || err.Error() != `invalid input: language "fr" must be one of en, de, es, ru` {
+		t.Errorf("err = %v", err)
 	}
 }
 

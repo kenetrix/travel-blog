@@ -7,8 +7,10 @@ get:
     the password form when `passwordLogin` is false.
 
     The flow itself is plain browser navigation, not JSON, so it is not part
-    of this contract: `GET /api/auth/oidc/login[?next=/path]` redirects (302)
-    to the provider and `GET /api/auth/oidc/callback` is the provider's
+    of this contract: `GET /api/auth/oidc/login[?next=/path][&lang=de]`
+    redirects (302) to the provider. `lang` is the login page's UI language;
+    a new account gets it when the provider's locale is not a supported
+    language and `GET /api/auth/oidc/callback` is the provider's
     redirect target. The callback sets the `session` cookie and redirects to
     `next`, or to `/login?error=<code>` with `oidc_failed`,
     `registration_closed` or `email_unverified`.

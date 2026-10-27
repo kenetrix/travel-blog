@@ -220,6 +220,7 @@ type flow struct {
 	Nonce    string `json:"n"`
 	Verifier string `json:"v"`
 	Next     string `json:"x"`
+	Lang     string `json:"l,omitempty"`
 	Expires  int64  `json:"e"`
 }
 
@@ -287,6 +288,7 @@ func (p *Provider) handleLogin(w http.ResponseWriter, r *http.Request) {
 	f := flow{
 		State: random(), Nonce: random(), Verifier: oauth2.GenerateVerifier(),
 		Next: safeNext(r.URL.Query().Get("next")), Expires: time.Now().Add(flowTTL).Unix(),
+		Lang: r.URL.Query().Get("lang"),
 	}
 	payload, _ := json.Marshal(f)
 	w.Header().Add("Set-Cookie", flowCookieHeader(p.sign(payload), int(flowTTL.Seconds())))
@@ -366,6 +368,7 @@ func (p *Provider) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Email: claims.Email, EmailVerified: claims.EmailVerified,
 		PreferredUsername: claims.PreferredUsername, Name: claims.Name,
 		GivenName: claims.GivenName, FamilyName: claims.FamilyName, Locale: claims.Locale,
+		UILanguage: f.Lang,
 	})
 	switch {
 	case errors.Is(err, service.ErrForbidden):

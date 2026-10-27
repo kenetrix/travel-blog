@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,7 +40,7 @@ func NewPhotoService(locations port.LocationRepository, photos port.PhotoReposit
 func (s *PhotoService) Upload(user domain.UserID, locationID, contentType string, content io.Reader, caption, takenAt string) (domain.Photo, error) {
 	ext, ok := photoTypes[contentType]
 	if !ok {
-		return domain.Photo{}, fmt.Errorf("%w: unsupported image type %q", ErrInvalid, contentType)
+		return domain.Photo{}, newError(ErrInvalid, "unsupported_image", fmt.Sprintf("unsupported image type %q", contentType), "value", contentType)
 	}
 	caption, err := trimText("caption", caption, 500)
 	if err != nil {
@@ -50,7 +51,7 @@ func (s *PhotoService) Upload(user domain.UserID, locationID, contentType string
 		return domain.Photo{}, err
 	}
 	if loc == nil {
-		return domain.Photo{}, fmt.Errorf("%w: location %s", ErrNotFound, locationID)
+		return domain.Photo{}, newError(ErrNotFound, "location_not_found", fmt.Sprintf("location %s", locationID))
 	}
 
 	limited := &countingReader{r: io.LimitReader(content, MaxPhotoBytes+1)}
@@ -60,7 +61,7 @@ func (s *PhotoService) Upload(user domain.UserID, locationID, contentType string
 	}
 	if limited.n > MaxPhotoBytes {
 		s.removeFile(key)
-		return domain.Photo{}, fmt.Errorf("%w: photo is larger than %d MB", ErrInvalid, MaxPhotoBytes>>20)
+		return domain.Photo{}, newError(ErrInvalid, "photo_too_large", fmt.Sprintf("photo is larger than %d MB", MaxPhotoBytes>>20), "max", strconv.Itoa(MaxPhotoBytes>>20))
 	}
 
 	p := domain.Photo{
@@ -86,7 +87,7 @@ func (s *PhotoService) Open(user domain.UserID, id string) (domain.Photo, io.Rea
 		return domain.Photo{}, nil, err
 	}
 	if p == nil {
-		return domain.Photo{}, nil, fmt.Errorf("%w: photo %s", ErrNotFound, id)
+		return domain.Photo{}, nil, newError(ErrNotFound, "photo_not_found", fmt.Sprintf("photo %s", id))
 	}
 	f, err := s.files.Open(p.StorageKey)
 	if err != nil {
@@ -101,7 +102,7 @@ func (s *PhotoService) Delete(user domain.UserID, id string) error {
 		return err
 	}
 	if p == nil {
-		return fmt.Errorf("%w: photo %s", ErrNotFound, id)
+		return newError(ErrNotFound, "photo_not_found", fmt.Sprintf("photo %s", id))
 	}
 	if _, err := s.photos.Delete(user, id); err != nil {
 		return err

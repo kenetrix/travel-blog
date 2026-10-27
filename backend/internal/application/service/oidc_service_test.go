@@ -26,7 +26,7 @@ func TestOIDCFirstLoginCreatesAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := u.Profile
-	if p.Username != "ada_l" || p.Email != "ada@example.com" || p.DisplayName != "Ada Lovelace" || p.Language != "de-DE" {
+	if p.Username != "ada_l" || p.Email != "ada@example.com" || p.DisplayName != "Ada Lovelace" || p.Language != "de" {
 		t.Errorf("profile: %+v", p)
 	}
 	if u.MustChangePassword {
@@ -39,6 +39,29 @@ func TestOIDCFirstLoginCreatesAccount(t *testing.T) {
 	id2, _, err := e.accounts.LoginOIDC(claims("s1", "other", "new@example.com", true))
 	if err != nil || id2 != id {
 		t.Errorf("second login: %v %v", id2, err)
+	}
+}
+
+func TestOIDCLanguage(t *testing.T) {
+	tests := []struct{ locale, ui, want string }{
+		{"de-AT", "", "de"},
+		{"ru_RU", "en", "ru"},
+		{"fr-FR", "de", "de"},
+		{"fr", "", "en"},
+		{"", "es", "es"},
+		{"", "", "en"},
+	}
+	for i, tt := range tests {
+		e := newEnv(t)
+		c := claims("s1", "ada", "", false)
+		c.Locale, c.UILanguage = tt.locale, tt.ui
+		id, _, err := e.accounts.LoginOIDC(c)
+		if err != nil {
+			t.Fatalf("%d: %v", i, err)
+		}
+		if u, _, _ := e.accounts.Account(id); u.Profile.Language != tt.want {
+			t.Errorf("locale %q, ui %q: language %q, want %q", tt.locale, tt.ui, u.Profile.Language, tt.want)
+		}
 	}
 }
 

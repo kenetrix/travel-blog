@@ -58,7 +58,7 @@ func (s *AccountService) Register(r Registration) (domain.User, string, error) {
 		return domain.User{}, "", err
 	}
 	if !open {
-		return domain.User{}, "", fmt.Errorf("%w: registration is closed", ErrForbidden)
+		return domain.User{}, "", newError(ErrForbidden, "registration_closed", "registration is closed")
 	}
 	u := domain.User{ID: domain.UserID(uuid.NewString())}
 	p := &u.Profile
@@ -100,7 +100,7 @@ func (s *AccountService) Register(r Registration) (domain.User, string, error) {
 	}
 	if err := s.users.Create(u, string(hash)); err != nil {
 		if errors.Is(err, port.ErrConflict) {
-			return domain.User{}, "", fmt.Errorf("%w: email or username", ErrConflict)
+			return domain.User{}, "", newError(ErrConflict, "username_taken", "email or username")
 		}
 		return domain.User{}, "", err
 	}
@@ -145,10 +145,10 @@ func (s *AccountService) Login(username, password string) (domain.UserID, string
 	}
 	if !ok {
 		bcrypt.CompareHashAndPassword(s.dummyHash, []byte(password))
-		return "", "", fmt.Errorf("%w: wrong username or password", ErrUnauthorized)
+		return "", "", newError(ErrUnauthorized, "wrong_credentials", "wrong username or password")
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-		return "", "", fmt.Errorf("%w: wrong username or password", ErrUnauthorized)
+		return "", "", newError(ErrUnauthorized, "wrong_credentials", "wrong username or password")
 	}
 	token, err := s.startSession(id)
 	return id, token, err
@@ -209,7 +209,7 @@ func (s *AccountService) Account(user domain.UserID) (domain.User, domain.Settin
 		return domain.User{}, domain.Settings{}, err
 	}
 	if u == nil {
-		return domain.User{}, domain.Settings{}, fmt.Errorf("%w: user %s", ErrNotFound, user)
+		return domain.User{}, domain.Settings{}, newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", user))
 	}
 	settings, err := s.users.Settings(user)
 	return *u, settings, err
@@ -279,7 +279,7 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 	}
 	if up.Color != nil {
 		if *up.Color != "" && !colorPattern.MatchString(*up.Color) {
-			return domain.Profile{}, fmt.Errorf("%w: color must look like #3a7d5c", ErrInvalid)
+			return domain.Profile{}, newError(ErrInvalid, "invalid_color", "color must look like #3a7d5c")
 		}
 		p.Color = strings.ToLower(*up.Color)
 	}
@@ -289,7 +289,7 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 
 	if err := s.users.UpdateProfile(user, p); err != nil {
 		if errors.Is(err, port.ErrConflict) {
-			return domain.Profile{}, fmt.Errorf("%w: email or username", ErrConflict)
+			return domain.Profile{}, newError(ErrConflict, "username_taken", "email or username")
 		}
 		return domain.Profile{}, err
 	}
@@ -300,17 +300,17 @@ func (s *AccountService) SaveSettings(user domain.UserID, set domain.Settings) e
 	switch set.DistanceUnit {
 	case domain.Kilometers, domain.Miles:
 	default:
-		return fmt.Errorf("%w: unknown distance unit %q", ErrInvalid, set.DistanceUnit)
+		return newError(ErrInvalid, "invalid_distance_unit", fmt.Sprintf("unknown distance unit %q", set.DistanceUnit), "value", string(set.DistanceUnit))
 	}
 	switch set.Theme {
 	case domain.ThemeSystem, domain.ThemeLight, domain.ThemeDark:
 	default:
-		return fmt.Errorf("%w: unknown theme %q", ErrInvalid, set.Theme)
+		return newError(ErrInvalid, "invalid_theme", fmt.Sprintf("unknown theme %q", set.Theme), "value", string(set.Theme))
 	}
 	switch set.DefaultView {
 	case domain.ViewCountries, domain.ViewFlights:
 	default:
-		return fmt.Errorf("%w: unknown view %q", ErrInvalid, set.DefaultView)
+		return newError(ErrInvalid, "invalid_view", fmt.Sprintf("unknown view %q", set.DefaultView), "value", string(set.DefaultView))
 	}
 	if err := checkVisibility(set.DefaultVisibility); err != nil {
 		return err
@@ -329,10 +329,10 @@ func (s *AccountService) ChangePassword(user domain.UserID, currentToken, curren
 		return err
 	}
 	if hash == "" {
-		return fmt.Errorf("%w: this account has no password", ErrForbidden)
+		return newError(ErrForbidden, "no_password", "this account has no password")
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(current)) != nil {
-		return fmt.Errorf("%w: wrong current password", ErrForbidden)
+		return newError(ErrForbidden, "wrong_password", "wrong current password")
 	}
 	if err := checkPassword(next); err != nil {
 		return err

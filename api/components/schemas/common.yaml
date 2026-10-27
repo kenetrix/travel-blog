@@ -5,7 +5,19 @@ Problem:
   properties:
     title: { type: string }
     status: { type: integer }
-    detail: { type: string }
+    detail:
+      type: string
+      description: English message; clients show the translation for `code`
+    code:
+      type: string
+      description: |
+        Stable snake_case error code, e.g. `username_taken` or
+        `invalid_language`; `unknown` for errors without one. The full list is
+        in docs/error-codes.md.
+    params:
+      type: object
+      additionalProperties: { type: string }
+      description: 'Values the message for `code` refers to, e.g. max: "100"'
 
 Visibility:
   type: string

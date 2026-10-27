@@ -119,7 +119,7 @@ func (s *AccountService) requireAdmin(actor domain.UserID) error {
 		return err
 	}
 	if u == nil || u.Role != domain.RoleAdmin {
-		return fmt.Errorf("%w: administrators only", ErrForbidden)
+		return newError(ErrForbidden, "admin_only", "administrators only")
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func (s *AccountService) target(id domain.UserID) (*domain.User, error) {
 		return nil, err
 	}
 	if u == nil {
-		return nil, fmt.Errorf("%w: user %s", ErrNotFound, id)
+		return nil, newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", id))
 	}
 	return u, nil
 }
@@ -150,7 +150,7 @@ func (s *AccountService) SetRole(actor, id domain.UserID, role domain.Role) (dom
 		return domain.User{}, err
 	}
 	if role != domain.RoleUser && role != domain.RoleAdmin {
-		return domain.User{}, fmt.Errorf("%w: role must be user or admin", ErrInvalid)
+		return domain.User{}, newError(ErrInvalid, "invalid_role", "role must be user or admin")
 	}
 	u, err := s.target(id)
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *AccountService) SetRole(actor, id domain.UserID, role domain.Role) (dom
 			return domain.User{}, err
 		}
 		if n <= 1 {
-			return domain.User{}, fmt.Errorf("%w: there must be at least one administrator", ErrConflict)
+			return domain.User{}, newError(ErrConflict, "last_admin", "there must be at least one administrator")
 		}
 	}
 	if err := s.users.SetRole(id, role); err != nil {
@@ -179,7 +179,7 @@ func (s *AccountService) ResetPassword(actor, id domain.UserID, password string)
 		return err
 	}
 	if actor == id {
-		return fmt.Errorf("%w: change your own password in the profile", ErrInvalid)
+		return newError(ErrInvalid, "own_password", "change your own password in the profile")
 	}
 	if _, err := s.target(id); err != nil {
 		return err
@@ -207,7 +207,7 @@ func (s *AccountService) DeleteUser(actor, id domain.UserID) error {
 		return err
 	}
 	if actor == id {
-		return fmt.Errorf("%w: delete your own account in the profile", ErrInvalid)
+		return newError(ErrInvalid, "own_account", "delete your own account in the profile")
 	}
 	if _, err := s.target(id); err != nil {
 		return err

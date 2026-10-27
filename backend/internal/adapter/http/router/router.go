@@ -19,18 +19,18 @@ func New(handler api.StrictServerInterface, authenticate func(http.Handler) http
 	}
 	strict := api.NewStrictHandlerWithOptions(handler, nil, api.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			writeProblem(w, http.StatusBadRequest, err.Error())
+			writeProblem(w, http.StatusBadRequest, "bad_request", err.Error())
 		},
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Printf("%s %s: %v", r.Method, r.URL.Path, err)
-			writeProblem(w, http.StatusInternalServerError, "")
+			writeProblem(w, http.StatusInternalServerError, "internal", "")
 		},
 	})
 	api.HandlerWithOptions(strict, api.StdHTTPServerOptions{
 		BaseURL:    "/api",
 		BaseRouter: mux,
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			writeProblem(w, http.StatusBadRequest, err.Error())
+			writeProblem(w, http.StatusBadRequest, "bad_request", err.Error())
 		},
 	})
 	return securityHeaders(noCache(limitBody(limitAuth(authenticate(requireUser(requirePasswordChange(mux)))))))
@@ -54,7 +54,7 @@ var openPrefixes = []string{"/api/auth/", "/api/public/"}
 func requireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := auth.UserFrom(r.Context()); !ok && !isOpen(r.URL.Path) {
-			writeProblem(w, http.StatusUnauthorized, "login required")
+			writeProblem(w, http.StatusUnauthorized, "login_required", "login required")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -68,7 +68,7 @@ func requirePasswordChange(next http.Handler) http.Handler {
 		if auth.MustChangePassword(r.Context()) && !isOpen(r.URL.Path) &&
 			!(r.Method == http.MethodGet && r.URL.Path == "/api/user") &&
 			!(r.Method == http.MethodPut && r.URL.Path == "/api/user/password") {
-			writeProblem(w, http.StatusForbidden, "password change required")
+			writeProblem(w, http.StatusForbidden, "password_change_required", "password change required")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -93,8 +93,9 @@ func noCache(next http.Handler) http.Handler {
 	})
 }
 
-func writeProblem(w http.ResponseWriter, status int, detail string) {
-	p := api.Problem{Status: status, Title: http.StatusText(status)}
+// code is the stable error code clients translate (see docs/error-codes.md).
+func writeProblem(w http.ResponseWriter, status int, code, detail string) {
+	p := api.Problem{Status: status, Title: http.StatusText(status), Code: &code}
 	if detail != "" {
 		p.Detail = &detail
 	}

@@ -8,7 +8,7 @@ CREATE TABLE users (
 	last_name TEXT NOT NULL DEFAULT '',
 	display_name TEXT NOT NULL DEFAULT '',
 	bio TEXT NOT NULL DEFAULT '',
-	language TEXT NOT NULL DEFAULT 'en', -- BCP 47, e.g. 'de' or 'en-US'
+	language TEXT NOT NULL DEFAULT 'en', -- UI language: en, de, es or ru
 	timezone TEXT NOT NULL DEFAULT 'UTC', -- IANA, e.g. 'Europe/Berlin'
 	home_country TEXT NOT NULL DEFAULT '', -- ISO 3166 alpha-3
 	color TEXT NOT NULL DEFAULT '', -- avatar colour as #rrggbb; empty: default

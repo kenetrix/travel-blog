@@ -23,13 +23,15 @@ type OIDCClaims struct {
 	GivenName         string
 	FamilyName        string
 	Locale            string
+	// UILanguage is the login page's language, used when Locale is not supported
+	UILanguage string
 }
 
 // LoginOIDC logs in the user of an OIDC identity and returns user and session token. Order:
 // known identity, existing account with the same verified email, new account (if registration is open).
 func (s *AccountService) LoginOIDC(c OIDCClaims) (domain.UserID, string, error) {
 	if c.Issuer == "" || c.Subject == "" {
-		return "", "", fmt.Errorf("%w: identity without issuer or subject", ErrInvalid)
+		return "", "", newError(ErrInvalid, "invalid_identity", "identity without issuer or subject")
 	}
 	u, err := s.resolveOIDC(c)
 	if err != nil {
@@ -74,7 +76,7 @@ func (s *AccountService) resolveOIDC(c OIDCClaims) (domain.UserID, error) {
 		return "", err
 	}
 	if !open {
-		return "", fmt.Errorf("%w: registration is closed", ErrForbidden)
+		return "", newError(ErrForbidden, "registration_closed", "registration is closed")
 	}
 
 	u := domain.User{ID: domain.UserID(uuid.NewString())}
@@ -86,7 +88,7 @@ func (s *AccountService) resolveOIDC(c OIDCClaims) (domain.UserID, error) {
 	}
 	p.FirstName, _ = trimText("firstName", c.GivenName, 100)
 	p.LastName, _ = trimText("lastName", c.FamilyName, 100)
-	p.Language = oidcLanguage(c.Locale)
+	p.Language = oidcLanguage(c.Locale, c.UILanguage)
 	p.Timezone = "UTC"
 	p.CreatedAt = s.now().UTC()
 	fullName, _ := trimText("displayName", c.Name, 100)
@@ -120,7 +122,7 @@ func (s *AccountService) resolveOIDC(c OIDCClaims) (domain.UserID, error) {
 			return "", gerr
 		}
 	}
-	return "", fmt.Errorf("%w: no free username", ErrConflict)
+	return "", newError(ErrConflict, "no_free_username", "no free username")
 }
 
 // afterIdentityRace handles an identity that was linked in parallel:
@@ -131,7 +133,7 @@ func (s *AccountService) afterIdentityRace(c OIDCClaims, linkErr error) (domain.
 	}
 	known, err := s.users.GetByIdentity(c.Issuer, c.Subject)
 	if err != nil || known == nil {
-		return "", fmt.Errorf("%w: identity already linked", ErrConflict)
+		return "", newError(ErrConflict, "identity_linked", "identity already linked")
 	}
 	return known.ID, nil
 }
@@ -176,10 +178,11 @@ func usernameBase(preferred, email string) string {
 	return "user"
 }
 
-func oidcLanguage(locale string) string {
-	l := strings.ReplaceAll(strings.TrimSpace(locale), "_", "-")
-	if l == "" || checkLanguage(l) != nil {
-		return "en"
+func oidcLanguage(locale, uiLanguage string) string {
+	for _, tag := range []string{locale, uiLanguage} {
+		if l := supportedLanguage(tag); l != "" {
+			return l
+		}
 	}
-	return l
+	return "en"
 }

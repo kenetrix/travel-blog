@@ -185,8 +185,10 @@ export interface paths {
          *     the password form when `passwordLogin` is false.
          *
          *     The flow itself is plain browser navigation, not JSON, so it is not part
-         *     of this contract: `GET /api/auth/oidc/login[?next=/path]` redirects (302)
-         *     to the provider and `GET /api/auth/oidc/callback` is the provider's
+         *     of this contract: `GET /api/auth/oidc/login[?next=/path][&lang=de]`
+         *     redirects (302) to the provider. `lang` is the login page's UI language;
+         *     a new account gets it when the provider's locale is not a supported
+         *     language and `GET /api/auth/oidc/callback` is the provider's
          *     redirect target. The callback sets the `session` cookie and redirects to
          *     `next`, or to `/login?error=<code>` with `oidc_failed`,
          *     `registration_closed` or `email_unverified`.
@@ -434,7 +436,18 @@ export interface components {
         Problem: {
             title: string
             status: number
+            /** @description English message; clients show the translation for `code` */
             detail?: string
+            /**
+             * @description Stable snake_case error code, e.g. `username_taken` or
+             *     `invalid_language`; `unknown` for errors without one. The full list is
+             *     in docs/error-codes.md.
+             */
+            code?: string
+            /** @description Values the message for `code` refers to, e.g. max: "100" */
+            params?: {
+                [key: string]: string
+            }
         }
         /** @enum {string} */
         Visibility: 'private' | 'public'
@@ -560,11 +573,7 @@ export interface components {
             lastName: string
             displayName: string
             bio: string
-            /**
-             * @description BCP 47 language tag
-             * @example de
-             */
-            language: string
+            language: components['schemas']['Language']
             /**
              * @description IANA time zone
              * @example Europe/Berlin
@@ -585,7 +594,7 @@ export interface components {
             lastName?: string
             displayName?: string
             bio?: string
-            language?: string
+            language?: components['schemas']['Language']
             timezone?: string
             /** @description Alpha-3 or empty */
             homeCountry?: string
@@ -624,8 +633,7 @@ export interface components {
             password: string
             firstName?: string
             lastName?: string
-            /** @description BCP 47, defaults to en */
-            language?: string
+            language?: components['schemas']['Language']
         }
         LoginInput: {
             username: string
@@ -688,6 +696,11 @@ export interface components {
             rating: number
             tags: string[]
         }
+        /**
+         * @description UI language; registration defaults to en
+         * @enum {string}
+         */
+        Language: 'en' | 'de' | 'es' | 'ru'
         OidcConfig: {
             /** @description Whether login with the configured provider works */
             enabled: boolean

@@ -24,10 +24,7 @@ Profile:
     lastName: { type: string }
     displayName: { type: string }
     bio: { type: string }
-    language:
-      type: string
-      description: BCP 47 language tag
-      example: de
+    language: { $ref: '#/Language' }
     timezone:
       type: string
       description: IANA time zone
@@ -49,10 +46,15 @@ ProfileUpdate:
     lastName: { type: string, maxLength: 100 }
     displayName: { type: string, maxLength: 100 }
     bio: { type: string, maxLength: 2000 }
-    language: { type: string }
+    language: { $ref: '#/Language' }
     timezone: { type: string }
     homeCountry: { type: string, description: Alpha-3 or empty }
     color: { type: string, description: 'Hex colour like #3a7d5c, or empty' }
+
+Language:
+  type: string
+  description: UI language; registration defaults to en
+  enum: [en, de, es, ru]
 
 Settings:
   type: object
@@ -107,7 +109,7 @@ RegisterInput:
       maxLength: 72
     firstName: { type: string }
     lastName: { type: string }
-    language: { type: string, description: 'BCP 47, defaults to en' }
+    language: { $ref: '#/Language' }
 
 LoginInput:
   type: object

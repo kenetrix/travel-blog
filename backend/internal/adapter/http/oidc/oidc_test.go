@@ -135,10 +135,11 @@ func (h *harness) get(path string, cookies ...*http.Cookie) *httptest.ResponseRe
 	return rec
 }
 
-// start performs GET /login and returns the flow cookie and the state.
-func (h *harness) start(next string) (*http.Cookie, string) {
+// start performs GET /login and returns the flow cookie and the state; query
+// is appended to the login URL.
+func (h *harness) start(next string, query ...string) (*http.Cookie, string) {
 	h.t.Helper()
-	rec := h.get("/api/auth/oidc/login?next=" + url.QueryEscape(next))
+	rec := h.get("/api/auth/oidc/login?next=" + url.QueryEscape(next) + strings.Join(query, ""))
 	if rec.Code != http.StatusFound {
 		h.t.Fatalf("login status %d", rec.Code)
 	}
@@ -189,6 +190,18 @@ func TestLoginSuccess(t *testing.T) {
 	got := h.login.got
 	if got.Issuer != h.provider.URL || got.Subject != "user-1" || got.Email != "ada@example.com" ||
 		!got.EmailVerified || got.PreferredUsername != "ada" {
+		t.Errorf("claims: %+v", got)
+	}
+}
+
+func TestLoginPassesUILanguage(t *testing.T) {
+	h := newHarness(t)
+	h.provider.claims["locale"] = "fr-FR"
+	flow, state := h.start("/", "&lang=de")
+	if rec := h.get("/api/auth/oidc/callback?code=good&state="+state, flow); rec.Code != http.StatusFound {
+		t.Fatalf("callback: %d", rec.Code)
+	}
+	if got := h.login.got; got.Locale != "fr-FR" || got.UILanguage != "de" {
 		t.Errorf("claims: %+v", got)
 	}
 }

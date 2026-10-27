@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 )
@@ -83,7 +82,7 @@ func isReserved(name string) bool {
 // must be normalized already.
 func checkUsernameAllowed(name string) error {
 	folded := leetReplacer.Replace(name)
-	rejected := fmt.Errorf("%w: this username is not allowed", ErrInvalid)
+	rejected := newError(ErrInvalid, "username_not_allowed", "this username is not allowed")
 	// Numeric codes of the neo-Nazi scene
 	if strings.Contains(strings.ReplaceAll(name, "_", ""), "1488") || isReserved(name) {
 		return rejected

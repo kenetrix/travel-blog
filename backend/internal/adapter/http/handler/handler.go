@@ -22,9 +22,9 @@ import (
 // Handler implements api.StrictServerInterface and delegates to the services,
 // always for the user that auth put in the context.
 type Handler struct {
-	travel   *service.TravelService
-	accounts *service.AccountService
-	oidc     OIDC
+	travel     *service.TravelService
+	accounts   *service.AccountService
+	oidc       OIDC
 	oidcConfig OIDCConfig
 }
 
@@ -56,7 +56,7 @@ func (h *Handler) passwordLogin() bool {
 	return h.oidc == nil || h.oidc.PasswordLogin()
 }
 
-var errPasswordLoginOff = errors.New("password login is disabled, use single sign-on")
+var errPasswordLoginOff = &service.Error{Kind: service.ErrForbidden, Code: "password_login_off", Msg: "password login is disabled, use single sign-on"}
 
 // userFrom returns the user of the request. Protected routes never see a request
 // without one (see router), so a missing user is a programming error: 500.
@@ -135,7 +135,15 @@ func problem(status int, err error) api.Problem {
 	if _, text, ok := strings.Cut(detail, ": "); ok {
 		detail = text
 	}
-	return api.Problem{Status: status, Title: http.StatusText(status), Detail: &detail}
+	code := "unknown"
+	var params *map[string]string
+	if e, ok := errors.AsType[*service.Error](err); ok {
+		code = e.Code
+		if len(e.Params) > 0 {
+			params = &e.Params
+		}
+	}
+	return api.Problem{Status: status, Title: http.StatusText(status), Detail: &detail, Code: &code, Params: params}
 }
 
 func badRequest(err error) api.BadRequestApplicationProblemPlusJSONResponse {
@@ -157,7 +165,6 @@ func forbidden(err error) api.ForbiddenApplicationProblemPlusJSONResponse {
 func conflict(err error) api.ConflictApplicationProblemPlusJSONResponse {
 	return api.ConflictApplicationProblemPlusJSONResponse(problem(http.StatusConflict, err))
 }
-
 
 func toAPIEntry(e domain.CountryEntry) api.CountryEntry {
 	tags := e.Details.Tags
@@ -241,7 +248,7 @@ func toAPIProfile(p domain.Profile) api.Profile {
 		LastName:    p.LastName,
 		DisplayName: p.DisplayName,
 		Bio:         p.Bio,
-		Language:    p.Language,
+		Language:    api.Language(p.Language),
 		Timezone:    p.Timezone,
 		HomeCountry: p.HomeCountry,
 		Color:       p.Color,

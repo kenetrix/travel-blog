@@ -332,6 +332,40 @@ func TestProblems(t *testing.T) {
 	}
 }
 
+func TestProblemCodes(t *testing.T) {
+	h := newServer(t)
+	me := register(t, h, "mia")
+	register(t, h, "alice")
+	cases := []struct {
+		method, path, body string
+		header             map[string]string
+		code               string
+		params             map[string]string
+	}{
+		{"POST", "/api/auth/register", `{"username":"alice","password":"correct horse battery"}`, nil, "username_taken", nil},
+		{"PATCH", "/api/user/profile", `{"language":"fr"}`, me, "invalid_language", map[string]string{"value": "fr"}},
+		{"POST", "/api/flights", `{"from":"BER","to":"BER","countries":["DEU"]}`, me, "same_airport", nil},
+		{"POST", "/api/flights", `not json`, me, "bad_request", nil},
+		{"GET", "/api/flights", "", nil, "login_required", nil},
+	}
+	for _, c := range cases {
+		rec := do(t, h, c.method, c.path, c.body, c.header)
+		var p struct {
+			Code   string            `json:"code"`
+			Detail string            `json:"detail"`
+			Params map[string]string `json:"params"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil || p.Code != c.code || p.Detail == "" {
+			t.Errorf("%s %s: %s, want code %s", c.method, c.path, rec.Body, c.code)
+		}
+		for k, v := range c.params {
+			if p.Params[k] != v {
+				t.Errorf("%s %s: params %v, want %s=%s", c.method, c.path, p.Params, k, v)
+			}
+		}
+	}
+}
+
 func TestTravelOmitsTextsAndCountryHasThem(t *testing.T) {
 	h := newServer(t)
 	me := register(t, h, "mia")

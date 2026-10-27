@@ -146,14 +146,14 @@ func (s *OIDCConfigService) build(in OIDCConfigInput) (domain.OIDCConfig, error)
 	}
 	for _, f := range []struct{ field, raw string }{{"issuer", cfg.Issuer}, {"redirectUrl", cfg.RedirectURL}} {
 		if u, err := url.Parse(f.raw); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return cfg, fmt.Errorf("%w: %s must be an http(s) URL", ErrInvalid, f.field)
+			return cfg, newError(ErrInvalid, "invalid_url", fmt.Sprintf("%s must be an http(s) URL", f.field), "field", f.field)
 		}
 	}
 	if cfg.ClientID == "" {
-		return cfg, fmt.Errorf("%w: clientId is required", ErrInvalid)
+		return cfg, newError(ErrInvalid, "client_id_required", "clientId is required")
 	}
 	if len([]rune(cfg.Name)) > 40 {
-		return cfg, fmt.Errorf("%w: name must have at most 40 characters", ErrInvalid)
+		return cfg, newError(ErrInvalid, "text_too_long", "name must have at most 40 characters", "field", "name", "max", "40")
 	}
 	if cfg.Name == "" {
 		cfg.Name = "SSO"
@@ -169,7 +169,7 @@ func (s *OIDCConfigService) build(in OIDCConfigInput) (domain.OIDCConfig, error)
 		cfg.ClientSecret = old.ClientSecret
 	}
 	if cfg.ClientSecret == "" {
-		return cfg, fmt.Errorf("%w: clientSecret is required", ErrInvalid)
+		return cfg, newError(ErrInvalid, "client_secret_required", "clientSecret is required")
 	}
 	return cfg, nil
 }
@@ -179,7 +179,7 @@ func (s *OIDCConfigService) writable(actor domain.UserID) error {
 		return err
 	}
 	if s.env != nil {
-		return fmt.Errorf("%w: OIDC is configured by environment variables", ErrConflict)
+		return newError(ErrConflict, "oidc_from_env", "OIDC is configured by environment variables")
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func (s *OIDCConfigService) Save(actor domain.UserID, in OIDCConfigInput) error 
 		return err
 	}
 	if err := s.runtime.Reload(cfg); err != nil {
-		return fmt.Errorf("%w: the provider cannot be reached: %v", ErrInvalid, err)
+		return newError(ErrInvalid, "provider_unreachable", fmt.Sprintf("the provider cannot be reached: %v", err), "reason", err.Error())
 	}
 	return s.repo.Replace(map[string]string{
 		keyIssuer: cfg.Issuer, keyClientID: cfg.ClientID, keyClientSecret: cfg.ClientSecret,
@@ -226,7 +226,7 @@ func (s *OIDCConfigService) Test(actor domain.UserID, in OIDCConfigInput) error 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := s.runtime.Test(ctx, cfg); err != nil {
-		return fmt.Errorf("%w: the provider cannot be reached: %v", ErrInvalid, err)
+		return newError(ErrInvalid, "provider_unreachable", fmt.Sprintf("the provider cannot be reached: %v", err), "reason", err.Error())
 	}
 	return nil
 }

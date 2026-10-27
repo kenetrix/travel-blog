@@ -27,7 +27,7 @@ func limitBody(next http.Handler) http.Handler {
 			limit = maxUploadBody
 		}
 		if r.ContentLength > limit {
-			writeProblem(w, http.StatusRequestEntityTooLarge, "request body too large")
+			writeProblem(w, http.StatusRequestEntityTooLarge, "body_too_large", "request body too large")
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
@@ -86,7 +86,7 @@ func limitAuth(next http.Handler) http.Handler {
 			}
 			if ok, wait := l.allow(host); !ok {
 				w.Header().Set("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
-				writeProblem(w, http.StatusTooManyRequests, "too many attempts, try again later")
+				writeProblem(w, http.StatusTooManyRequests, "too_many_attempts", "too many attempts, try again later")
 				return
 			}
 		}

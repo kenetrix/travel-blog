@@ -74,6 +74,30 @@ func (e CountrySummaryStatus) Valid() bool {
 	}
 }
 
+// Defines values for Language.
+const (
+	De Language = "de"
+	En Language = "en"
+	Es Language = "es"
+	Ru Language = "ru"
+)
+
+// Valid indicates whether the value is a known member of the Language enum.
+func (e Language) Valid() bool {
+	switch e {
+	case De:
+		return true
+	case En:
+		return true
+	case Es:
+		return true
+	case Ru:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OidcAdminConfigSource.
 const (
 	OidcAdminConfigSourceEnv      OidcAdminConfigSource = "env"
@@ -353,6 +377,9 @@ type FlightUpdate struct {
 	Visibility   *Visibility `json:"visibility,omitempty"`
 }
 
+// Language UI language; registration defaults to en
+type Language string
+
 // LoginInput defines model for LoginInput.
 type LoginInput struct {
 	Password string `json:"password"`
@@ -419,9 +446,18 @@ type PasswordReset struct {
 
 // Problem RFC 9457 problem details
 type Problem struct {
+	// Code Stable snake_case error code, e.g. `username_taken` or
+	// `invalid_language`; `unknown` for errors without one. The full list is
+	// in docs/error-codes.md.
+	Code *string `json:"code,omitempty"`
+
+	// Detail English message; clients show the translation for `code`
 	Detail *string `json:"detail,omitempty"`
-	Status int     `json:"status"`
-	Title  string  `json:"title"`
+
+	// Params Values the message for `code` refers to, e.g. max: "100"
+	Params *map[string]string `json:"params,omitempty"`
+	Status int                `json:"status"`
+	Title  string             `json:"title"`
 }
 
 // Profile defines model for Profile.
@@ -440,11 +476,9 @@ type Profile struct {
 	// HomeCountry ISO 3166-1 alpha-3, empty if unset
 	HomeCountry string `json:"homeCountry"`
 
-	// Language BCP 47 language tag
-	//
-	// Example: de
-	Language string `json:"language"`
-	LastName string `json:"lastName"`
+	// Language UI language; registration defaults to en
+	Language Language `json:"language"`
+	LastName string   `json:"lastName"`
 
 	// Timezone IANA time zone
 	//
@@ -469,10 +503,12 @@ type ProfileUpdate struct {
 
 	// HomeCountry Alpha-3 or empty
 	HomeCountry *string `json:"homeCountry,omitempty"`
-	Language    *string `json:"language,omitempty"`
-	LastName    *string `json:"lastName,omitempty"`
-	Timezone    *string `json:"timezone,omitempty"`
-	Username    *string `json:"username,omitempty"`
+
+	// Language UI language; registration defaults to en
+	Language *Language `json:"language,omitempty"`
+	LastName *string   `json:"lastName,omitempty"`
+	Timezone *string   `json:"timezone,omitempty"`
+	Username *string   `json:"username,omitempty"`
 }
 
 // PublicProfile defines model for PublicProfile.
@@ -499,11 +535,11 @@ type RegisterInput struct {
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FirstName *string              `json:"firstName,omitempty"`
 
-	// Language BCP 47, defaults to en
-	Language *string `json:"language,omitempty"`
-	LastName *string `json:"lastName,omitempty"`
-	Password string  `json:"password"`
-	Username string  `json:"username"`
+	// Language UI language; registration defaults to en
+	Language *Language `json:"language,omitempty"`
+	LastName *string   `json:"lastName,omitempty"`
+	Password string    `json:"password"`
+	Username string    `json:"username"`
 }
 
 // Role defines model for Role.
