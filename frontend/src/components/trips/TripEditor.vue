@@ -515,6 +515,7 @@ const heading = computed(() =>
                 </div>
                 <SegmentedControl
                     v-model="draft.visibility"
+                    class="visibility"
                     :options="visibilityOptions"
                     :label="t('trip.visibility')"
                     :disabled="readOnly"
@@ -810,6 +811,15 @@ textarea.field {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
+}
+
+/* Full width like the fields above, so both halves share it */
+.visibility {
+    display: flex;
+}
+
+.visibility :deep(button) {
+    flex: 1;
 }
 
 .actions {
