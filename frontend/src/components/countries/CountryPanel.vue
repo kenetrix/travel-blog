@@ -63,6 +63,7 @@ const listedCountries = computed(() => {
     <AppSheet
         v-model:expanded="expanded"
         :wide="!!selectedIso"
+        :fill="!selectedIso"
         :label="selectedIso ? t('countries.details') : t('countries.title')"
     >
         <CountryDetailModal
@@ -71,97 +72,105 @@ const listedCountries = computed(() => {
             @close="store.selectCountry(null)"
         />
         <template v-else>
-            <div>
-                <h2>{{ t('countries.title') }}</h2>
-                <p class="sub">{{ t('countries.subtitle') }}</p>
-            </div>
+            <div class="top">
+                <div>
+                    <h2>{{ t('countries.title') }}</h2>
+                    <p class="sub">{{ t('countries.subtitle') }}</p>
+                </div>
 
-            <div>
-                <input
-                    v-model="searchCountry"
-                    type="search"
-                    :placeholder="t('countries.search')"
-                    :aria-label="t('countries.search')"
-                    @focus="expanded = true"
-                />
-            </div>
+                <div>
+                    <input
+                        v-model="searchCountry"
+                        type="search"
+                        :placeholder="t('countries.search')"
+                        :aria-label="t('countries.search')"
+                        @focus="expanded = true"
+                    />
+                </div>
 
-            <div v-if="allTags.length && !query" class="tags">
-                <button
-                    v-for="t in allTags"
-                    :key="t"
-                    type="button"
-                    class="tag"
-                    :class="{ on: activeTag === t }"
-                    @click="activeTag = activeTag === t ? '' : t"
-                >
-                    {{ t }}
-                </button>
-            </div>
-
-            <div v-if="wishlistCountries.length">
-                <label>{{ t('countries.wishlist') }}</label>
-                <ol>
-                    <li
-                        v-for="country in wishlistCountries"
-                        :key="country.alpha3"
+                <div v-if="allTags.length && !query" class="tags">
+                    <button
+                        v-for="t in allTags"
+                        :key="t"
+                        type="button"
+                        class="tag"
+                        :class="{ on: activeTag === t }"
+                        @click="activeTag = activeTag === t ? '' : t"
                     >
-                        <button
-                            type="button"
-                            @click="store.selectCountry(country.alpha3)"
-                        >
-                            <span
-                                :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                            ></span>
-                            {{ countryName(country) }}
-                        </button>
-                    </li>
-                </ol>
+                        {{ t }}
+                    </button>
+                </div>
             </div>
 
-            <div>
-                <label>{{
-                    query ? t('countries.results') : t('countries.visited')
-                }}</label>
-                <ol>
-                    <li
-                        v-for="country in listedCountries"
-                        :key="country.alpha3"
-                    >
-                        <button
-                            type="button"
-                            @click="store.selectCountry(country.alpha3)"
+            <div class="lists">
+                <div v-if="wishlistCountries.length">
+                    <label>{{ t('countries.wishlist') }}</label>
+                    <ol>
+                        <li
+                            v-for="country in wishlistCountries"
+                            :key="country.alpha3"
                         >
-                            <span
-                                :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                            ></span>
-                            {{ countryName(country) }}
-                            <span
-                                v-if="query && visited.has(country.alpha3)"
-                                class="check"
+                            <button
+                                type="button"
+                                @click="store.selectCountry(country.alpha3)"
                             >
-                                ✓
-                            </span>
-                            <span
-                                v-else-if="
-                                    query && wishlist.has(country.alpha3)
-                                "
-                                class="wish"
+                                <span
+                                    :class="`fi fi-${country.alpha2.toLowerCase()}`"
+                                ></span>
+                                {{ countryName(country) }}
+                            </button>
+                        </li>
+                    </ol>
+                </div>
+
+                <div>
+                    <label>{{
+                        query ? t('countries.results') : t('countries.visited')
+                    }}</label>
+                    <ol>
+                        <li
+                            v-for="country in listedCountries"
+                            :key="country.alpha3"
+                        >
+                            <button
+                                type="button"
+                                @click="store.selectCountry(country.alpha3)"
                             >
-                                ☆
-                            </span>
-                            <span
-                                v-if="details[country.alpha3]?.rating"
-                                class="rating"
-                            >
-                                {{ '★'.repeat(details[country.alpha3].rating) }}
-                            </span>
-                        </button>
-                    </li>
-                    <li v-if="!listedCountries.length" class="empty">
-                        {{ t('countries.none') }}
-                    </li>
-                </ol>
+                                <span
+                                    :class="`fi fi-${country.alpha2.toLowerCase()}`"
+                                ></span>
+                                {{ countryName(country) }}
+                                <span
+                                    v-if="query && visited.has(country.alpha3)"
+                                    class="check"
+                                >
+                                    ✓
+                                </span>
+                                <span
+                                    v-else-if="
+                                        query && wishlist.has(country.alpha3)
+                                    "
+                                    class="wish"
+                                >
+                                    ☆
+                                </span>
+                                <span
+                                    v-if="details[country.alpha3]?.rating"
+                                    class="rating"
+                                >
+                                    {{
+                                        '★'.repeat(
+                                            details[country.alpha3].rating
+                                        )
+                                    }}
+                                </span>
+                            </button>
+                        </li>
+                        <li v-if="!listedCountries.length" class="empty">
+                            {{ t('countries.none') }}
+                        </li>
+                    </ol>
+                </div>
             </div>
         </template>
     </AppSheet>
@@ -221,12 +230,33 @@ li button:hover {
     }
 }
 
-/* Desktop: the panel grows with the list up to half the screen */
-@media (min-width: 1024px) and (min-height: 501px) {
-    ol {
-        max-height: 50vh;
-        overflow-y: auto;
-    }
+/* Title, search and tags stay put, only the lists scroll */
+.top,
+.lists {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.top {
+    flex: none;
+}
+
+.lists {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.lists,
+ol {
+    scrollbar-width: none;
+}
+
+.lists::-webkit-scrollbar,
+ol::-webkit-scrollbar {
+    display: none;
 }
 
 .tags {

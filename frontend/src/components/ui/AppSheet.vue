@@ -8,8 +8,15 @@ import { t } from '../../i18n'
 // Desktop: floating panel on the given side. Outside phones, `expanded`
 // false slides the sheet off screen, leaving a tab to bring it back.
 const props = withDefaults(
-    defineProps<{ side?: 'left' | 'right'; wide?: boolean; label: string }>(),
-    { side: 'left', wide: false }
+    defineProps<{
+        side?: 'left' | 'right'
+        wide?: boolean
+        // Phone: always as tall as allowed, so the content scrolls instead of
+        // the sheet growing with it
+        fill?: boolean
+        label: string
+    }>(),
+    { side: 'left', wide: false, fill: false }
 )
 const expanded = defineModel<boolean>('expanded', { default: false })
 
@@ -24,7 +31,7 @@ let startOffset = 0
 let moved = false
 
 // Visible height while collapsed; the bottom padding is the safe area
-const PEEK = 104
+const PEEK = 72
 function peek(): number {
     const el = sheet.value
     if (!el) return 0
@@ -102,7 +109,7 @@ onBeforeUnmount(() => unregister())
     <section
         ref="sheet"
         class="sheet"
-        :class="[side, { wide, expanded, dragging: dragY !== null }]"
+        :class="[side, { wide, fill, expanded, dragging: dragY !== null }]"
         :style="style"
         :aria-label="label"
     >
@@ -161,10 +168,11 @@ onBeforeUnmount(() => unregister())
     z-index: 15;
     display: flex;
     flex-direction: column;
-    max-height: min(
+    --sheet-max: min(
         72dvh,
         calc(100dvh - var(--appbar-h) - var(--safe-top) - 1.5rem)
     );
+    max-height: var(--sheet-max);
     padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
     background: var(--panel);
     backdrop-filter: blur(8px);
@@ -172,10 +180,14 @@ onBeforeUnmount(() => unregister())
     border-bottom: none;
     border-radius: var(--radius) var(--radius) 0 0;
     box-shadow: 0 -4px 24px rgb(0 0 0 / 0.12);
-    /* 104px: PEEK in the script */
-    transform: translateY(calc(100% - 104px - var(--safe-bottom)));
+    /* 72px: PEEK in the script */
+    transform: translateY(calc(100% - 72px - var(--safe-bottom)));
     transition: transform 0.25s ease;
     touch-action: pan-y;
+}
+
+.sheet.fill {
+    height: var(--sheet-max);
 }
 
 .sheet.expanded {
@@ -214,9 +226,19 @@ onBeforeUnmount(() => unregister())
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: none;
     /* --sheet-pad: lets content such as a sticky footer reach the edges */
     --sheet-pad: 1.1rem;
     padding: 0 var(--sheet-pad) var(--sheet-pad);
+}
+
+.content::-webkit-scrollbar {
+    display: none;
+}
+
+/* The content of a filled sheet manages its own scrolling */
+.sheet.fill .content {
+    overflow: hidden;
 }
 
 /* While collapsed only the title shows; scrolling would move hidden content */
@@ -233,6 +255,7 @@ onBeforeUnmount(() => unregister())
         right: auto;
         bottom: calc(var(--edge) + var(--safe-bottom));
         width: var(--sheet-w);
+        height: auto;
         max-height: none;
         padding: 0;
         border: 1px solid var(--line);
@@ -249,6 +272,10 @@ onBeforeUnmount(() => unregister())
     .sheet:not(.expanded) .content {
         overflow-y: auto;
         padding: var(--sheet-pad);
+    }
+
+    .sheet.fill .content {
+        overflow: hidden;
     }
 
     /* Hidden: slid out to the left, only the tab stays on screen */
