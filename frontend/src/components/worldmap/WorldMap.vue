@@ -27,6 +27,8 @@ const {
     visitedCount,
     tripMap,
     tripFocus,
+    trips,
+    tripDetails,
     pinMode,
     pin,
 } = storeToRefs(store)
@@ -72,6 +74,8 @@ onMounted(() => {
     // A trip opened by URL asks for its focus before the map has loaded
     provider.onReady(() => {
         syncMap()
+        updateTripRoutes()
+        updatePlaces()
         if (tripMap.value) fitTrip()
     })
     provider.mount(mapContainer.value)
@@ -97,6 +101,7 @@ onMounted(() => {
     })
     provider.onMoveEnd(() => {
         updatePlaces()
+        updateTripRoutesZoom()
         if (pinMode.value === 'center') readCenterPin()
     })
     window.addEventListener('resize', placeCenterPin)
@@ -109,13 +114,13 @@ onUnmounted(() => {
 
 // --- Trip --------------------------------------------------------------
 
-// Names of the places in the countries in view, while a trip is edited and
+// Names of the places in the countries in view, in the countries view once
 // the map is zoomed in far enough
 let placesShown = false
 let placesRequest = 0
 async function updatePlaces() {
     const request = ++placesRequest
-    if (!tripMap.value?.editing || provider.getZoom() < PLACES_MIN_ZOOM) {
+    if (props.view !== 'countries' || provider.getZoom() < PLACES_MIN_ZOOM) {
         if (placesShown) provider.showPlaces(null)
         placesShown = false
         return
@@ -134,6 +139,48 @@ watch(
         updatePlaces()
     },
     { deep: true }
+)
+
+// Routes of all trips show once a country is selected or the map is zoomed in
+const TRIP_ROUTES_MIN_ZOOM = 5
+const tripRoutesZoomed = ref(false)
+
+async function updateTripRoutes() {
+    const wanted =
+        props.view === 'countries' &&
+        !tripMap.value &&
+        (!!selectedIso.value || tripRoutesZoomed.value)
+    if (!wanted) return provider.showTripRoutes([])
+    const loaded = await Promise.all(
+        trips.value.map((t) => tripDetails.value[t.id] ?? store.loadTrip(t.id))
+    )
+    // The state changed while the stops loaded
+    if (tripMap.value) return
+    provider.showTripRoutes(
+        loaded.flatMap((trip) => (trip ? [trip.stops] : []))
+    )
+}
+
+function updateTripRoutesZoom() {
+    const zoomed = provider.getZoom() >= TRIP_ROUTES_MIN_ZOOM
+    if (zoomed === tripRoutesZoomed.value) return
+    tripRoutesZoomed.value = zoomed
+}
+
+watch(
+    [
+        tripRoutesZoomed,
+        selectedIso,
+        tripMap,
+        trips,
+        () => props.view,
+        // Edits of a loaded trip
+        () => Object.keys(tripDetails.value).length,
+    ],
+    () => {
+        updateTripRoutes()
+        updatePlaces()
+    }
 )
 
 function fitTrip() {

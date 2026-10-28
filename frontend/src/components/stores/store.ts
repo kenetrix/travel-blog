@@ -759,6 +759,12 @@ export const useTravelStore = defineStore('travel', () => {
             const index = trips.value.findIndex((t) => t.id === data.id)
             if (index >= 0) trips.value[index] = summary
             else trips.value.push(summary)
+            // A planned country is at least on the wishlist
+            for (const iso of data.countries) {
+                if (statusOf(iso) === 'none') {
+                    await saveCountry(iso, 'wishlist', emptyDetails())
+                }
+            }
             return data
         } catch (e) {
             notify(problemMessage(e, 'store.tripSaveFailed'))

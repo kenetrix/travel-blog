@@ -57,11 +57,67 @@ const ROUTE_HIT_PX = 12
 // The same for a place name
 const PLACE_HIT_PX = 6
 
-// Place names by population: big cities from zoom 5, towns from zoom 9.
+// Base map (Natural Earth) names of countries too small for their label to
+// fit at low zoom: tier 1 is named from zoom 5, tier 2 from zoom 6.
+const SMALL_COUNTRIES_TIER1 = [
+    'Albania',
+    'Belgium',
+    'Bosnia and Herz.',
+    'Costa Rica',
+    'Croatia',
+    'Denmark',
+    'El Salvador',
+    'Estonia',
+    'Haiti',
+    'Israel',
+    'Jamaica',
+    'Kosovo',
+    'Kuwait',
+    'Latvia',
+    'Lebanon',
+    'Lithuania',
+    'Macedonia',
+    'Moldova',
+    'Montenegro',
+    'Netherlands',
+    'Qatar',
+    'Slovenia',
+    'Switzerland',
+    'Taiwan',
+    'Vanuatu',
+]
+const SMALL_COUNTRIES_TIER2 = [
+    'Andorra',
+    'Antigua and Barb.',
+    'Bahrain',
+    'Barbados',
+    'Brunei',
+    'Cyprus',
+    'Dominica',
+    'Fiji',
+    'Grenada',
+    'Liechtenstein',
+    'Luxembourg',
+    'Malta',
+    'Mauritius',
+    'Monaco',
+    'N. Cyprus',
+    'Palestine',
+    'San Marino',
+    'Singapore',
+    'St. Kitts and Nevis',
+    'St. Vin. and Gren.',
+    'Vatican',
+]
+
+// Place names by population: big cities from zoom 5, villages from zoom 11.
 // Listed smallest first, so the biggest places end up on top and win when
 // labels collide.
 const PLACE_TIERS = [
-    { id: 'places-small', min: 0, max: 100_000, minZoom: 9, size: 11 },
+    { id: 'places-tiny', min: 0, max: 1_500, minZoom: 11, size: 10 },
+    { id: 'places-village', min: 1_500, max: 5_000, minZoom: 10, size: 10.5 },
+    { id: 'places-small', min: 5_000, max: 20_000, minZoom: 9, size: 11 },
+    { id: 'places-town', min: 20_000, max: 100_000, minZoom: 8, size: 11.5 },
     { id: 'places-medium', min: 100_000, max: 500_000, minZoom: 7, size: 12 },
     { id: 'places-large', min: 500_000, max: 1e10, minZoom: 5, size: 13 },
 ]
@@ -348,8 +404,10 @@ export class MapLibreProvider implements MapProvider {
                     },
                     paint: {
                         'text-color': Colors.place,
-                        'text-halo-color': Colors.water,
-                        'text-halo-width': 1.2,
+                        // Dark outline keeps names readable on the gold and violet fills
+                        'text-halo-color': Colors.countryBase,
+                        'text-halo-width': 2,
+                        'text-halo-blur': 0.5,
                     },
                 })
             }
@@ -366,6 +424,19 @@ export class MapLibreProvider implements MapProvider {
                 ['geometry-type'],
                 'Point',
             ]
+            // All trips as thin lines, below the open trip
+            this.map!.addSource('trip-routes', { type: 'geojson', data: EMPTY })
+            this.map!.addLayer({
+                id: 'trip-routes-line',
+                type: 'line',
+                source: 'trip-routes',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': Colors.trip,
+                    'line-width': 2,
+                    'line-opacity': 0.75,
+                },
+            })
             this.map!.addLayer({
                 id: 'trip-line',
                 type: 'line',
@@ -455,14 +526,34 @@ export class MapLibreProvider implements MapProvider {
     // names are shown at every zoom, as there are no translated abbreviations
     private applyCountryNames(): void {
         const names = this.countryNames
-        const name = names
+        const full = names
             ? [
                   'match',
                   ['get', 'NAME'],
                   ...Object.entries(names).flat(),
                   ['get', 'NAME'],
               ]
-            : ['step', ['zoom'], ['get', 'ABBREV'], 4, ['get', 'NAME']]
+            : ['get', 'NAME']
+        const short = names ? full : ['get', 'ABBREV']
+        // Labels of small countries are blanked until zoomed in, where they
+        // no longer collide. Zoom can only be the input of a top-level step.
+        const hide = (label: unknown, hidden: string[]) => [
+            'case',
+            ['in', ['get', 'NAME'], ['literal', hidden]],
+            '',
+            label,
+        ]
+        const name = [
+            'step',
+            ['zoom'],
+            hide(short, [...SMALL_COUNTRIES_TIER1, ...SMALL_COUNTRIES_TIER2]),
+            4,
+            hide(full, [...SMALL_COUNTRIES_TIER1, ...SMALL_COUNTRIES_TIER2]),
+            5,
+            hide(full, SMALL_COUNTRIES_TIER2),
+            6,
+            full,
+        ]
         this.map!.setLayoutProperty(
             'countries-label',
             'text-field',
@@ -836,6 +927,24 @@ export class MapLibreProvider implements MapProvider {
     }
 
     addMarker(_marker: MapMarker): void {}
+
+    showTripRoutes(routes: TripStopPoint[][]): void {
+        const source = this.map?.getSource('trip-routes') as
+            GeoJSONSource | undefined
+        source?.setData({
+            type: 'FeatureCollection',
+            features: routes
+                .filter((stops) => stops.length > 1)
+                .map((stops) => ({
+                    type: 'Feature' as const,
+                    geometry: {
+                        type: 'LineString' as const,
+                        coordinates: stops.map((s) => [s.lng, s.lat]),
+                    },
+                    properties: {},
+                })),
+        })
+    }
 
     showTrip(stops: TripStopPoint[] | null): void {
         const source = this.map?.getSource('trip') as GeoJSONSource | undefined

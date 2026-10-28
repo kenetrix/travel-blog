@@ -57,6 +57,8 @@ export interface MapProvider {
     // Labels by the base map's English country name; null keeps English
     setCountryNames(names: Record<string, string> | null): void
     // Numbered stops joined by a line in visiting order; null hides them
+    // The routes of all trips, drawn under the open one
+    showTripRoutes(routes: TripStopPoint[][]): void
     showTrip(stops: TripStopPoint[] | null): void
     fitPoints(points: TripStopPoint[], insets?: MapInsets): void
     // Fits the country without marking it as selected
