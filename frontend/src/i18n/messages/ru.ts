@@ -12,6 +12,7 @@ export default {
     },
     common: {
         cancel: 'Отмена',
+        done: 'Готово',
         confirm: 'Подтвердить',
         save: 'Сохранить',
         delete: 'Удалить',

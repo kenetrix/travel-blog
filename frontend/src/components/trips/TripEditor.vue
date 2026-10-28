@@ -209,7 +209,9 @@ function addNamedStop() {
         arrival: '',
         notes: '',
     })
-    stopPlacing()
+    naming.value = null
+    // Straight on to the next stop
+    startPlacing()
 }
 
 // Back to the centre pin, which starts where it was
@@ -276,12 +278,12 @@ async function confirmPlace() {
         notes: '',
     }
     draft.value.stops.push(stop)
+    // Named stops go straight on to the next one; an unnamed one is named first
+    if (stop.name) return startPlacing()
     stopPlacing()
-    if (!stop.name) {
-        expanded.value = true
-        await nextTick()
-        nameInputs.value[stop.key]?.focus()
-    }
+    expanded.value = true
+    await nextTick()
+    nameInputs.value[stop.key]?.focus()
 }
 
 // --- Stops ---------------------------------------------------------------
@@ -513,7 +515,11 @@ const heading = computed(() =>
                     type="button"
                     @click="stopPlacing"
                 >
-                    {{ t('common.cancel') }}
+                    {{
+                        !placingStop && draft.stops.length
+                            ? t('common.done')
+                            : t('common.cancel')
+                    }}
                 </button>
             </div>
         </div>
@@ -526,27 +532,6 @@ const heading = computed(() =>
                         {{ t('trip.stopCount', { count: draft.stops.length }) }}
                     </p>
                 </div>
-                <button
-                    class="btn btn-primary add"
-                    type="button"
-                    :disabled="!canAddStop"
-                    :title="addStopTitle"
-                    @click="startPlacing()"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.4"
-                        stroke-linecap="round"
-                        aria-hidden="true"
-                    >
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                    <span>{{ t('trip.addStop') }}</span>
-                </button>
             </div>
 
             <p v-if="loading" class="sub">{{ t('trip.loading') }}</p>
@@ -938,14 +923,6 @@ textarea.field {
 .btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-}
-
-.btn.add {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: 0.35rem;
-    border-radius: 999px;
 }
 
 .hint {

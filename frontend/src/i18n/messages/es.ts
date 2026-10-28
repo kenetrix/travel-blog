@@ -12,6 +12,7 @@ export default {
     },
     common: {
         cancel: 'Cancelar',
+        done: 'Listo',
         confirm: 'Confirmar',
         save: 'Guardar',
         delete: 'Eliminar',

@@ -12,6 +12,7 @@ export default {
     },
     common: {
         cancel: 'Abbrechen',
+        done: 'Fertig',
         confirm: 'Bestätigen',
         save: 'Speichern',
         delete: 'Löschen',
