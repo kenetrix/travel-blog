@@ -91,6 +91,20 @@ button:disabled {
     --map-water: #373838;
 }
 
+/* Installed iOS app: the status bar is translucent over the map, so labels and
+   borders show through behind the clock. A solid strip keeps it clean. */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: var(--safe-top);
+    background: var(--map-water);
+    pointer-events: none;
+}
+
 /* Theme colours of panels and pages. data-theme on <html> comes from the
    user's settings (system | light | dark); see useTheme in the store. */
 :root {
