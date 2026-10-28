@@ -1,15 +1,15 @@
 // Writes public/places/<ISO3>.json from the GeoNames dump of places with at
-// least 5,000 inhabitants (CC BY 4.0, https://www.geonames.org). Run when
+// least 500 inhabitants (CC BY 4.0, https://www.geonames.org). Run when
 // updating the place names:
-//   download and unzip https://download.geonames.org/export/dump/cities5000.zip
-//   node scripts/places.ts <path to cities5000.txt>
+//   download and unzip https://download.geonames.org/export/dump/cities500.zip
+//   node scripts/places.ts <path to cities500.txt>
 // Each file is a JSON array of [name, lat, lng, population], largest first.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const input = process.argv[2]
 if (!input) {
-    console.error('usage: node scripts/places.ts <cities5000.txt>')
+    console.error('usage: node scripts/places.ts <cities500.txt>')
     process.exit(1)
 }
 
