@@ -430,11 +430,21 @@ export class MapLibreProvider implements MapProvider {
                 id: 'trip-routes-line',
                 type: 'line',
                 source: 'trip-routes',
+                filter: isLine,
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: {
                     'line-color': Colors.trip,
-                    'line-width': 2,
-                    'line-opacity': 0.75,
+                    'line-width': 2.5,
+                },
+            })
+            this.map!.addLayer({
+                id: 'trip-routes-dots',
+                type: 'circle',
+                source: 'trip-routes',
+                filter: isPoint,
+                paint: {
+                    'circle-radius': 3.5,
+                    'circle-color': Colors.trip,
                 },
             })
             this.map!.addLayer({
@@ -445,8 +455,7 @@ export class MapLibreProvider implements MapProvider {
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: {
                     'line-color': Colors.trip,
-                    'line-width': 2.5,
-                    'line-opacity': 0.9,
+                    'line-width': 3,
                 },
             })
             this.map!.addLayer({
@@ -933,16 +942,28 @@ export class MapLibreProvider implements MapProvider {
             GeoJSONSource | undefined
         source?.setData({
             type: 'FeatureCollection',
-            features: routes
-                .filter((stops) => stops.length > 1)
-                .map((stops) => ({
+            features: routes.flatMap((stops) => [
+                ...(stops.length > 1
+                    ? [
+                          {
+                              type: 'Feature' as const,
+                              geometry: {
+                                  type: 'LineString' as const,
+                                  coordinates: stops.map((s) => [s.lng, s.lat]),
+                              },
+                              properties: {},
+                          },
+                      ]
+                    : []),
+                ...stops.map((s) => ({
                     type: 'Feature' as const,
                     geometry: {
-                        type: 'LineString' as const,
-                        coordinates: stops.map((s) => [s.lng, s.lat]),
+                        type: 'Point' as const,
+                        coordinates: [s.lng, s.lat],
                     },
                     properties: {},
                 })),
+            ]),
         })
     }
 

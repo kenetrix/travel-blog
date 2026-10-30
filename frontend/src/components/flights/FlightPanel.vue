@@ -452,7 +452,7 @@ function skipNumber() {
 .flight-form {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.6rem;
 }
 
 h2 {

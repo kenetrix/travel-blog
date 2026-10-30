@@ -264,6 +264,15 @@ onBeforeUnmount(() => unregister())
         transform: none;
     }
 
+    /* Sheets that size to their content stop above the map badges */
+    .sheet:not(.fill) {
+        bottom: auto;
+        max-height: calc(
+            100dvh - var(--appbar-h) - var(--safe-top) - 2rem -
+                var(--safe-bottom) - 4.5rem
+        );
+    }
+
     .handle {
         display: none;
     }
@@ -320,6 +329,12 @@ onBeforeUnmount(() => unregister())
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .sheet {
         top: calc(var(--safe-top) + var(--edge));
+    }
+
+    .sheet:not(.fill) {
+        max-height: calc(
+            100dvh - var(--safe-top) - var(--edge) - var(--safe-bottom) - 3.2rem
+        );
     }
 
     .content,

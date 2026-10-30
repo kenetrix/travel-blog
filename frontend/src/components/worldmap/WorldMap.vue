@@ -142,14 +142,19 @@ watch(
 )
 
 // Routes of all trips show once a country is selected or the map is zoomed in
+// A selected country keeps them down to a lower zoom, but they still hide
+// when the map is zoomed back out to the world
 const TRIP_ROUTES_MIN_ZOOM = 5
+const TRIP_ROUTES_SELECTED_MIN_ZOOM = 4
 const tripRoutesZoomed = ref(false)
+const tripRoutesSelectedZoomed = ref(false)
 
 async function updateTripRoutes() {
     const wanted =
         props.view === 'countries' &&
         !tripMap.value &&
-        (!!selectedIso.value || tripRoutesZoomed.value)
+        ((!!selectedIso.value && tripRoutesSelectedZoomed.value) ||
+            tripRoutesZoomed.value)
     if (!wanted) return provider.showTripRoutes([])
     const loaded = await Promise.all(
         trips.value.map((t) => tripDetails.value[t.id] ?? store.loadTrip(t.id))
@@ -162,14 +167,15 @@ async function updateTripRoutes() {
 }
 
 function updateTripRoutesZoom() {
-    const zoomed = provider.getZoom() >= TRIP_ROUTES_MIN_ZOOM
-    if (zoomed === tripRoutesZoomed.value) return
-    tripRoutesZoomed.value = zoomed
+    const zoom = provider.getZoom()
+    tripRoutesZoomed.value = zoom >= TRIP_ROUTES_MIN_ZOOM
+    tripRoutesSelectedZoomed.value = zoom >= TRIP_ROUTES_SELECTED_MIN_ZOOM
 }
 
 watch(
     [
         tripRoutesZoomed,
+        tripRoutesSelectedZoomed,
         selectedIso,
         tripMap,
         trips,
@@ -407,14 +413,14 @@ watch(
     z-index: 10;
 }
 
-/* Tablet: bottom right, beside the side sheet */
+/* Tablet: bottom centre of the screen, independent of the side sheet */
 @media (min-width: 600px),
     (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .stats {
         top: auto;
         bottom: calc(var(--safe-bottom) + 1.2rem);
-        left: calc(var(--safe-left) + var(--sheet-space) + 1rem);
-        transform: none;
+        left: 50%;
+        transform: translateX(-50%);
         gap: 1.2rem;
         padding: 0.45rem 1.1rem;
         font-size: 0.78rem;
@@ -424,7 +430,6 @@ watch(
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
     .stats {
         bottom: calc(var(--safe-bottom) + var(--edge));
-        left: calc(var(--safe-left) + var(--edge) + var(--sheet-space));
         padding: 0.3rem 0.8rem;
         font-size: 0.72rem;
     }
@@ -447,6 +452,13 @@ watch(
         right: var(--safe-right);
     }
 
+    .map :deep(.maplibregl-ctrl-group) {
+        display: none;
+    }
+}
+
+/* Phones and tablets: pinch to zoom, no buttons */
+@media (max-width: 1023px), (orientation: landscape) and (max-height: 500px) {
     .map :deep(.maplibregl-ctrl-group) {
         display: none;
     }

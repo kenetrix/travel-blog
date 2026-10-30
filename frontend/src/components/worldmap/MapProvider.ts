@@ -105,8 +105,8 @@ export const Colors = {
     // well as from the dark base
     flight: '#5fd4e4',
     flightLabel: '#c4f1f7',
-    // --trip in style.css; coral stands apart from the other three
-    trip: '#f2785c',
+    // --trip in style.css; hot pink stands apart from the other three
+    trip: '#ff3d6e',
     tripNumber: '#1a1c1e',
     place: '#ededed',
     // Also --map-water in style.css and the theme colour of the app
