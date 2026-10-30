@@ -14,6 +14,7 @@ import {
 } from '../stores/store'
 import { countryName, getCountryByIso } from '../countries/countries'
 import { suggestName } from '../worldmap/places'
+import type { StopCategory } from './categories'
 import { t } from '../../i18n'
 
 const MAX_STOPS = 200
@@ -29,6 +30,9 @@ interface DraftStop {
     lat: number
     arrival: string
     notes: string
+    rating: number
+    category: string
+    links: { url: string; label: string }[]
 }
 
 interface Draft {
@@ -88,6 +92,9 @@ function draftOf(trip: Trip): Draft {
             lat: s.lat,
             arrival: s.arrival ?? '',
             notes: s.notes,
+            rating: s.rating,
+            category: s.category,
+            links: s.links.map((l) => ({ url: l.url, label: l.label ?? '' })),
         })),
     }
 }
@@ -208,6 +215,9 @@ function addNamedStop() {
         lat: round(point.lat),
         arrival: '',
         notes: '',
+        rating: 0,
+        category: '',
+        links: [],
     })
     naming.value = null
     // Straight on to the next stop
@@ -276,6 +286,9 @@ async function confirmPlace() {
         lat: round(point.lat),
         arrival: '',
         notes: '',
+        rating: 0,
+        category: '',
+        links: [],
     }
     draft.value.stops.push(stop)
     // Named stops go straight on to the next one; an unnamed one is named first
@@ -377,6 +390,11 @@ async function save() {
             lat: s.lat,
             arrival: s.arrival,
             notes: s.notes.trim(),
+            rating: s.rating,
+            category: s.category as StopCategory,
+            links: s.links
+                .filter((l) => l.url.trim())
+                .map((l) => ({ url: l.url.trim(), label: l.label.trim() })),
         })),
     }
     saving.value = true
@@ -707,7 +725,7 @@ const heading = computed(() =>
                             </div>
                             <details
                                 class="stop-details"
-                                :open="!!(stop.arrival || stop.notes)"
+                                :open="!!stop.arrival"
                             >
                                 <summary>{{ t('trip.stopDetails') }}</summary>
                                 <label :for="`arrival-${stop.key}`">{{
@@ -720,16 +738,6 @@ const heading = computed(() =>
                                     type="date"
                                     min="1900-01-01"
                                     max="2100-12-31"
-                                />
-                                <label :for="`notes-${stop.key}`">{{
-                                    t('trip.stopNotes')
-                                }}</label>
-                                <textarea
-                                    :id="`notes-${stop.key}`"
-                                    v-model="stop.notes"
-                                    class="field"
-                                    rows="2"
-                                    maxlength="4000"
                                 />
                             </details>
                         </li>
