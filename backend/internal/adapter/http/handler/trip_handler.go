@@ -140,6 +140,9 @@ func tripInputOf(in api.TripInput) service.TripInput {
 			Lng:       s.Lng,
 			VisitedAt: deref(s.Arrival),
 			Notes:     deref(s.Notes),
+			Rating:    ptrOr(s.Rating),
+			Category:  string(ptrOr(s.Category)),
+			Links:     linksOf(s.Links),
 		}
 		if s.Id != nil {
 			stops[i].ID = s.Id.String()
@@ -159,13 +162,16 @@ func toAPITrip(t domain.Trip) api.Trip {
 	stops := make([]api.TripStop, len(t.Stops))
 	for i, s := range t.Stops {
 		stops[i] = api.TripStop{
-			Id:      uuid.MustParse(s.ID),
-			Name:    s.Name,
-			Country: s.CountryID,
-			Lat:     s.Lat,
-			Lng:     s.Lng,
-			Arrival: dateOf(s.VisitedAt),
-			Notes:   s.Notes,
+			Id:       uuid.MustParse(s.ID),
+			Name:     s.Name,
+			Country:  s.CountryID,
+			Lat:      s.Lat,
+			Lng:      s.Lng,
+			Arrival:  dateOf(s.VisitedAt),
+			Notes:    s.Notes,
+			Rating:   s.Rating,
+			Category: api.TripStopCategory(s.Category),
+			Links:    apiLinks(s.Links),
 		}
 	}
 	return api.Trip{
@@ -190,4 +196,29 @@ func dateOf(s string) *openapi_types.Date {
 		return nil
 	}
 	return &openapi_types.Date{Time: d}
+}
+
+func linksOf(in *[]api.TripStopLink) []domain.StopLink {
+	out := []domain.StopLink{}
+	for _, l := range ptrOr(in) {
+		out = append(out, domain.StopLink{URL: l.Url, Label: ptrOr(l.Label)})
+	}
+	return out
+}
+
+func apiLinks(in []domain.StopLink) []api.TripStopLink {
+	out := make([]api.TripStopLink, len(in))
+	for i, l := range in {
+		label := l.Label
+		out[i] = api.TripStopLink{Url: l.URL, Label: &label}
+	}
+	return out
+}
+
+func ptrOr[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
 }

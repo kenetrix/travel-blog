@@ -11,5 +11,15 @@ type Location struct {
 	Lng        float64
 	VisitedAt  string // YYYY-MM-DD, arrival
 	Notes      string
+	Rating     int    // 0 for none, else 1 to 5
+	Category   string // one of StopCategories, or empty
+	Links      []StopLink
 	Visibility Visibility
 }
+
+type StopLink struct {
+	URL   string `json:"url"`
+	Label string `json:"label"`
+}
+
+var StopCategories = []string{"sight", "food", "stay", "activity", "nature", "transport", "other"}

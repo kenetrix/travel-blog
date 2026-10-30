@@ -194,6 +194,78 @@ func (e SettingsTheme) Valid() bool {
 	}
 }
 
+// Defines values for TripStopCategory.
+const (
+	TripStopCategoryActivity  TripStopCategory = "activity"
+	TripStopCategoryEmpty     TripStopCategory = ""
+	TripStopCategoryFood      TripStopCategory = "food"
+	TripStopCategoryNature    TripStopCategory = "nature"
+	TripStopCategoryOther     TripStopCategory = "other"
+	TripStopCategorySight     TripStopCategory = "sight"
+	TripStopCategoryStay      TripStopCategory = "stay"
+	TripStopCategoryTransport TripStopCategory = "transport"
+)
+
+// Valid indicates whether the value is a known member of the TripStopCategory enum.
+func (e TripStopCategory) Valid() bool {
+	switch e {
+	case TripStopCategoryActivity:
+		return true
+	case TripStopCategoryEmpty:
+		return true
+	case TripStopCategoryFood:
+		return true
+	case TripStopCategoryNature:
+		return true
+	case TripStopCategoryOther:
+		return true
+	case TripStopCategorySight:
+		return true
+	case TripStopCategoryStay:
+		return true
+	case TripStopCategoryTransport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TripStopInputCategory.
+const (
+	TripStopInputCategoryActivity  TripStopInputCategory = "activity"
+	TripStopInputCategoryEmpty     TripStopInputCategory = ""
+	TripStopInputCategoryFood      TripStopInputCategory = "food"
+	TripStopInputCategoryNature    TripStopInputCategory = "nature"
+	TripStopInputCategoryOther     TripStopInputCategory = "other"
+	TripStopInputCategorySight     TripStopInputCategory = "sight"
+	TripStopInputCategoryStay      TripStopInputCategory = "stay"
+	TripStopInputCategoryTransport TripStopInputCategory = "transport"
+)
+
+// Valid indicates whether the value is a known member of the TripStopInputCategory enum.
+func (e TripStopInputCategory) Valid() bool {
+	switch e {
+	case TripStopInputCategoryActivity:
+		return true
+	case TripStopInputCategoryEmpty:
+		return true
+	case TripStopInputCategoryFood:
+		return true
+	case TripStopInputCategoryNature:
+		return true
+	case TripStopInputCategoryOther:
+		return true
+	case TripStopInputCategorySight:
+		return true
+	case TripStopInputCategoryStay:
+		return true
+	case TripStopInputCategoryTransport:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Visibility.
 const (
 	Private Visibility = "private"
@@ -608,7 +680,8 @@ type TripInput struct {
 // TripStop defines model for TripStop.
 type TripStop struct {
 	// Arrival Example: 2024-05-01
-	Arrival *openapi_types.Date `json:"arrival,omitempty"`
+	Arrival  *openapi_types.Date `json:"arrival,omitempty"`
+	Category TripStopCategory    `json:"category"`
 
 	// Country Alpha-3 code
 	//
@@ -617,7 +690,8 @@ type TripStop struct {
 	Id      openapi_types.UUID `json:"id"`
 
 	// Lat Example: 48.2082
-	Lat float64 `json:"lat"`
+	Lat   float64        `json:"lat"`
+	Links []TripStopLink `json:"links"`
 
 	// Lng Example: 16.3738
 	Lng float64 `json:"lng"`
@@ -625,12 +699,21 @@ type TripStop struct {
 	// Name Example: Vienna
 	Name  string `json:"name"`
 	Notes string `json:"notes"`
+
+	// Rating 0 for none
+	Rating int `json:"rating"`
 }
+
+// TripStopCategory defines model for TripStop.Category.
+type TripStopCategory string
 
 // TripStopInput defines model for TripStopInput.
 type TripStopInput struct {
 	// Arrival Day of arrival (YYYY-MM-DD); empty for none
 	Arrival *string `json:"arrival,omitempty"`
+
+	// Category Kind of stop; empty for none
+	Category *TripStopInputCategory `json:"category,omitempty"`
 
 	// Country Alpha-3 code of the country at the stop
 	//
@@ -641,7 +724,8 @@ type TripStopInput struct {
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
 	// Lat Example: 48.2082
-	Lat float64 `json:"lat"`
+	Lat   float64         `json:"lat"`
+	Links *[]TripStopLink `json:"links,omitempty"`
 
 	// Lng Example: 16.3738
 	Lng float64 `json:"lng"`
@@ -649,6 +733,20 @@ type TripStopInput struct {
 	// Name Example: Vienna
 	Name  string  `json:"name"`
 	Notes *string `json:"notes,omitempty"`
+
+	// Rating 0 for none
+	Rating *int `json:"rating,omitempty"`
+}
+
+// TripStopInputCategory Kind of stop; empty for none
+type TripStopInputCategory string
+
+// TripStopLink defines model for TripStopLink.
+type TripStopLink struct {
+	Label *string `json:"label,omitempty"`
+
+	// Url Example: https://example.com/museum
+	Url string `json:"url"`
 }
 
 // TripSummary defines model for TripSummary.

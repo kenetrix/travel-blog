@@ -19,6 +19,22 @@ TripStopInput:
       pattern: '^(\d{4}-\d{2}-\d{2})?$'
       description: Day of arrival (YYYY-MM-DD); empty for none
     notes: { type: string, maxLength: 4000 }
+    rating: { type: integer, minimum: 0, maximum: 5, description: 0 for none }
+    category:
+      type: string
+      enum: ['', sight, food, stay, activity, nature, transport, other]
+      description: Kind of stop; empty for none
+    links:
+      type: array
+      maxItems: 10
+      items: { $ref: '#/TripStopLink' }
+
+TripStopLink:
+  type: object
+  required: [url]
+  properties:
+    url: { type: string, maxLength: 500, example: 'https://example.com/museum' }
+    label: { type: string, maxLength: 80 }
 
 TripInput:
   type: object
@@ -45,7 +61,7 @@ TripInput:
 
 TripStop:
   type: object
-  required: [id, name, country, lat, lng, notes]
+  required: [id, name, country, lat, lng, notes, rating, category, links]
   properties:
     id: { type: string, format: uuid }
     name: { type: string, example: Vienna }
@@ -54,6 +70,13 @@ TripStop:
     lng: { type: number, format: double, example: 16.3738 }
     arrival: { type: string, format: date, example: '2024-05-01' }
     notes: { type: string }
+    rating: { type: integer, minimum: 0, maximum: 5, description: 0 for none }
+    category:
+      type: string
+      enum: ['', sight, food, stay, activity, nature, transport, other]
+    links:
+      type: array
+      items: { $ref: '#/TripStopLink' }
 
 TripSummary:
   type: object

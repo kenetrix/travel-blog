@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -161,9 +162,9 @@ func (r *TripRepo) Replace(user domain.UserID, t domain.Trip) (bool, []string, e
 		for i, s := range t.Stops {
 			updated, err := affected(tx.Exec(`
 				UPDATE locations SET position = ?, country_id = ?, name = ?, lat = ?, lng = ?, visited_at = ?,
-					notes = ?, visibility = ?
+					notes = ?, rating = ?, category = ?, links = ?, visibility = ?
 				WHERE user_id = ? AND trip_id = ? AND id = ?
-			`, i, s.CountryID, s.Name, s.Lat, s.Lng, nullIfEmpty(s.VisitedAt), s.Notes, t.Visibility, user, t.ID, s.ID))
+			`, i, s.CountryID, s.Name, s.Lat, s.Lng, nullIfEmpty(s.VisitedAt), s.Notes, s.Rating, s.Category, linksJSON(s.Links), t.Visibility, user, t.ID, s.ID))
 			if err != nil {
 				return err
 			}
@@ -204,10 +205,18 @@ func (r *TripRepo) Delete(user domain.UserID, id string) (bool, []string, error)
 // Stops take the trip's visibility, so a private trip never has public stops.
 func insertStop(tx *sql.Tx, user domain.UserID, t domain.Trip, position int, s domain.Location) error {
 	_, err := tx.Exec(`
-		INSERT INTO locations (id, user_id, trip_id, position, country_id, name, lat, lng, visited_at, notes, visibility)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, s.ID, user, t.ID, position, s.CountryID, s.Name, s.Lat, s.Lng, nullIfEmpty(s.VisitedAt), s.Notes, t.Visibility)
+		INSERT INTO locations (id, user_id, trip_id, position, country_id, name, lat, lng, visited_at, notes, rating, category, links, visibility)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, s.ID, user, t.ID, position, s.CountryID, s.Name, s.Lat, s.Lng, nullIfEmpty(s.VisitedAt), s.Notes, s.Rating, s.Category, linksJSON(s.Links), t.Visibility)
 	return err
+}
+
+func linksJSON(links []domain.StopLink) string {
+	if links == nil {
+		return "[]"
+	}
+	b, _ := json.Marshal(links)
+	return string(b)
 }
 
 func photoKeys(tx *sql.Tx, query string, args ...any) ([]string, error) {

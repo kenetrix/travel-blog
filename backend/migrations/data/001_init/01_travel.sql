@@ -54,6 +54,9 @@ CREATE TABLE locations (
 	lng REAL NOT NULL,
 	visited_at TEXT, -- YYYY-MM-DD, arrival
 	notes TEXT NOT NULL DEFAULT '',
+	rating INTEGER NOT NULL DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
+	category TEXT NOT NULL DEFAULT '',
+	links TEXT NOT NULL DEFAULT '[]', -- JSON array of {url, label}
 	visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
 	UNIQUE (trip_id, position)
 );

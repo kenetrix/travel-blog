@@ -634,6 +634,22 @@ export interface components {
             /** @description Day of arrival (YYYY-MM-DD); empty for none */
             arrival?: string
             notes?: string
+            /** @description 0 for none */
+            rating?: number
+            /**
+             * @description Kind of stop; empty for none
+             * @enum {string}
+             */
+            category?:
+                | ''
+                | 'sight'
+                | 'food'
+                | 'stay'
+                | 'activity'
+                | 'nature'
+                | 'transport'
+                | 'other'
+            links?: components['schemas']['TripStopLink'][]
         }
         /**
          * @description The whole trip. Stops are in visiting order; stops of the trip that are
@@ -676,6 +692,19 @@ export interface components {
              */
             arrival?: string
             notes: string
+            /** @description 0 for none */
+            rating: number
+            /** @enum {string} */
+            category:
+                | ''
+                | 'sight'
+                | 'food'
+                | 'stay'
+                | 'activity'
+                | 'nature'
+                | 'transport'
+                | 'other'
+            links: components['schemas']['TripStopLink'][]
         }
         TripSummary: {
             /** Format: uuid */
@@ -878,6 +907,11 @@ export interface components {
             /** @description 0 = unrated */
             rating: number
             tags: string[]
+        }
+        TripStopLink: {
+            /** @example https://example.com/museum */
+            url: string
+            label?: string
         }
         /**
          * @description UI language; registration defaults to en

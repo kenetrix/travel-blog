@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net/url"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +22,9 @@ const (
 	maxStopName  = 120
 	maxTripNotes = 4000
 	maxStopNotes = 4000
+	maxStopLinks = 10
+	maxLinkURL   = 500
+	maxLinkLabel = 80
 )
 
 // TripService manages the trips of users with their stops. Every method only works on
@@ -206,6 +212,15 @@ func checkTrip(in TripInput, existing []domain.Location) (domain.Trip, error) {
 		if l.Notes, err = trimText("notes", l.Notes, maxStopNotes); err != nil {
 			return domain.Trip{}, err
 		}
+		if l.Rating < 0 || l.Rating > 5 {
+			return domain.Trip{}, newError(ErrInvalid, "invalid_rating", "rating must be between 0 and 5")
+		}
+		if l.Category != "" && !slices.Contains(domain.StopCategories, l.Category) {
+			return domain.Trip{}, newError(ErrInvalid, "invalid_category", "unknown stop category", "value", l.Category)
+		}
+		if l.Links, err = checkLinks(l.Links); err != nil {
+			return domain.Trip{}, err
+		}
 		l.TripID, l.Position = "", i
 		stops[i] = l
 	}
@@ -216,4 +231,24 @@ func checkTrip(in TripInput, existing []domain.Location) (domain.Trip, error) {
 		Notes:    notes,
 		Stops:    stops,
 	}, nil
+}
+
+// checkLinks keeps only http(s) links, so a stop never carries a javascript: URL.
+func checkLinks(in []domain.StopLink) ([]domain.StopLink, error) {
+	if len(in) > maxStopLinks {
+		return nil, newError(ErrInvalid, "too_many_links", fmt.Sprintf("a stop has at most %d links", maxStopLinks), "max", strconv.Itoa(maxStopLinks))
+	}
+	out := make([]domain.StopLink, 0, len(in))
+	for _, l := range in {
+		u, err := url.Parse(strings.TrimSpace(l.URL))
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || len(l.URL) > maxLinkURL {
+			return nil, newError(ErrInvalid, "invalid_link", "a link must be a valid http or https URL", "value", l.URL)
+		}
+		label, err := trimText("label", l.Label, maxLinkLabel)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, domain.StopLink{URL: u.String(), Label: label})
+	}
+	return out, nil
 }
