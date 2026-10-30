@@ -17,6 +17,8 @@
 
 <br>
 
+<img src="docs/demo.svg" alt="Germany, Portugal and Greece light up as visited, Italy as want to go, then flights from Hamburg to Lisbon and Munich to Athens are drawn" width="100%">
+
 <img src="docs/screenshot-countries.png" alt="World map with visited countries in gold and a wishlist country outlined in violet" width="100%">
 
 <details>
