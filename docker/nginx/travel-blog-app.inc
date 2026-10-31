@@ -1,0 +1,26 @@
+root /usr/share/nginx/html;
+index index.html;
+client_max_body_size 25m;
+
+gzip on;
+gzip_types text/css application/javascript application/json image/svg+xml;
+
+location /api/ {
+    proxy_pass http://api:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $tb_proto;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+location ~ ^/(sw\.js|registerSW\.js|manifest\.webmanifest|index\.html)$ {
+    add_header Cache-Control "no-cache";
+}
+
+location / {
+    try_files $uri /index.html;
+}

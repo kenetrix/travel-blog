@@ -1,0 +1,36 @@
+# Travel Blog with Docker Compose; see README.md next to this file.
+# Pulls the released images, or builds them from this checkout with --build.
+
+services:
+  api:
+    image: ghcr.io/kenetrix/travel-blog-api:${TRAVEL_BLOG_VERSION:-latest}
+    build:
+      context: ..
+      target: api
+    restart: unless-stopped
+    # OIDC_* variables (docs/oidc.md) enable single sign-on
+    env_file:
+      - path: oidc.env
+        required: false
+    volumes:
+      - data:/opt/travel-blog/data
+
+  web:
+    image: ghcr.io/kenetrix/travel-blog-web:${TRAVEL_BLOG_VERSION:-latest}
+    build:
+      context: ..
+      target: web
+      args:
+        APP_VERSION: ${APP_VERSION:-}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - ${HTTP_PORT:-80}:80
+      - ${HTTPS_PORT:-443}:443
+    volumes:
+      - certs:/etc/nginx/ssl
+
+volumes:
+  data:
+  certs:

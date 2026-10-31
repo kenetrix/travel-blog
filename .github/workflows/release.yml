@@ -1,7 +1,8 @@
 name: Release
 
 # Builds the artifacts the Proxmox helper script installs: travel-blog-linux-<arch>.tar.gz
-# containing the static API binary (travel-blog-api) and the built frontend (web/)
+# containing the static API binary (travel-blog-api) and the built frontend (web/),
+# and the images for docker/compose.yaml
 on:
   push:
     tags: ['v*']
@@ -46,3 +47,51 @@ jobs:
           gh release list --limit 1000 --json tagName --jq '.[].tagName' |
             xargs -r -n1 gh release delete --yes
           gh release create "$GITHUB_REF_NAME" travel-blog-linux-*.tar.gz --generate-notes
+
+  # The images docker/compose.yaml pulls: ghcr.io/<owner>/travel-blog-{api,web}
+  images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        target: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+      # The final stages install Alpine packages for arm64; compiling is cross-platform
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/travel-blog-${{ matrix.target }}" >> "$GITHUB_ENV"
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
+          build-args: APP_VERSION=${{ github.ref_name }}
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+            ${{ env.IMAGE }}:latest
+
+      # Before v1.0.0 only the newest image is kept, like the release. Its platform and
+      # attestation manifests are untagged package versions too, so keep all the index lists.
+      - name: Remove older images
+        if: startsWith(github.ref_name, 'v0.')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          keep=$(docker buildx imagetools inspect --raw "$IMAGE@$DIGEST" | jq -r '.manifests[].digest'; echo "$DIGEST")
+          versions="/users/$GITHUB_REPOSITORY_OWNER/packages/container/travel-blog-${{ matrix.target }}/versions"
+          gh api --paginate "$versions" --jq '.[] | "\(.id) \(.name)"' |
+            while read -r id digest; do
+              grep -qxF "$digest" <<<"$keep" || gh api -X DELETE "$versions/$id"
+            done

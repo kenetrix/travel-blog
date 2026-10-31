@@ -78,7 +78,8 @@ travel-blog/
 ├── backend/     Go API server (domain, application, adapters, migrations)
 ├── frontend/    Vue 3 + TypeScript app
 ├── docs/        guides and screenshot
+├── docker/      Docker Compose setup
 └── proxmox/     LXC helper script
 ```
 
-More detail lives next to the code: [`api/`](api/README.md) · [`backend/`](backend/README.md) · [`frontend/`](frontend/README.md) · [`proxmox/`](proxmox/README.md)
+More detail lives next to the code: [`api/`](api/README.md) · [`backend/`](backend/README.md) · [`frontend/`](frontend/README.md) · [`docker/`](docker/README.md) · [`proxmox/`](proxmox/README.md)
