@@ -83,3 +83,7 @@ travel-blog/
 ```
 
 More detail lives next to the code: [`api/`](api/README.md) · [`backend/`](backend/README.md) · [`frontend/`](frontend/README.md) · [`docker/`](docker/README.md) · [`proxmox/`](proxmox/README.md)
+
+## License
+
+[MIT](LICENSE). The Impressum shown at `/impressum` is filled from `LEGAL_NAME`, `LEGAL_ADDRESS` and `LEGAL_EMAIL` (see [docker/README.md](docker/README.md)).
