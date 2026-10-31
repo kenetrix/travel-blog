@@ -43,9 +43,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Only the newest release is kept; tags stay. Also covers re-running this job.
-          gh release list --limit 1000 --json tagName --jq '.[].tagName' |
-            xargs -r -n1 gh release delete --yes
+          # Before v1.0.0 only the newest release is kept; tags stay. Also covers re-running this job.
+          if [[ "$GITHUB_REF_NAME" == v0.* ]]; then
+            gh release list --limit 1000 --json tagName --jq '.[].tagName' |
+              xargs -r -n1 gh release delete --yes
+          fi
           gh release create "$GITHUB_REF_NAME" travel-blog-linux-*.tar.gz --generate-notes
 
   # The images docker/compose.yaml pulls: ghcr.io/<owner>/travel-blog-{api,web}

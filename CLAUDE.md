@@ -29,8 +29,9 @@ Until the `v1.0.0` tag exists, do not add migration scripts. Change the files in
 
 ## Releases
 
-Pushing a `v*` tag builds a GitHub release (`.github/workflows/release.yml`), which deletes
-every previous release, so only the newest one exists.
+Pushing a `v*` tag builds a GitHub release (`.github/workflows/release.yml`) and pushes the
+Docker images to GHCR, tagged with the version and `latest`. Before `v1.0.0` it deletes every
+previous release and image, so only the newest one exists; from `v1.0.0` on they are kept.
 
 - Never move or re-push an existing tag. Every release gets a new version.
 - Before `v1.0.0`, release as the next `0.x.y`: bump `y` for fixes only, `x` when features
