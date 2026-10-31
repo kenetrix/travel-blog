@@ -3,7 +3,6 @@ package sqlite
 import (
 	"database/sql"
 	"errors"
-	"time"
 
 	"travel-blog/backend/internal/domain"
 )
@@ -30,7 +29,7 @@ func scanPhoto(row scanner) (domain.Photo, error) {
 	if err != nil {
 		return p, err
 	}
-	p.CreatedAt, err = time.Parse(time.RFC3339Nano, created)
+	p.CreatedAt, err = parseTime(created)
 	return p, err
 }
 
@@ -71,7 +70,7 @@ func (r *PhotoRepo) Create(p domain.Photo) error {
 		INSERT INTO photos (id, location_id, storage_key, content_type, caption, taken_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, p.ID, p.LocationID, p.StorageKey, p.ContentType, p.Caption, nullIfEmpty(p.TakenAt),
-		p.CreatedAt.UTC().Format(time.RFC3339Nano))
+		formatTime(p.CreatedAt))
 	return err
 }
 

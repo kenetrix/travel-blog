@@ -11,24 +11,13 @@ import (
 	"travel-blog/backend/internal/domain"
 )
 
-func deref[T ~string](s *T) string {
-	if s == nil {
-		return ""
-	}
-	return string(*s)
-}
-
 func (h *Handler) Register(_ context.Context, req api.RegisterRequestObject) (api.RegisterResponseObject, error) {
 	if !h.passwordLogin() {
 		return api.Register403ApplicationProblemPlusJSONResponse{ForbiddenApplicationProblemPlusJSONResponse: forbidden(errPasswordLoginOff)}, nil
 	}
 	in := req.Body
-	email := ""
-	if in.Email != nil {
-		email = string(*in.Email)
-	}
 	u, token, err := h.accounts.Register(service.Registration{
-		Email:     email,
+		Email:     deref(in.Email),
 		Username:  in.Username,
 		Password:  in.Password,
 		FirstName: deref(in.FirstName),
@@ -137,8 +126,8 @@ func (h *Handler) UpdateProfile(ctx context.Context, req api.UpdateProfileReques
 		Timezone:    in.Timezone,
 		HomeCountry: in.HomeCountry,
 		Color:       in.Color,
+		Email:       in.Email,
 	}
-	up.Email = in.Email
 	p, err := h.accounts.UpdateProfile(user, up)
 	switch {
 	case errors.Is(err, service.ErrInvalid):

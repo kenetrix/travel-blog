@@ -21,6 +21,12 @@ import (
 
 const SessionTTL = 30 * 24 * time.Hour
 
+// Longest profile texts, in characters
+const (
+	maxNameLength = 100
+	maxBioLength  = 2000
+)
+
 type AccountService struct {
 	users    port.UserRepository
 	sessions port.SessionRepository
@@ -78,10 +84,10 @@ func (s *AccountService) Register(r Registration) (domain.User, string, error) {
 	if err := checkPassword(r.Password); err != nil {
 		return domain.User{}, "", err
 	}
-	if p.FirstName, err = trimText("firstName", r.FirstName, 100); err != nil {
+	if p.FirstName, err = trimText("firstName", r.FirstName, maxNameLength); err != nil {
 		return domain.User{}, "", err
 	}
-	if p.LastName, err = trimText("lastName", r.LastName, 100); err != nil {
+	if p.LastName, err = trimText("lastName", r.LastName, maxNameLength); err != nil {
 		return domain.User{}, "", err
 	}
 	p.Language = r.Language
@@ -146,13 +152,19 @@ func (s *AccountService) Login(username, password string) (domain.UserID, string
 	}
 	if !ok {
 		bcrypt.CompareHashAndPassword(s.dummyHash, []byte(password))
-		return "", "", newError(ErrUnauthorized, "wrong_credentials", "wrong username or password")
+		return "", "", wrongCredentials()
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-		return "", "", newError(ErrUnauthorized, "wrong_credentials", "wrong username or password")
+		return "", "", wrongCredentials()
 	}
 	token, err := s.startSession(id)
 	return id, token, err
+}
+
+// wrongCredentials is the same for an unknown user and a wrong password, so
+// the answer does not reveal which accounts exist.
+func wrongCredentials() error {
+	return newError(ErrUnauthorized, "wrong_credentials", "wrong username or password")
 }
 
 // startSession creates a random token; only its hash is stored.
@@ -210,7 +222,7 @@ func (s *AccountService) Account(user domain.UserID) (domain.User, domain.Settin
 		return domain.User{}, domain.Settings{}, err
 	}
 	if u == nil {
-		return domain.User{}, domain.Settings{}, newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", user))
+		return domain.User{}, domain.Settings{}, userNotFound(string(user))
 	}
 	settings, err := s.users.Settings(user)
 	return *u, settings, err
@@ -247,10 +259,10 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 		dst   *string
 		max   int
 	}{
-		{"firstName", up.FirstName, &p.FirstName, 100},
-		{"lastName", up.LastName, &p.LastName, 100},
-		{"displayName", up.DisplayName, &p.DisplayName, 100},
-		{"bio", up.Bio, &p.Bio, 2000},
+		{"firstName", up.FirstName, &p.FirstName, maxNameLength},
+		{"lastName", up.LastName, &p.LastName, maxNameLength},
+		{"displayName", up.DisplayName, &p.DisplayName, maxNameLength},
+		{"bio", up.Bio, &p.Bio, maxBioLength},
 	}
 	for _, t := range texts {
 		if t.value == nil {
@@ -279,8 +291,8 @@ func (s *AccountService) UpdateProfile(user domain.UserID, up domain.ProfileUpda
 		p.HomeCountry = *up.HomeCountry
 	}
 	if up.Color != nil {
-		if *up.Color != "" && !colorPattern.MatchString(*up.Color) {
-			return domain.Profile{}, newError(ErrInvalid, "invalid_color", "color must look like #3a7d5c")
+		if err := checkColor(*up.Color); err != nil {
+			return domain.Profile{}, err
 		}
 		p.Color = strings.ToLower(*up.Color)
 	}
@@ -320,6 +332,10 @@ func (s *AccountService) SaveSettings(user domain.UserID, set domain.Settings) e
 		return err
 	}
 	return s.users.SaveSettings(user, set)
+}
+
+func userNotFound(name string) error {
+	return newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", name))
 }
 
 // ChangePassword checks the current password, sets the new one and ends all other

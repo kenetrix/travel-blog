@@ -3,7 +3,6 @@ package sqlite
 import (
 	"database/sql"
 	"strings"
-	"time"
 
 	"travel-blog/backend/internal/domain"
 )
@@ -47,7 +46,7 @@ func (r *FlightRepo) list(where string, args ...any) ([]domain.Flight, error) {
 		if err := rows.Scan(&f.ID, &f.From, &f.To, &f.Visibility, &created, &number, &date, &duration, &aircraft); err != nil {
 			return nil, err
 		}
-		if f.CreatedAt, err = time.Parse(time.RFC3339Nano, created); err != nil {
+		if f.CreatedAt, err = parseTime(created); err != nil {
 			return nil, err
 		}
 		f.Number, f.Date, f.DurationMinutes, f.Aircraft = number.String, date.String, int(duration.Int64), aircraft.String
@@ -61,7 +60,7 @@ func (r *FlightRepo) Create(user domain.UserID, f domain.Flight) error {
 		INSERT INTO flights (id, user_id, from_iata, to_iata, visibility, created_at,
 			flight_number, flown_on, duration_minutes, aircraft)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, f.ID, user, f.From, f.To, f.Visibility, f.CreatedAt.UTC().Format(time.RFC3339Nano),
+	`, f.ID, user, f.From, f.To, f.Visibility, formatTime(f.CreatedAt),
 		nullString(f.Number), nullString(f.Date), nullInt(f.DurationMinutes), nullString(f.Aircraft))
 	return err
 }

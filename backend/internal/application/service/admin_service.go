@@ -57,18 +57,8 @@ func (s *AccountService) EnsureAdmin(file string) (created bool, err error) {
 	if err := os.WriteFile(file, []byte(content), 0o600); err != nil {
 		return false, fmt.Errorf("write initial admin credentials: %w", err)
 	}
-	u := domain.User{
-		ID:                 domain.UserID(uuid.NewString()),
-		Role:               domain.RoleAdmin,
-		MustChangePassword: true,
-		Profile: domain.Profile{
-			Username:    username,
-			DisplayName: "Administrator",
-			Language:    "en",
-			Timezone:    "UTC",
-			CreatedAt:   s.now().UTC(),
-		},
-	}
+	u := s.newAdmin(username)
+	u.MustChangePassword = true
 	if err := s.users.Create(u, string(hash)); err != nil {
 		os.Remove(file)
 		return false, err
@@ -84,17 +74,8 @@ func (s *AccountService) EnsureDevAdmin() (domain.UserID, error) {
 		return "", err
 	}
 	if u == nil {
-		u = &domain.User{
-			ID:   domain.UserID(uuid.NewString()),
-			Role: domain.RoleAdmin,
-			Profile: domain.Profile{
-				Username:    "admin",
-				DisplayName: "Administrator",
-				Language:    "en",
-				Timezone:    "UTC",
-				CreatedAt:   s.now().UTC(),
-			},
-		}
+		admin := s.newAdmin("admin")
+		u = &admin
 		if err := s.users.Create(*u, ""); err != nil {
 			return "", err
 		}
@@ -107,6 +88,21 @@ func (s *AccountService) EnsureDevAdmin() (domain.UserID, error) {
 		}
 	}
 	return u.ID, nil
+}
+
+// newAdmin returns a new administrator account with the default profile.
+func (s *AccountService) newAdmin(username string) domain.User {
+	return domain.User{
+		ID:   domain.UserID(uuid.NewString()),
+		Role: domain.RoleAdmin,
+		Profile: domain.Profile{
+			Username:    username,
+			DisplayName: "Administrator",
+			Language:    "en",
+			Timezone:    "UTC",
+			CreatedAt:   s.now().UTC(),
+		},
+	}
 }
 
 func (s *AccountService) RegistrationOpen() (bool, error) {
@@ -131,7 +127,7 @@ func (s *AccountService) target(id domain.UserID) (*domain.User, error) {
 		return nil, err
 	}
 	if u == nil {
-		return nil, newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", id))
+		return nil, userNotFound(string(id))
 	}
 	return u, nil
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
-	"time"
 
 	"travel-blog/backend/internal/domain"
 )
@@ -28,10 +27,10 @@ func scanTrip(row scanner) (domain.Trip, error) {
 	if err != nil {
 		return t, err
 	}
-	if t.CreatedAt, err = time.Parse(time.RFC3339Nano, created); err != nil {
+	if t.CreatedAt, err = parseTime(created); err != nil {
 		return t, err
 	}
-	t.UpdatedAt, err = time.Parse(time.RFC3339Nano, updated)
+	t.UpdatedAt, err = parseTime(updated)
 	return t, err
 }
 
@@ -234,10 +233,6 @@ func photoKeys(tx *sql.Tx, query string, args ...any) ([]string, error) {
 		keys = append(keys, key)
 	}
 	return keys, rows.Err()
-}
-
-func formatTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339Nano)
 }
 
 func inTx(db *sql.DB, fn func(*sql.Tx) error) error {

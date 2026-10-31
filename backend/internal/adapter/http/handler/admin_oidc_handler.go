@@ -22,6 +22,19 @@ func WithOIDCConfig(c OIDCConfig) Option {
 
 var errNoOIDCConfig = errors.New("OIDC configuration is not available")
 
+// oidcAdmin returns the user of the request for the OIDC configuration routes,
+// which need the configuration service.
+func (h *Handler) oidcAdmin(ctx context.Context) (domain.UserID, error) {
+	actor, err := userFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+	if h.oidcConfig == nil {
+		return "", errNoOIDCConfig
+	}
+	return actor, nil
+}
+
 func toOIDCInput(in api.OidcAdminInput) service.OIDCConfigInput {
 	out := service.OIDCConfigInput{
 		Issuer: in.Issuer, ClientID: in.ClientId, ClientSecret: deref(in.ClientSecret),
@@ -34,12 +47,9 @@ func toOIDCInput(in api.OidcAdminInput) service.OIDCConfigInput {
 }
 
 func (h *Handler) GetOidcAdminConfig(ctx context.Context, _ api.GetOidcAdminConfigRequestObject) (api.GetOidcAdminConfigResponseObject, error) {
-	actor, err := userFrom(ctx)
+	actor, err := h.oidcAdmin(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if h.oidcConfig == nil {
-		return nil, errNoOIDCConfig
 	}
 	v, err := h.oidcConfig.View(actor)
 	switch {
@@ -56,12 +66,9 @@ func (h *Handler) GetOidcAdminConfig(ctx context.Context, _ api.GetOidcAdminConf
 }
 
 func (h *Handler) SaveOidcAdminConfig(ctx context.Context, req api.SaveOidcAdminConfigRequestObject) (api.SaveOidcAdminConfigResponseObject, error) {
-	actor, err := userFrom(ctx)
+	actor, err := h.oidcAdmin(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if h.oidcConfig == nil {
-		return nil, errNoOIDCConfig
 	}
 	err = h.oidcConfig.Save(actor, toOIDCInput(*req.Body))
 	switch {
@@ -78,12 +85,9 @@ func (h *Handler) SaveOidcAdminConfig(ctx context.Context, req api.SaveOidcAdmin
 }
 
 func (h *Handler) DeleteOidcAdminConfig(ctx context.Context, _ api.DeleteOidcAdminConfigRequestObject) (api.DeleteOidcAdminConfigResponseObject, error) {
-	actor, err := userFrom(ctx)
+	actor, err := h.oidcAdmin(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if h.oidcConfig == nil {
-		return nil, errNoOIDCConfig
 	}
 	err = h.oidcConfig.Delete(actor)
 	switch {
@@ -98,12 +102,9 @@ func (h *Handler) DeleteOidcAdminConfig(ctx context.Context, _ api.DeleteOidcAdm
 }
 
 func (h *Handler) TestOidcAdminConfig(ctx context.Context, req api.TestOidcAdminConfigRequestObject) (api.TestOidcAdminConfigResponseObject, error) {
-	actor, err := userFrom(ctx)
+	actor, err := h.oidcAdmin(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if h.oidcConfig == nil {
-		return nil, errNoOIDCConfig
 	}
 	err = h.oidcConfig.Test(actor, toOIDCInput(*req.Body))
 	switch {

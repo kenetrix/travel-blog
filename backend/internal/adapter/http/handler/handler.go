@@ -226,20 +226,9 @@ func toAPIFlights(flights []domain.Flight, details bool) []api.Flight {
 		out[i].FlightNumber = optional(f.Number)
 		out[i].Aircraft = optional(f.Aircraft)
 		out[i].DurationMinutes = optional(f.DurationMinutes)
-		if d, err := time.Parse(time.DateOnly, f.Date); err == nil {
-			out[i].Date = &openapi_types.Date{Time: d}
-		}
+		out[i].Date = dateOf(f.Date)
 	}
 	return out
-}
-
-// optional returns nil for the zero value, so the field is left out of the JSON.
-func optional[T comparable](v T) *T {
-	var zero T
-	if v == zero {
-		return nil
-	}
-	return &v
 }
 
 func toAPIProfile(p domain.Profile) api.Profile {
@@ -287,4 +276,36 @@ func visibilityOf(v *api.Visibility) *domain.Visibility {
 	}
 	dv := domain.Visibility(*v)
 	return &dv
+}
+
+// optional returns nil for the zero value, so the field is left out of the JSON.
+func optional[T comparable](v T) *T {
+	var zero T
+	if v == zero {
+		return nil
+	}
+	return &v
+}
+
+// ptrOr returns the value p points to, or the zero value for nil.
+func ptrOr[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
+}
+
+// deref returns the string p points to, or "" for nil.
+func deref[T ~string](p *T) string {
+	return string(ptrOr(p))
+}
+
+// dateOf returns nil for an empty or malformed day, so the field is left out of the JSON.
+func dateOf(s string) *openapi_types.Date {
+	d, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return nil
+	}
+	return &openapi_types.Date{Time: d}
 }

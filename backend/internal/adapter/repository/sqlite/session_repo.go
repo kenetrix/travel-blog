@@ -19,8 +19,8 @@ func NewSessionRepo(db *sql.DB) *SessionRepo {
 func (r *SessionRepo) Create(s domain.Session) error {
 	_, err := r.db.Exec(
 		`INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`,
-		s.TokenHash, s.UserID, s.CreatedAt.UTC().Format(time.RFC3339Nano),
-		s.ExpiresAt.UTC().Format(time.RFC3339Nano),
+		s.TokenHash, s.UserID, formatTime(s.CreatedAt),
+		formatTime(s.ExpiresAt),
 	)
 	return err
 }
@@ -37,10 +37,10 @@ func (r *SessionRepo) Get(tokenHash string) (*domain.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if s.CreatedAt, err = time.Parse(time.RFC3339Nano, created); err != nil {
+	if s.CreatedAt, err = parseTime(created); err != nil {
 		return nil, err
 	}
-	if s.ExpiresAt, err = time.Parse(time.RFC3339Nano, expires); err != nil {
+	if s.ExpiresAt, err = parseTime(expires); err != nil {
 		return nil, err
 	}
 	return &s, nil
@@ -59,6 +59,6 @@ func (r *SessionRepo) DeleteOthers(user domain.UserID, keep string) error {
 // DeleteExpired compares UTC RFC 3339 timestamps as text, which is
 // equivalent to a time comparison.
 func (r *SessionRepo) DeleteExpired(now time.Time) error {
-	_, err := r.db.Exec(`DELETE FROM sessions WHERE expires_at <= ?`, now.UTC().Format(time.RFC3339Nano))
+	_, err := r.db.Exec(`DELETE FROM sessions WHERE expires_at <= ?`, formatTime(now))
 	return err
 }

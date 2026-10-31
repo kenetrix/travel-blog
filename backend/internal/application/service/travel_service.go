@@ -63,7 +63,7 @@ func (s *TravelService) Country(user domain.UserID, iso string) (domain.CountryE
 // PublicTravel returns profile and public data of a user, but only if their profile is
 // public; otherwise ErrNotFound, so it does not reveal whether the user exists.
 func (s *TravelService) PublicTravel(username string) (domain.Profile, []domain.CountryEntry, []domain.Flight, error) {
-	notFound := newError(ErrNotFound, "user_not_found", fmt.Sprintf("user %s", username))
+	notFound := userNotFound(username)
 	u, err := s.users.GetByUsername(strings.ToLower(username))
 	if err != nil {
 		return domain.Profile{}, nil, nil, err
@@ -100,13 +100,11 @@ func (s *TravelService) SaveCountry(user domain.UserID, iso string, status domai
 	if err := checkCode("country", iso); err != nil {
 		return nil, err
 	}
-	if d.Rating < 0 || d.Rating > 5 {
-		return nil, newError(ErrInvalid, "invalid_rating", "rating must be between 0 and 5")
+	if err := checkRating(d.Rating); err != nil {
+		return nil, err
 	}
-	if visibility != nil {
-		if err := checkVisibility(*visibility); err != nil {
-			return nil, err
-		}
+	if err := checkOptionalVisibility(visibility); err != nil {
+		return nil, err
 	}
 
 	switch status {
@@ -164,10 +162,8 @@ func (s *TravelService) CreateFlight(user domain.UserID, from, to string, countr
 		}
 	}
 	countries = slices.Compact(slices.Clone(countries))
-	if visibility != nil {
-		if err := checkVisibility(*visibility); err != nil {
-			return domain.Flight{}, nil, err
-		}
+	if err := checkOptionalVisibility(visibility); err != nil {
+		return domain.Flight{}, nil, err
 	}
 	if from == to {
 		return domain.Flight{}, nil, newError(ErrSameAirport, "same_airport", "departure and arrival are the same airport")
@@ -234,7 +230,7 @@ func (s *TravelService) UpdateFlight(user domain.UserID, id string, u domain.Fli
 		return err
 	}
 	if !found {
-		return newError(ErrNotFound, "flight_not_found", fmt.Sprintf("flight %s", id))
+		return flightNotFound(id)
 	}
 	return nil
 }
@@ -246,9 +242,13 @@ func (s *TravelService) DeleteFlight(user domain.UserID, id string) error {
 		return err
 	}
 	if !found {
-		return newError(ErrNotFound, "flight_not_found", fmt.Sprintf("flight %s", id))
+		return flightNotFound(id)
 	}
 	return nil
+}
+
+func flightNotFound(id string) error {
+	return newError(ErrNotFound, "flight_not_found", fmt.Sprintf("flight %s", id))
 }
 
 func normalizeTags(tags []string) []string {

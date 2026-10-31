@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -152,4 +153,13 @@ func migrateOne(ctx context.Context, conn *sql.Conn, script string, version int)
 		return err
 	}
 	return tx.Commit()
+}
+
+// Timestamps are stored as RFC 3339 text in UTC, which sorts chronologically.
+func formatTime(t time.Time) string {
+	return t.UTC().Format(time.RFC3339Nano)
+}
+
+func parseTime(s string) (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, s)
 }

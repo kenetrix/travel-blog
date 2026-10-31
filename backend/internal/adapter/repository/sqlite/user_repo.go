@@ -37,7 +37,7 @@ func scanUser(row scanner) (*domain.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.CreatedAt, err = time.Parse(time.RFC3339Nano, created); err != nil {
+	if p.CreatedAt, err = parseTime(created); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -81,7 +81,7 @@ func insertUser(tx *sql.Tx, u domain.User, passwordHash string) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, u.ID, p.Username, nullIfEmpty(p.Email), nullIfEmpty(passwordHash), p.FirstName,
 		p.LastName, p.DisplayName, p.Bio, p.Language, p.Timezone, p.HomeCountry,
-		p.Color, p.CreatedAt.UTC().Format(time.RFC3339Nano),
+		p.Color, formatTime(p.CreatedAt),
 		cmpOr(u.Role, domain.RoleUser), u.MustChangePassword)
 	if err != nil {
 		return conflict(err)
@@ -109,7 +109,7 @@ func (r *UserRepo) GetByIdentity(issuer, subject string) (*domain.User, error) {
 
 func (r *UserRepo) LinkIdentity(issuer, subject string, id domain.UserID) error {
 	_, err := r.db.Exec(`INSERT INTO oidc_identities (issuer, subject, user_id, created_at)
-		VALUES (?, ?, ?, ?)`, issuer, subject, id, time.Now().UTC().Format(time.RFC3339Nano))
+		VALUES (?, ?, ?, ?)`, issuer, subject, id, formatTime(time.Now()))
 	return conflict(err)
 }
 
@@ -123,7 +123,7 @@ func (r *UserRepo) CreateWithIdentity(u domain.User, issuer, subject string) err
 		return err
 	}
 	if _, err := tx.Exec(`INSERT INTO oidc_identities (issuer, subject, user_id, created_at)
-		VALUES (?, ?, ?, ?)`, issuer, subject, u.ID, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		VALUES (?, ?, ?, ?)`, issuer, subject, u.ID, formatTime(time.Now())); err != nil {
 		return conflict(err)
 	}
 	return tx.Commit()

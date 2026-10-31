@@ -3,10 +3,8 @@ package handler
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"travel-blog/backend/internal/adapter/http/api"
 	"travel-blog/backend/internal/application/service"
@@ -189,15 +187,6 @@ func toAPITrip(t domain.Trip) api.Trip {
 	}
 }
 
-// dateOf returns nil for an empty or malformed day, so the field is left out of the JSON.
-func dateOf(s string) *openapi_types.Date {
-	d, err := time.Parse(time.DateOnly, s)
-	if err != nil {
-		return nil
-	}
-	return &openapi_types.Date{Time: d}
-}
-
 func linksOf(in *[]api.TripStopLink) []domain.StopLink {
 	out := []domain.StopLink{}
 	for _, l := range ptrOr(in) {
@@ -213,12 +202,4 @@ func apiLinks(in []domain.StopLink) []api.TripStopLink {
 		out[i] = api.TripStopLink{Url: l.URL, Label: &label}
 	}
 	return out
-}
-
-func ptrOr[T any](p *T) T {
-	var zero T
-	if p == nil {
-		return zero
-	}
-	return *p
 }

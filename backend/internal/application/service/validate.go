@@ -63,8 +63,6 @@ func checkCode(kind, code string) error {
 	return nil
 }
 
-var colorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-
 func checkOptionalCode(kind, code string) error {
 	if code == "" {
 		return nil
@@ -75,6 +73,32 @@ func checkOptionalCode(kind, code string) error {
 func checkVisibility(v domain.Visibility) error {
 	if !v.Valid() {
 		return newError(ErrInvalid, "invalid_visibility", fmt.Sprintf("unknown visibility %q", v), "value", string(v))
+	}
+	return nil
+}
+
+// checkOptionalVisibility accepts nil, which means the default applies.
+func checkOptionalVisibility(v *domain.Visibility) error {
+	if v == nil {
+		return nil
+	}
+	return checkVisibility(*v)
+}
+
+// checkRating accepts 0 (no rating) to 5 stars.
+func checkRating(n int) error {
+	if n < 0 || n > 5 {
+		return newError(ErrInvalid, "invalid_rating", "rating must be between 0 and 5")
+	}
+	return nil
+}
+
+var colorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// checkColor accepts an empty string (no colour) or a hex colour like #3a7d5c.
+func checkColor(s string) error {
+	if s != "" && !colorPattern.MatchString(s) {
+		return newError(ErrInvalid, "invalid_color", "color must look like #3a7d5c")
 	}
 	return nil
 }
@@ -153,10 +177,8 @@ const (
 
 // checkFlightUpdate validates u and normalises its flight number and aircraft.
 func checkFlightUpdate(u *domain.FlightUpdate) error {
-	if u.Visibility != nil {
-		if err := checkVisibility(*u.Visibility); err != nil {
-			return err
-		}
+	if err := checkOptionalVisibility(u.Visibility); err != nil {
+		return err
 	}
 	if u.Number != nil && *u.Number != "" {
 		number, ok := domain.NormalizeFlightNumber(*u.Number)

@@ -170,10 +170,8 @@ func checkTrip(in TripInput, existing []domain.Location) (domain.Trip, error) {
 	if in.StartsOn != "" && in.EndsOn != "" && in.EndsOn < in.StartsOn {
 		return domain.Trip{}, newError(ErrInvalid, "invalid_date_range", "the trip ends before it starts")
 	}
-	if in.Visibility != nil {
-		if err := checkVisibility(*in.Visibility); err != nil {
-			return domain.Trip{}, err
-		}
+	if err := checkOptionalVisibility(in.Visibility); err != nil {
+		return domain.Trip{}, err
 	}
 	if len(in.Stops) > MaxTripStops {
 		return domain.Trip{}, newError(ErrInvalid, "too_many_stops", fmt.Sprintf("a trip has at most %d stops", MaxTripStops), "max", strconv.Itoa(MaxTripStops))
@@ -212,8 +210,8 @@ func checkTrip(in TripInput, existing []domain.Location) (domain.Trip, error) {
 		if l.Notes, err = trimText("notes", l.Notes, maxStopNotes); err != nil {
 			return domain.Trip{}, err
 		}
-		if l.Rating < 0 || l.Rating > 5 {
-			return domain.Trip{}, newError(ErrInvalid, "invalid_rating", "rating must be between 0 and 5")
+		if err := checkRating(l.Rating); err != nil {
+			return domain.Trip{}, err
 		}
 		if l.Category != "" && !slices.Contains(domain.StopCategories, l.Category) {
 			return domain.Trip{}, newError(ErrInvalid, "invalid_category", "unknown stop category", "value", l.Category)
