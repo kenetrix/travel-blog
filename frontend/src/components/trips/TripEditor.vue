@@ -104,6 +104,8 @@ const comparable = (d: Draft) =>
     JSON.stringify({ ...d, stops: d.stops.map(({ key: _key, ...s }) => s) })
 
 const dirty = computed(() => comparable(draft.value) !== saved.value)
+// The empty draft is no change, so the loaded trip may replace it
+saved.value = comparable(draft.value)
 
 function fill(next: Draft) {
     draft.value = next
