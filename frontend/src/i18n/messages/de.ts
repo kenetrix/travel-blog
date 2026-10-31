@@ -229,9 +229,15 @@ export default {
         onlyAdmins: 'Nur Administratoren können diese Seite öffnen.',
         offline: 'Die Verwaltung ist offline nicht verfügbar.',
         mustChange: 'muss Passwort ändern',
-        roleOf: 'Rolle von {name}',
         roleUser: 'Benutzer',
         roleAdmin: 'Administrator',
+        roleUserNote: 'Verwaltet die eigenen Länder, Flüge und Reisen',
+        roleAdminNote:
+            'Verwaltet zusätzlich Benutzer, Registrierung und Single Sign-on',
+        changeRole: 'Rolle ändern',
+        changeRoleOf: 'Wähle die Rolle von @{name}.',
+        currentRole: 'aktuell',
+        roleChanged: '@{name} ist jetzt: {role}',
         resetPassword: 'Passwort zurücksetzen',
         tempPassword: 'Vorläufiges Passwort, mindestens 10 Zeichen',
         tempPasswordFor: 'Vorläufiges Passwort für {name}',
@@ -243,8 +249,6 @@ export default {
             '@{name} wird mit allen Ländern, Flügen und Fotos gelöscht. Das lässt sich nicht rückgängig machen.',
         registrationOpen: 'Registrierung ist offen',
         registrationClosed: 'Registrierung ist geschlossen',
-        nowAdmin: '@{name} ist jetzt Administrator',
-        nowUser: '@{name} ist jetzt Benutzer',
         passwordReset:
             '@{name} ist überall abgemeldet und muss bei der nächsten Anmeldung ein neues Passwort wählen',
         deleted: '@{name} gelöscht',
@@ -253,6 +257,10 @@ export default {
         roleFailed: 'Die Rolle konnte nicht geändert werden',
         resetFailed: 'Das Passwort konnte nicht zurückgesetzt werden',
         deleteFailed: 'Das Konto konnte nicht gelöscht werden',
+        you: 'Du',
+        joined: 'Dabei seit {date}',
+        search: 'Nach Name, Benutzername oder E-Mail suchen',
+        noMatch: 'Keine Benutzer gefunden',
     },
     oidc: {
         copyFailed:

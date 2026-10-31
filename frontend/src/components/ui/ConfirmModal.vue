@@ -6,6 +6,7 @@ const props = defineProps<{
     title: string
     message: string
     confirmLabel?: string
+    confirmDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,11 +29,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             <div class="modal" role="dialog" aria-modal="true" @click.stop>
                 <h3>{{ title }}</h3>
                 <p class="message">{{ message }}</p>
+                <slot />
                 <div class="actions">
                     <button class="btn cancel" @click="emit('cancel')">
                         {{ t('common.cancel') }}
                     </button>
-                    <button class="btn confirm" @click="emit('confirm')">
+                    <button
+                        class="btn confirm"
+                        :disabled="props.confirmDisabled"
+                        @click="emit('confirm')"
+                    >
                         {{ props.confirmLabel ?? t('common.confirm') }}
                     </button>
                 </div>
@@ -139,7 +145,12 @@ h3 {
     color: #fff;
 }
 
-.btn.confirm:hover {
+.btn.confirm:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn.confirm:hover:not(:disabled) {
     background: #2f6a4e;
 }
 

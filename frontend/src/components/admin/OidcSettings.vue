@@ -212,13 +212,15 @@ onMounted(async () => {
                 placeholder="openid profile email"
                 :disabled="oidcReadonly"
             />
-            <label class="check">
+            <label class="check toggle">
+                <span>{{ t('oidc.disablePassword') }}</span>
                 <input
                     v-model="oidcForm.disablePassword"
                     type="checkbox"
+                    role="switch"
+                    class="switch"
                     :disabled="oidcReadonly"
                 />
-                {{ t('oidc.disablePassword') }}
             </label>
             <p class="note">{{ t('oidc.saveNote') }}</p>
             <div v-if="!oidcReadonly" class="actions">

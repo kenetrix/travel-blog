@@ -41,6 +41,57 @@
     height: 1.1rem;
 }
 
+.panel .toggle {
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+}
+
+/* A native checkbox drawn as a switch, so keyboard and forms keep working */
+.panel input.switch {
+    flex: none;
+    position: relative;
+    width: 2.6rem;
+    height: 1.5rem;
+    margin: 0;
+    border-radius: 1rem;
+    background: var(--line-strong);
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.panel input.switch::before {
+    content: '';
+    position: absolute;
+    top: 0.2rem;
+    left: 0.2rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.panel input.switch:checked {
+    background: #3a7d5c;
+}
+
+.panel input.switch:checked::before {
+    transform: translateX(1.1rem);
+}
+
+.panel input.switch:focus-visible {
+    outline: 2px solid #3a7d5c;
+    outline-offset: 2px;
+}
+
+.panel input.switch:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .panel input:not([type='checkbox']),
 .panel select,
 .panel textarea {
