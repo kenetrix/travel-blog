@@ -25,7 +25,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <PageWrapper :title="t('legal.impressumTitle')">
+    <PageWrapper history :title="t('legal.impressumTitle')">
         <article class="legal-page">
             <p>{{ t('legal.impressumIntro') }}</p>
             <p v-if="failed" class="note">{{ t('legal.unavailable') }}</p>

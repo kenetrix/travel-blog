@@ -3,8 +3,14 @@ import { useRouter } from 'vue-router'
 import OfflineBanner from './OfflineBanner.vue'
 import { t } from '../../i18n'
 
-withDefaults(
-    defineProps<{ title: string; subtitle?: string; closable?: boolean }>(),
+const props = withDefaults(
+    defineProps<{
+        title: string
+        subtitle?: string
+        closable?: boolean
+        // Return to the page that linked here instead of the map
+        history?: boolean
+    }>(),
     { closable: true }
 )
 
@@ -12,7 +18,9 @@ const router = useRouter()
 
 // Back to the map, which keeps whatever was open before
 function back() {
-    router.push({ name: 'home' })
+    // history.state.back is null when this page was the entry point
+    if (props.history && window.history.state?.back) router.back()
+    else router.push({ name: 'home' })
 }
 </script>
 

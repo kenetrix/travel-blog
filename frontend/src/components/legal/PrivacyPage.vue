@@ -16,7 +16,7 @@ const key = (section: string, part: 'Title' | 'Text') =>
 </script>
 
 <template>
-    <PageWrapper :title="t('legal.privacyTitle')">
+    <PageWrapper history :title="t('legal.privacyTitle')">
         <article class="legal-page">
             <p>{{ t('legal.privacyIntro') }}</p>
             <section v-for="section in sections" :key="section">
