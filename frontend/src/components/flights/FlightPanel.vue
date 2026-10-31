@@ -149,8 +149,8 @@ async function addFlight() {
 
 async function saveNumber() {
     const flight = added.value
-    if (!flight || normalizedNumber.value === null) return
-    if (!normalizedNumber.value) return skipNumber()
+    // Without a number there is nothing to save; that is what Skip is for
+    if (!flight || !normalizedNumber.value) return
     const saved = await store.updateFlight(flight.id, {
         flightNumber: normalizedNumber.value,
     })
@@ -208,21 +208,23 @@ function skipNumber() {
 
             <div class="actions">
                 <button
-                    class="btn btn-primary"
-                    type="submit"
-                    :disabled="!store.canWrite || normalizedNumber === null"
-                    :title="
-                        store.canWrite ? undefined : t('common.offlineHint')
-                    "
-                >
-                    {{ t('common.save') }}
-                </button>
-                <button
+                    v-if="!number.trim()"
                     class="btn btn-secondary"
                     type="button"
                     @click="skipNumber"
                 >
                     {{ t('flights.skip') }}
+                </button>
+                <button
+                    v-else
+                    class="btn btn-primary"
+                    type="submit"
+                    :disabled="!store.canWrite || !normalizedNumber"
+                    :title="
+                        store.canWrite ? undefined : t('common.offlineHint')
+                    "
+                >
+                    {{ t('common.save') }}
                 </button>
             </div>
             <p v-if="!store.canWrite" class="hint offline">
