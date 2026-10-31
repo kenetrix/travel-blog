@@ -1,4 +1,5 @@
 import { COUNTRY_BOUNDS } from './countryBounds'
+import { abbreviate, countryAreas } from './countryLabels'
 import {
     Map as MLMap,
     AttributionControl,
@@ -237,6 +238,21 @@ export class MapLibreProvider implements MapProvider {
                 'countries-label',
                 'text-halo-color',
                 undefined
+            )
+            // Bigger countries are placed first and win label collisions
+            const bySize = [
+                'match',
+                ['get', 'NAME'],
+                ...Object.entries(countryAreas()).flatMap(([name, area]) => [
+                    name,
+                    -area,
+                ]),
+                0,
+            ]
+            this.map!.setLayoutProperty(
+                'countries-label',
+                'symbol-sort-key',
+                bySize as ExpressionSpecification
             )
 
             this.map!.setPaintProperty(
@@ -532,7 +548,7 @@ export class MapLibreProvider implements MapProvider {
     }
 
     // The base style shows abbreviations ("Ger.") below zoom 4; translated
-    // names are shown at every zoom, as there are no translated abbreviations
+    // ones are derived from the translated names
     private applyCountryNames(): void {
         const names = this.countryNames
         const full = names
@@ -543,7 +559,17 @@ export class MapLibreProvider implements MapProvider {
                   ['get', 'NAME'],
               ]
             : ['get', 'NAME']
-        const short = names ? full : ['get', 'ABBREV']
+        const short = names
+            ? [
+                  'match',
+                  ['get', 'NAME'],
+                  ...Object.entries(names).flatMap(([base, local]) => [
+                      base,
+                      abbreviate(local),
+                  ]),
+                  ['get', 'ABBREV'],
+              ]
+            : ['get', 'ABBREV']
         // Labels of small countries are blanked until zoomed in, where they
         // no longer collide. Zoom can only be the input of a top-level step.
         const hide = (label: unknown, hidden: string[]) => [

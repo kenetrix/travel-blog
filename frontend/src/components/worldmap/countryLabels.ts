@@ -1,4 +1,5 @@
-import { Countries, countryName } from '../countries/countries'
+import { Countries, getCountryByAlpha2 } from '../countries/countries'
+import { COUNTRY_BOUNDS } from './countryBounds'
 import { regionName } from '../../i18n/format'
 
 // The base map labels carry only an English Natural Earth name, no ISO code.
@@ -57,18 +58,57 @@ const NATURAL_EARTH: Record<string, string> = {
     'Wallis and Futuna Is.': 'WF',
 }
 
-// Base map name → name in the UI language; unknown names stay English
-export function countryLabels(): Record<string, string> {
+// Base map name → ISO alpha-2 code
+function baseNameCodes(): Record<string, string> {
     const english = new Intl.DisplayNames(['en'], { type: 'region' })
-    const labels: Record<string, string> = {}
+    const codes: Record<string, string> = {}
     for (const c of Countries) {
-        const local = countryName(c)
         for (const name of [c.name, c.nameLong, english.of(c.alpha2)]) {
-            if (name) labels[name] = local
+            if (name) codes[name] = c.alpha2
         }
     }
-    for (const [name, alpha2] of Object.entries(NATURAL_EARTH)) {
-        labels[name] = regionName(alpha2, name)
+    return { ...codes, ...NATURAL_EARTH }
+}
+
+// Base map name → name in the UI language; unknown names stay English
+export function countryLabels(): Record<string, string> {
+    return Object.fromEntries(
+        Object.entries(baseNameCodes()).map(([name, alpha2]) => [
+            name,
+            regionName(alpha2, name),
+        ])
+    )
+}
+
+// Base map name → approximate area of the main landmass in square degrees.
+// The tiles carry no rank, so without it labels are placed in alphabetical
+// order and small countries (Austria) crowd out big ones (Germany).
+export function countryAreas(): Record<string, number> {
+    const areas: Record<string, number> = {}
+    for (const [name, alpha2] of Object.entries(baseNameCodes())) {
+        const alpha3 = getCountryByAlpha2(alpha2)?.alpha3
+        const box = alpha3 && COUNTRY_BOUNDS[alpha3]
+        if (!box) continue
+        const [w, s, e, n] = box
+        areas[name] =
+            (e - w) * (n - s) * Math.cos((((s + n) / 2) * Math.PI) / 180)
     }
-    return labels
+    return areas
+}
+
+const VOWELS = /[aeiouyäöüáéíóúàèìòùâêîôûаеёиоуыэюя]/i
+
+// Short label for low zoom, in the style of Natural Earth's English ones
+// ("Ger.", "U.A.E."): initials of several words, or the first syllable
+export function abbreviate(name: string): string {
+    if (name.length <= 7 || !/^\p{L}/u.test(name)) return name
+    // Lowercase words are joiners like "und", "de" or "и"
+    const words = name.split(/[\s-]+/).filter((w) => /^\p{Lu}/u.test(w))
+    if (words.length > 1) {
+        return words.map((w) => w[0] + '.').join('')
+    }
+    let end = 3
+    while (end < 4 && end < name.length && !VOWELS.test(name[end])) end++
+    const short = name.slice(0, end) + '.'
+    return short.length < name.length ? short : name
 }
