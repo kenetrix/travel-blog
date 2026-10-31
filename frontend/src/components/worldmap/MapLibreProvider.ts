@@ -651,7 +651,7 @@ export class MapLibreProvider implements MapProvider {
     // Emphasise one route (and its label) and dim the others
     highlightFlight(id: string | null): void {
         if (!this.map?.getLayer('flights-line')) return
-        const hit = ['==', ['get', 'id'], id ?? '']
+        const hit: ExpressionSpecification = ['==', ['get', 'id'], id ?? '']
         this.map.setPaintProperty('flights-line', 'line-width', [
             'case',
             hit,
@@ -750,7 +750,10 @@ export class MapLibreProvider implements MapProvider {
 
         // While routes are shown, the countries step back so the routes are
         // the only strong colour: visited and wishlist countries fade
-        const byState = (state: string, opacity: number) => [
+        const byState = (
+            state: string,
+            opacity: number
+        ): ExpressionSpecification => [
             'case',
             ['boolean', ['feature-state', state], false],
             opacity,

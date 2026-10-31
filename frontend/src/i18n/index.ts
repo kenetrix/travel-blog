@@ -11,19 +11,29 @@ export const LANGUAGES = [
 
 export type Language = (typeof LANGUAGES)[number]['code']
 
+// A group of messages may have an `other` key too (trip.categories), so only
+// an object with nothing but plural forms counts as a plural
+type IsPlural<T> = T extends Plural
+    ? [Exclude<keyof T, Intl.LDMLPluralRule>] extends [never]
+        ? true
+        : false
+    : false
+
 // Catalog shape with plain strings, so other languages are not bound to the
 // English wording
 type Widen<T> = T extends string
     ? string
-    : T extends Plural
+    : IsPlural<T> extends true
       ? Plural
       : { [K in keyof T]: Widen<T[K]> }
 export type Messages = Widen<typeof en>
 
 type Leaves<T, P extends string = ''> = {
-    [K in keyof T & string]: T[K] extends string | Plural
+    [K in keyof T & string]: T[K] extends string
         ? `${P}${K}`
-        : Leaves<T[K], `${P}${K}.`>
+        : IsPlural<T[K]> extends true
+          ? `${P}${K}`
+          : Leaves<T[K], `${P}${K}.`>
 }[keyof T & string]
 export type MessageKey = Leaves<Messages>
 

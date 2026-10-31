@@ -232,15 +232,6 @@ function addNamedStop() {
     startPlacing()
 }
 
-// Back to the centre pin, which starts where it was
-function changePlace() {
-    const point = naming.value
-    naming.value = null
-    expanded.value = false
-    store.setPin(point)
-    store.setPinMode('center')
-}
-
 let suggestRequest = 0
 watch(
     () => store.pin,

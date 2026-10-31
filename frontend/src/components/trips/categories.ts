@@ -2,7 +2,11 @@ import type { TripInput } from '../stores/store'
 
 export type StopCategory = NonNullable<TripInput['stops'][number]['category']>
 
-export const STOP_CATEGORIES: { value: StopCategory; icon: string }[] = [
+// The API's '' (no category) is never offered as a choice
+export const STOP_CATEGORIES: {
+    value: Exclude<StopCategory, ''>
+    icon: string
+}[] = [
     { value: 'sight', icon: '🏛️' },
     { value: 'food', icon: '🍽️' },
     { value: 'stay', icon: '🛏️' },
