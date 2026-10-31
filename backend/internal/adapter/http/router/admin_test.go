@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,6 +60,31 @@ func TestAdminAndPasswordGate(t *testing.T) {
 	}
 	if rec := do(t, h, "GET", "/api/admin/settings", "", alice); rec.Code != 403 {
 		t.Errorf("settings as user: %d", rec.Code)
+	}
+
+	// Only an administrator makes someone an administrator, never the user themself
+	var users []struct{ ID, Username, Role string }
+	rec = do(t, h, "GET", "/api/admin/users", "", admin)
+	if err := json.Unmarshal(rec.Body.Bytes(), &users); err != nil {
+		t.Fatal(err)
+	}
+	aliceID := ""
+	for _, u := range users {
+		if u.Username == "alice" {
+			aliceID = u.ID
+		}
+	}
+	rec = do(t, h, "PATCH", "/api/admin/users/"+aliceID, `{"role":"admin"}`, alice)
+	if rec.Code != 403 {
+		t.Errorf("make self admin as user: %d %s", rec.Code, rec.Body)
+	}
+	rec = do(t, h, "PATCH", "/api/admin/users/"+aliceID, `{"role":"admin"}`, admin)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"role":"admin"`) {
+		t.Errorf("make admin as admin: %d %s", rec.Code, rec.Body)
+	}
+	rec = do(t, h, "PATCH", "/api/admin/users/"+aliceID, `{"role":"user"}`, admin)
+	if rec.Code != 200 {
+		t.Errorf("make user again: %d %s", rec.Code, rec.Body)
 	}
 
 	rec = do(t, h, "PUT", "/api/admin/settings", `{"registrationOpen":false}`, admin)
