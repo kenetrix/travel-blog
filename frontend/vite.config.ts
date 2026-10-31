@@ -83,9 +83,10 @@ export default defineConfig({
                         },
                     },
                     {
-                        // Place names per country (public/places), loaded
-                        // only when zoomed into a country while editing a trip
-                        urlPattern: /\/places\/[A-Z]{3}\.json$/,
+                        // Place names and state borders per country
+                        // (public/places, public/states), loaded only when
+                        // zoomed into a country
+                        urlPattern: /\/(places|states)\/[A-Z]{3}\.json$/,
                         handler: 'CacheFirst',
                         options: {
                             cacheName: 'places',

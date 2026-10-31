@@ -1,3 +1,5 @@
+import type { StateBorders } from './states'
+
 export interface FlightRoute {
     id: string
     from: [number, number] // [lng, lat]
@@ -66,6 +68,8 @@ export interface MapProvider {
     fitCountry(isoCode: string, insets?: MapInsets): void
     // Place names; null hides them
     showPlaces(places: MapPlace[] | null): void
+    // Borders inside the countries; null hides them
+    showStateBorders(borders: Record<string, StateBorders> | null): void
     getZoom(): number
     // Countries with a part in the visible map
     countriesInView(): string[]
@@ -113,5 +117,7 @@ export const Colors = {
     // Also --map-water in style.css and the theme colour of the app
     water: '#373838',
     geoline: '#4c4d4d',
+    // Light enough for the dark base, dark enough for the gold and violet fills
+    stateBorder: '#5c5d5d',
     label: '#dbdbdb',
 }

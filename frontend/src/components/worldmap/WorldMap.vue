@@ -11,6 +11,7 @@ import { useLayout } from '../ui/useLayout'
 import { sheetInsets } from '../ui/mapInsets'
 import type { MapInsets } from './MapProvider'
 import { PLACES_MIN_ZOOM, placesOf } from './places'
+import { stateBordersOf } from './states'
 import { PIN_HEIGHT, PIN_SVG, PIN_WIDTH } from './pin'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -118,21 +119,34 @@ onUnmounted(() => {
 
 // --- Trip --------------------------------------------------------------
 
-// Names of the places in the countries in view, in the countries view once
-// the map is zoomed in far enough
+// Names of the places and the state borders in the countries in view, in the
+// countries view once the map is zoomed in far enough
 let placesShown = false
 let placesRequest = 0
+// Countries whose borders are drawn; panning within them keeps the lines
+let bordersOf = ''
 async function updatePlaces() {
     const request = ++placesRequest
     if (props.view !== 'countries' || provider.getZoom() < PLACES_MIN_ZOOM) {
-        if (placesShown) provider.showPlaces(null)
+        if (placesShown) {
+            provider.showPlaces(null)
+            provider.showStateBorders(null)
+        }
         placesShown = false
+        bordersOf = ''
         return
     }
-    const places = await placesOf(provider.countriesInView())
+    const isos = provider.countriesInView()
+    const key = [...isos].sort().join()
+    const [places, borders] = await Promise.all([
+        placesOf(isos),
+        key === bordersOf ? null : stateBordersOf(isos),
+    ])
     // The map moved on, or the editor closed, while the files loaded
     if (request !== placesRequest) return
     provider.showPlaces(places)
+    if (borders) provider.showStateBorders(borders)
+    bordersOf = key
     placesShown = true
 }
 

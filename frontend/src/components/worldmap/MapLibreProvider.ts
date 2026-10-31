@@ -25,6 +25,7 @@ import type {
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { Colors } from './MapProvider'
 import { pinElement } from './pin'
+import type { BorderLine, StateBorders } from './states'
 import type { FeatureCollection } from 'geojson'
 
 setWorkerUrl(workerUrl)
@@ -128,6 +129,53 @@ const PLACE_LAYERS = PLACE_TIERS.map((t) => t.id)
 // The given opacity where the feature-state is set, otherwise none
 function byState(state: string, opacity: number): ExpressionSpecification {
     return ['case', ['boolean', ['feature-state', state], false], opacity, 0]
+}
+
+// Each country's state borders show once the country is this wide on screen,
+// so small countries are not covered in lines while zoomed out
+const STATE_BORDERS_MIN_PX = 400
+const STATE_BORDERS_ZOOMS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9]
+
+// The first of STATE_BORDERS_ZOOMS at which the country is wide enough. The
+// lines' own extent stands in for tiny countries without known bounds.
+function stateBordersMinZoom(iso: string, lines: BorderLine[]): number {
+    const [west, south, east, north] =
+        COUNTRY_BOUNDS[iso] ?? extentOf(lines.flat())
+    // Degrees of latitude grow towards the poles in Web Mercator
+    const stretch = 1 / Math.cos((((south + north) / 2) * Math.PI) / 180)
+    const degrees = Math.max(east - west, (north - south) * stretch, 0.01)
+    const zoom = Math.log2((STATE_BORDERS_MIN_PX * 360) / (512 * degrees))
+    return (
+        STATE_BORDERS_ZOOMS.find((z) => z >= zoom) ??
+        STATE_BORDERS_ZOOMS[STATE_BORDERS_ZOOMS.length - 1]
+    )
+}
+
+function extentOf(
+    points: [number, number][]
+): [number, number, number, number] {
+    const lngs = points.map((p) => p[0])
+    const lats = points.map((p) => p[1])
+    return [
+        Math.min(...lngs),
+        Math.min(...lats),
+        Math.max(...lngs),
+        Math.max(...lats),
+    ]
+}
+
+// The opacity once the zoom reaches the line's minZoom, before that none.
+// Zoom may only be the input of a top-level step, hence one step per zoom.
+function bySizeZoom(opacity: number): ExpressionSpecification {
+    return [
+        'step',
+        ['zoom'],
+        0,
+        ...STATE_BORDERS_ZOOMS.flatMap((z) => [
+            z,
+            ['case', ['<=', ['get', 'minZoom'], z], opacity, 0],
+        ]),
+    ] as ExpressionSpecification
 }
 
 const EMPTY: FeatureCollection = {
@@ -340,6 +388,33 @@ export class MapLibreProvider implements MapProvider {
                 type: 'fill',
                 source: 'lakes',
                 paint: { 'fill-color': Colors.water },
+            },
+            // Borders inside countries, filled once zoomed in; subdivisions
+            // only once there is room for them
+            {
+                id: 'state-borders-minor',
+                type: 'line',
+                source: 'states',
+                minzoom: 7,
+                filter: ['==', ['get', 'minor'], true],
+                layout: { 'line-join': 'round', visibility: 'none' },
+                paint: {
+                    'line-color': Colors.stateBorder,
+                    'line-width': 0.5,
+                    'line-opacity': bySizeZoom(0.5),
+                },
+            },
+            {
+                id: 'state-borders',
+                type: 'line',
+                source: 'states',
+                filter: ['==', ['get', 'minor'], false],
+                layout: { 'line-join': 'round', visibility: 'none' },
+                paint: {
+                    'line-color': Colors.stateBorder,
+                    'line-width': 0.8,
+                    'line-opacity': bySizeZoom(0.9),
+                },
             }
         )
         // Wishlist countries get a light fill plus an outline: planned, not
@@ -495,6 +570,7 @@ export class MapLibreProvider implements MapProvider {
             sources: {
                 ...style.sources,
                 lakes: { type: 'geojson', data: EMPTY },
+                states: { type: 'geojson', data: EMPTY },
                 flights: { type: 'geojson', data: EMPTY },
                 // One point per route at the middle of its arc, so each route
                 // gets exactly one horizontal label
@@ -613,6 +689,24 @@ export class MapLibreProvider implements MapProvider {
             if (!this.wished.has(iso)) set(iso, true)
         })
         this.wished = next
+        for (const layer of ['state-borders', 'state-borders-minor']) {
+            this.map.setPaintProperty(
+                layer,
+                'line-color',
+                this.stateBorderColor()
+            )
+        }
+    }
+
+    // The grey borders vanish in the violet wishlist fill; dark ones show
+    private stateBorderColor(): ExpressionSpecification | string {
+        if (!this.wished.size) return Colors.stateBorder
+        return [
+            'case',
+            ['in', ['get', 'iso'], ['literal', [...this.wished]]],
+            Colors.countryBase,
+            Colors.stateBorder,
+        ]
     }
 
     private setFocused(iso: string | null): void {
@@ -1026,6 +1120,34 @@ export class MapLibreProvider implements MapProvider {
                 layer,
                 'visibility',
                 places ? 'visible' : 'none'
+            )
+        }
+    }
+
+    showStateBorders(borders: Record<string, StateBorders> | null): void {
+        const source = this.map?.getSource('states') as
+            GeoJSONSource | undefined
+        if (!source) return
+        const lines = (iso: string, minor: boolean, list: BorderLine[]) => {
+            const minZoom = stateBordersMinZoom(iso, list)
+            return list.map((coordinates) => ({
+                type: 'Feature' as const,
+                geometry: { type: 'LineString' as const, coordinates },
+                properties: { iso, minor, minZoom },
+            }))
+        }
+        source.setData({
+            type: 'FeatureCollection',
+            features: Object.entries(borders ?? {}).flatMap(([iso, b]) => [
+                ...lines(iso, false, b.main),
+                ...lines(iso, true, b.minor),
+            ]),
+        })
+        for (const layer of ['state-borders', 'state-borders-minor']) {
+            this.map!.setLayoutProperty(
+                layer,
+                'visibility',
+                borders ? 'visible' : 'none'
             )
         }
     }
