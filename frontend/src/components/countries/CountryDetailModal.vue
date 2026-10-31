@@ -520,9 +520,8 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
 }
 
 h2 {
-    font-family: 'DM Serif Display', serif;
     font-size: 1rem;
-    font-weight: 400;
+    font-weight: 600;
 }
 
 .sub {

@@ -539,9 +539,8 @@ header {
 
 h1 {
     margin: 0;
-    font-family: 'DM Serif Display', serif;
     font-size: 1.65rem;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 1.2;
 }
 

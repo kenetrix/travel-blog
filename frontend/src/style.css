@@ -75,6 +75,15 @@ textarea {
     font-size: var(--field-font);
 }
 
+/* Form controls and MapLibre's controls bring their own system fonts */
+button,
+input,
+select,
+textarea,
+.maplibregl-map {
+    font-family: inherit;
+}
+
 button:disabled {
     cursor: not-allowed;
 }
