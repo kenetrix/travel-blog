@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
+import SegmentedControl from '../ui/SegmentedControl.vue'
 import { useTravelStore, type Trip } from '../stores/store'
 import { countryName, getCountryByIso } from '../countries/countries'
 import { pathKm } from '../geo/geo'
@@ -115,8 +116,11 @@ function setRating(n: number) {
     form.value.rating = form.value.rating === n ? 0 : n
 }
 
-// Saves the whole trip with the given stops; the editor's PUT replaces them all
-async function saveStops(stops: Trip['stops']): Promise<boolean> {
+// Saves the whole trip, as the editor's PUT replaces everything, with the
+// given stops or trip fields changed
+async function saveTrip(
+    changes: { stops?: Trip['stops'] } & Partial<TripForm>
+): Promise<boolean> {
     const current = trip.value
     if (!current) return false
     saving.value = true
@@ -126,7 +130,11 @@ async function saveStops(stops: Trip['stops']): Promise<boolean> {
         endsOn: current.endsOn ?? '',
         notes: current.notes,
         visibility: current.visibility,
-        stops: stops.map((s) => ({ ...s, arrival: s.arrival ?? '' })),
+        ...changes,
+        stops: (changes.stops ?? current.stops).map((s) => ({
+            ...s,
+            arrival: s.arrival ?? '',
+        })),
     })
     saving.value = false
     if (!saved) return false
@@ -137,8 +145,8 @@ async function saveStops(stops: Trip['stops']): Promise<boolean> {
 async function saveDetails() {
     const current = trip.value
     if (!current || !editingId.value || !linksValid.value) return
-    const ok = await saveStops(
-        current.stops.map((s) =>
+    const ok = await saveTrip({
+        stops: current.stops.map((s) =>
             s.id !== editingId.value
                 ? s
                 : {
@@ -153,25 +161,103 @@ async function saveDetails() {
                               label: l.label.trim(),
                           })),
                   }
-        )
-    )
+        ),
+    })
     if (ok) editingId.value = null
 }
 
-// Stops are only changed in edit mode
-const editMode = ref(false)
+// Edit mode manages the stops and the trip's own fields; stop details can
+// be edited any time. Coming back from adding stops in the editor, it is
+// still on; the query is dropped like the editor's.
+const editMode = ref(Boolean(route.query.edit))
+if (route.query.edit) {
+    router.replace({ query: { ...route.query, edit: undefined } })
+}
 const removing = ref<Trip['stops'][number] | null>(null)
 
-function toggleEditMode() {
-    editMode.value = !editMode.value
+interface TripForm {
+    title: string
+    startsOn: string
+    endsOn: string
+    notes: string
+    visibility: Trip['visibility']
+}
+
+const MAX_TITLE = 120
+const tripForm = ref<TripForm>({
+    title: '',
+    startsOn: '',
+    endsOn: '',
+    notes: '',
+    visibility: 'private',
+})
+
+function formOf(trip: Trip): TripForm {
+    return {
+        title: trip.title,
+        startsOn: trip.startsOn ?? '',
+        endsOn: trip.endsOn ?? '',
+        notes: trip.notes,
+        visibility: trip.visibility,
+    }
+}
+
+watch(
+    [editMode, () => trip.value?.id],
+    () => {
+        if (editMode.value && trip.value) tripForm.value = formOf(trip.value)
+    },
+    { immediate: true }
+)
+
+const tripDirty = computed(
+    () =>
+        !!trip.value &&
+        JSON.stringify(tripForm.value) !== JSON.stringify(formOf(trip.value))
+)
+
+const tripProblems = computed(() => {
+    const f = tripForm.value
+    const list: string[] = []
+    if (!f.title.trim()) list.push(t('trip.titleRequired'))
+    if (f.startsOn && f.endsOn && f.endsOn < f.startsOn) {
+        list.push(t('trip.endBeforeStart'))
+    }
+    return list
+})
+
+const visibilityOptions = computed(() => [
+    { value: 'private' as const, label: t('common.onlyMe') },
+    { value: 'public' as const, label: t('common.public') },
+])
+
+// "Done" saves the trip fields; with problems or a failed save it stays open
+async function toggleEditMode() {
     editingId.value = null
+    if (!editMode.value) {
+        editMode.value = true
+        return
+    }
+    if (tripDirty.value) {
+        if (tripProblems.value.length) return
+        const f = tripForm.value
+        const ok = await saveTrip({
+            ...f,
+            title: f.title.trim(),
+            notes: f.notes.trim(),
+        })
+        if (!ok) return
+    }
+    editMode.value = false
 }
 
 async function removeStop() {
     const stop = removing.value
     removing.value = null
     if (!stop || !trip.value) return
-    await saveStops(trip.value.stops.filter((s) => s.id !== stop.id))
+    await saveTrip({
+        stops: trip.value.stops.filter((s) => s.id !== stop.id),
+    })
 }
 
 async function remove() {
@@ -191,7 +277,11 @@ async function remove() {
             <div class="header-actions">
                 <button
                     class="btn"
-                    :disabled="!store.canWrite"
+                    :disabled="
+                        !store.canWrite ||
+                        saving ||
+                        (editMode && tripProblems.length > 0)
+                    "
                     :title="
                         store.canWrite ? undefined : t('common.offlineHint')
                     "
@@ -244,7 +334,60 @@ async function remove() {
                         <span>{{ t('trip.distance') }}</span>
                     </div>
                 </div>
-                <p v-if="trip.countries.length" class="countries">
+                <div v-if="editMode" class="trip-form">
+                    <div class="field-group">
+                        <label for="trip-title">{{ t('trip.title') }}</label>
+                        <input
+                            id="trip-title"
+                            v-model="tripForm.title"
+                            :placeholder="t('trip.titlePlaceholder')"
+                            :maxlength="MAX_TITLE"
+                        />
+                    </div>
+                    <div class="dates">
+                        <div class="field-group">
+                            <label for="trip-start">{{
+                                t('trip.startsOn')
+                            }}</label>
+                            <input
+                                id="trip-start"
+                                v-model="tripForm.startsOn"
+                                type="date"
+                                min="1900-01-01"
+                                max="2100-12-31"
+                            />
+                        </div>
+                        <div class="field-group">
+                            <label for="trip-end">{{ t('trip.endsOn') }}</label>
+                            <input
+                                id="trip-end"
+                                v-model="tripForm.endsOn"
+                                type="date"
+                                :min="tripForm.startsOn || '1900-01-01'"
+                                max="2100-12-31"
+                            />
+                        </div>
+                    </div>
+                    <SegmentedControl
+                        v-model="tripForm.visibility"
+                        :options="visibilityOptions"
+                        :label="t('trip.visibility')"
+                    />
+                    <div class="field-group">
+                        <label for="trip-notes">{{ t('trip.notes') }}</label>
+                        <textarea
+                            id="trip-notes"
+                            v-model="tripForm.notes"
+                            rows="3"
+                            maxlength="4000"
+                            :placeholder="t('trip.notesPlaceholder')"
+                        />
+                    </div>
+                    <p v-for="p in tripProblems" :key="p" class="error">
+                        {{ p }}
+                    </p>
+                </div>
+                <p v-else-if="trip.countries.length" class="countries">
                     <span v-for="iso in trip.countries" :key="iso" class="pill">
                         <span :class="flagOf(iso)" />
                         {{ nameOf(iso) }}
@@ -255,7 +398,9 @@ async function remove() {
                             : t('common.onlyMe')
                     }}</span>
                 </p>
-                <p v-if="trip.notes" class="text">{{ trip.notes }}</p>
+                <p v-if="trip.notes && !editMode" class="text">
+                    {{ trip.notes }}
+                </p>
             </section>
 
             <section v-if="trip.stops.length || editMode" class="panel">
@@ -294,20 +439,89 @@ async function remove() {
                         <div class="stop">
                             <div class="stop-top">
                                 <p class="name">{{ stop.name }}</p>
-                                <span
-                                    v-if="stop.rating"
-                                    class="rating"
-                                    :aria-label="
-                                        t('trip.stars', { count: stop.rating })
-                                    "
-                                >
-                                    <span aria-hidden="true">{{
-                                        '★'.repeat(stop.rating)
-                                    }}</span
-                                    ><span class="rest" aria-hidden="true">{{
-                                        '★'.repeat(5 - stop.rating)
-                                    }}</span>
-                                </span>
+                                <div class="stop-side">
+                                    <span
+                                        v-if="stop.rating"
+                                        class="rating"
+                                        :aria-label="
+                                            t('trip.stars', {
+                                                count: stop.rating,
+                                            })
+                                        "
+                                    >
+                                        <span aria-hidden="true">{{
+                                            '★'.repeat(stop.rating)
+                                        }}</span
+                                        ><span
+                                            class="rest"
+                                            aria-hidden="true"
+                                            >{{
+                                                '★'.repeat(5 - stop.rating)
+                                            }}</span
+                                        >
+                                    </span>
+                                    <button
+                                        v-if="
+                                            store.canWrite &&
+                                            editingId !== stop.id
+                                        "
+                                        type="button"
+                                        class="icon-btn"
+                                        :aria-label="t('trip.editDetails')"
+                                        :title="t('trip.editDetails')"
+                                        @click="startEdit(stop)"
+                                    >
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            width="16"
+                                            height="16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M12 20h9" />
+                                            <path
+                                                d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="
+                                            store.canWrite &&
+                                            editMode &&
+                                            editingId !== stop.id
+                                        "
+                                        type="button"
+                                        class="icon-btn danger"
+                                        :disabled="saving"
+                                        :aria-label="t('trip.removeStopTitle')"
+                                        :title="t('trip.removeStopTitle')"
+                                        @click="removing = stop"
+                                    >
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            width="16"
+                                            height="16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M3 6h18" />
+                                            <path
+                                                d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"
+                                            />
+                                            <path
+                                                d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                             <p class="meta">
                                 <span :class="flagOf(stop.country)" />
@@ -440,23 +654,6 @@ async function remove() {
                                     </button>
                                 </div>
                             </form>
-                            <div v-else-if="editMode" class="stop-actions">
-                                <button
-                                    type="button"
-                                    class="edit-details"
-                                    @click="startEdit(stop)"
-                                >
-                                    ✎ {{ t('trip.editDetails') }}
-                                </button>
-                                <button
-                                    type="button"
-                                    class="edit-details"
-                                    :disabled="saving"
-                                    @click="removing = stop"
-                                >
-                                    × {{ t('common.remove') }}
-                                </button>
-                            </div>
                             <p v-if="stop.links.length" class="links">
                                 <a
                                     v-for="(link, li) in stop.links"
@@ -475,7 +672,11 @@ async function remove() {
                 <RouterLink
                     v-if="editMode"
                     class="add-stop"
-                    :to="{ name: 'trip-edit', params: { id: trip.id } }"
+                    :to="{
+                        name: 'trip-edit',
+                        params: { id: trip.id },
+                        query: { add: '1', from: 'trip' },
+                    }"
                 >
                     + {{ t('trip.addStop') }}
                 </RouterLink>
@@ -597,6 +798,34 @@ async function remove() {
     color: var(--muted);
 }
 
+.trip-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-top: 0.9rem;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+
+.trip-form .segmented {
+    align-self: flex-start;
+}
+
+.trip-form .error {
+    margin: 0;
+}
+
 .overview .text {
     margin-top: 0.8rem;
 }
@@ -666,9 +895,51 @@ async function remove() {
 .stop-top {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0 0.8rem;
+}
+
+.stop-side {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--line-faint);
+    color: var(--text);
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+    background: #c0392b22;
+    color: #e0675a;
+}
+
+.icon-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+@media (pointer: coarse) {
+    .icon-btn {
+        width: var(--touch);
+        height: var(--touch);
+        margin: -6px -6px -6px 0;
+    }
 }
 
 .rating {
@@ -682,11 +953,6 @@ async function remove() {
     color: var(--faint);
 }
 
-.stop-actions {
-    display: flex;
-    gap: 0.9rem;
-}
-
 .add-stop {
     display: block;
     margin-top: 0.2rem;
@@ -697,17 +963,6 @@ async function remove() {
     font-size: 0.82rem;
     text-align: center;
     text-decoration: none;
-}
-
-.edit-details {
-    margin-top: 0.3rem;
-    padding: 0.2rem 0;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font: inherit;
-    font-size: 0.74rem;
-    cursor: pointer;
 }
 
 .details-form {
@@ -805,6 +1060,7 @@ async function remove() {
 }
 
 .stop {
+    flex: 1;
     min-width: 0;
 }
 

@@ -133,6 +133,12 @@ async function load() {
     // Keep edits the user already started on the stored copy
     if (!dirty.value) fill(draftOf(trip))
     store.focusTrip()
+    // From the trip page's "Add stop": start with the pin. The query is
+    // dropped so a reload or going back does not start it again.
+    if (route.query.add) {
+        router.replace({ query: { ...route.query, add: undefined } })
+        if (canAddStop.value) startPlacing()
+    }
 }
 
 onMounted(load)
@@ -404,14 +410,35 @@ async function save() {
     saving.value = false
     if (!trip) return
     leaving = true
-    router.push({ name: 'trip', params: { id: trip.id } })
+    router.push(tripPage(trip.id))
+}
+
+// Opened from the trip page's "Add stop": back there, still in edit mode
+const fromTrip = computed(() => route.query.from === 'trip')
+
+function tripPage(tripId: string) {
+    return {
+        name: 'trip',
+        params: { id: tripId },
+        query: fromTrip.value ? { edit: '1' } : {},
+    }
+}
+
+// "Done" after adding stops: from the trip page, save them and go back;
+// otherwise, or if the trip cannot be saved yet, stay in the editor
+async function finishPlacing() {
+    if (!fromTrip.value || placingStop.value) return stopPlacing()
+    stopPlacing()
+    if (!dirty.value) return router.push(tripPage(id.value!))
+    if (canSave.value) await save()
 }
 
 function cancel() {
-    if (placing.value) return stopPlacing()
-    router.push(
-        id.value ? { name: 'trip', params: { id: id.value } } : { name: 'home' }
-    )
+    // Nothing added yet: cancelling the pin goes straight back
+    if (placing.value && !(fromTrip.value && !dirty.value)) {
+        return stopPlacing()
+    }
+    router.push(id.value ? tripPage(id.value) : { name: 'home' })
 }
 
 // What the "discard changes" dialog does once confirmed
@@ -533,7 +560,7 @@ const heading = computed(() =>
                 <button
                     class="btn btn-secondary"
                     type="button"
-                    @click="stopPlacing"
+                    @click="finishPlacing"
                 >
                     {{
                         !placingStop && draft.stops.length
