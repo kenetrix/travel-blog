@@ -202,7 +202,7 @@ export default {
         kilometers: 'Kilómetros',
         miles: 'Millas',
         theme: 'Tema',
-        themeSystem: 'Como el sistema',
+        themeSystem: 'Sistema',
         themeLight: 'Claro',
         themeDark: 'Oscuro',
         startWith: 'Empezar con',

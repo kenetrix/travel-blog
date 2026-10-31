@@ -210,7 +210,7 @@ export default {
         kilometers: 'километрах',
         miles: 'милях',
         theme: 'Тема',
-        themeSystem: 'Как в системе',
+        themeSystem: 'Системная',
         themeLight: 'Светлая',
         themeDark: 'Тёмная',
         startWith: 'Начинать с',
