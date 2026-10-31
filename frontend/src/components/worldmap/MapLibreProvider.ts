@@ -194,6 +194,8 @@ export class MapLibreProvider implements MapProvider {
     private moveEndCallback?: () => void
     private pin?: Marker
     private placesVisible = false
+    // The places last handed to the map; the same ones are not sent again
+    private placesSent: MapPlace[] = []
     // Drawn arc per route id, for hit tests and fitting the map to a route
     private arcs = new Map<string, [number, number][]>()
     private routesVisible = false
@@ -1107,14 +1109,27 @@ export class MapLibreProvider implements MapProvider {
             GeoJSONSource | undefined
         if (!source) return
         this.placesVisible = !!places
-        source.setData({
-            type: 'FeatureCollection',
-            features: (places ?? []).map((p) => ({
-                type: 'Feature',
-                geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-                properties: { name: p.name, p: p.population },
-            })),
-        })
+        // Only the tiers shown at this zoom or the next one: copying every
+        // village of the countries in view to the worker stalled each zoom step
+        const zoom = this.map!.getZoom() + 1
+        const minPopulation = Math.min(
+            ...PLACE_TIERS.filter((t) => t.minZoom <= zoom).map((t) => t.min)
+        )
+        const shown = (places ?? []).filter(
+            (p) => p.population >= minPopulation
+        )
+        const sent = new Set(this.placesSent)
+        if (shown.length !== sent.size || !shown.every((p) => sent.has(p))) {
+            this.placesSent = shown
+            source.setData({
+                type: 'FeatureCollection',
+                features: shown.map((p) => ({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+                    properties: { name: p.name, p: p.population },
+                })),
+            })
+        }
         for (const layer of PLACE_LAYERS) {
             this.map!.setLayoutProperty(
                 layer,
