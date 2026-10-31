@@ -231,8 +231,10 @@ watch(
     { immediate: true }
 )
 
+// The form only holds the trip's values in edit mode
 const tripDirty = computed(
     () =>
+        editMode.value &&
         !!trip.value &&
         JSON.stringify(tripForm.value) !== JSON.stringify(formOf(trip.value))
 )
