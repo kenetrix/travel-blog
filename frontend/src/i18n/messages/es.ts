@@ -235,6 +235,7 @@ export default {
         roleAdminNote:
             'Además gestiona usuarios, registro e inicio de sesión único',
         changeRole: 'Cambiar rol',
+        actionsFor: 'Acciones para @{name}',
         changeRoleOf: 'Elige el rol de @{name}.',
         currentRole: 'actual',
         roleChanged: '@{name} ahora es: {role}',

@@ -243,6 +243,7 @@ export default {
         roleAdminNote:
             'Также управляет пользователями, регистрацией и единым входом',
         changeRole: 'Изменить роль',
+        actionsFor: 'Действия для @{name}',
         changeRoleOf: 'Выберите роль для @{name}.',
         currentRole: 'текущая',
         roleChanged: 'Роль @{name}: {role}',

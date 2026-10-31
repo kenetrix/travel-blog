@@ -232,6 +232,7 @@ export default {
         roleUserNote: 'Manages their own countries, flights and trips',
         roleAdminNote: 'Also manages users, registration and single sign-on',
         changeRole: 'Change role',
+        actionsFor: 'Actions for @{name}',
         changeRoleOf: 'Choose the role of @{name}.',
         currentRole: 'current',
         roleChanged: '@{name} is now: {role}',

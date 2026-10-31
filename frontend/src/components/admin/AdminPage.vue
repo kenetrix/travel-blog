@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import PageWrapper from '../ui/PageWrapper.vue'
 import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
@@ -120,6 +120,36 @@ async function setRegistration(open: boolean) {
     }
     say(t(open ? 'admin.registrationOpen' : 'admin.registrationClosed'))
 }
+
+// User whose action menu is open
+const menuFor = ref<string | null>(null)
+
+function toggleMenu(user: AdminUser) {
+    menuFor.value = menuFor.value === user.id ? null : user.id
+}
+
+// Closes the menu, then runs the chosen action
+function pick(action: () => void) {
+    menuFor.value = null
+    action()
+}
+
+function closeMenu(event: Event) {
+    if (event instanceof KeyboardEvent && event.key !== 'Escape') return
+    if (event.target instanceof Element && event.target.closest('.menu-wrap')) {
+        return
+    }
+    menuFor.value = null
+}
+
+onMounted(() => {
+    window.addEventListener('click', closeMenu)
+    window.addEventListener('keydown', closeMenu)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener('click', closeMenu)
+    window.removeEventListener('keydown', closeMenu)
+})
 
 function startRoleChange(user: AdminUser) {
     toChangeRole.value = user
@@ -243,7 +273,7 @@ async function deleteUser() {
                                         <strong>{{ user.displayName }}</strong>
                                         <span
                                             class="badge role"
-                                            :class="user.role"
+                                            :class="`role-${user.role}`"
                                         >
                                             {{ t(ROLES[user.role].label) }}
                                         </span>
@@ -276,32 +306,80 @@ async function deleteUser() {
                                         }}
                                     </span>
                                 </div>
-                                <div v-if="!isMe(user)" class="controls">
+                                <div v-if="!isMe(user)" class="menu-wrap">
                                     <button
                                         type="button"
-                                        class="btn secondary"
+                                        class="menu-button"
+                                        aria-haspopup="menu"
+                                        :aria-expanded="menuFor === user.id"
+                                        :aria-label="
+                                            t('admin.actionsFor', {
+                                                name: user.username,
+                                            })
+                                        "
+                                        :title="
+                                            store.canWrite
+                                                ? t('admin.actionsFor', {
+                                                      name: user.username,
+                                                  })
+                                                : t('common.offlineHint')
+                                        "
                                         :disabled="!store.canWrite"
-                                        @click="startRoleChange(user)"
+                                        @click="toggleMenu(user)"
                                     >
-                                        {{ t('admin.changeRole') }}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            width="16"
+                                            height="16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M12 20h9" />
+                                            <path
+                                                d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+                                            />
+                                        </svg>
                                     </button>
-                                    <button
-                                        type="button"
-                                        class="btn secondary"
-                                        :disabled="!store.canWrite"
-                                        :aria-expanded="resetting === user.id"
-                                        @click="startReset(user)"
+                                    <div
+                                        v-if="menuFor === user.id"
+                                        class="menu"
+                                        role="menu"
                                     >
-                                        {{ t('admin.resetPassword') }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="btn ghost-danger"
-                                        :disabled="!store.canWrite"
-                                        @click="toDelete = user"
-                                    >
-                                        {{ t('common.delete') }}
-                                    </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            @click="
+                                                pick(() =>
+                                                    startRoleChange(user)
+                                                )
+                                            "
+                                        >
+                                            {{ t('admin.changeRole') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            @click="
+                                                pick(() => startReset(user))
+                                            "
+                                        >
+                                            {{ t('admin.resetPassword') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="danger"
+                                            @click="
+                                                pick(() => (toDelete = user))
+                                            "
+                                        >
+                                            {{ t('common.delete') }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <form
@@ -471,8 +549,8 @@ async function deleteUser() {
 }
 
 .user {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.6rem 0.8rem;
 }
@@ -490,7 +568,6 @@ async function deleteUser() {
 }
 
 .who {
-    flex: 1 1 12rem;
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
@@ -522,7 +599,7 @@ async function deleteUser() {
     color: var(--muted);
 }
 
-.badge.role.admin {
+.badge.role-admin {
     background: #6b5bd233;
     color: #7a6ae0;
 }
@@ -547,24 +624,85 @@ async function deleteUser() {
     font-size: 0.7rem;
 }
 
-/* Own line, indented past the avatar, so every row lines up whatever the
-   width */
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding-left: 3.2rem;
+.menu-wrap {
+    position: relative;
 }
 
-.panel .btn.ghost-danger {
-    border: 1px solid transparent;
+.menu-button {
+    display: grid;
+    place-items: center;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
     background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+@media (pointer: fine) {
+    .menu-button {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+.menu-button:hover:not(:disabled),
+.menu-button[aria-expanded='true'] {
+    background: var(--line-faint);
+    color: var(--text);
+}
+
+.menu-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    min-width: 11rem;
+    padding: 0.3rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.6rem;
+    background: var(--raised);
+    box-shadow: 0 8px 24px var(--line-strong);
+}
+
+.menu button {
+    min-height: var(--touch);
+    padding: 0.4rem 0.7rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+@media (pointer: fine) {
+    .menu button {
+        min-height: 0;
+    }
+}
+
+.menu button:hover {
+    background: var(--line-faint);
+}
+
+.menu button.danger {
     color: #e0675a;
 }
 
-.panel .btn.ghost-danger:hover:not(:disabled) {
+.menu button.danger:hover {
     background: #c0392b22;
 }
 

@@ -235,6 +235,7 @@ export default {
         roleAdminNote:
             'Verwaltet zusätzlich Benutzer, Registrierung und Single Sign-on',
         changeRole: 'Rolle ändern',
+        actionsFor: 'Aktionen für @{name}',
         changeRoleOf: 'Wähle die Rolle von @{name}.',
         currentRole: 'aktuell',
         roleChanged: '@{name} ist jetzt: {role}',
