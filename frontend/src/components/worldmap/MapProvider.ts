@@ -44,7 +44,8 @@ export interface MapProvider {
     onReady(callback: () => void): void
     highlightCountries(isoCodes: string[]): void
     highlightWishlist(isoCodes: string[]): void
-    showFlightRoutes(routes: FlightRoute[], visible: boolean): void
+    setFlightRoutes(routes: FlightRoute[]): void
+    showFlightRoutes(visible: boolean): void
     highlightFlight(id: string | null): void
     addMarker(marker: MapMarker): void
     onCountryClick(callback: (countryCode: string) => void): void

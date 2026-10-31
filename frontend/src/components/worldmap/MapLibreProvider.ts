@@ -9,6 +9,9 @@ import {
     NavigationControl,
     setWorkerUrl,
     type ExpressionSpecification,
+    type FillLayerSpecification,
+    type LayerSpecification,
+    type StyleSpecification,
 } from 'maplibre-gl'
 import type {
     MapProvider,
@@ -51,7 +54,6 @@ function curve(
     })
 }
 
-const HIGHLIGHT_SOURCE = 'countries-state'
 // Half the side of the square around a click that may hit a route
 const ROUTE_HIT_PX = 12
 // The same for a place name
@@ -123,6 +125,11 @@ const PLACE_TIERS = [
 ]
 const PLACE_LAYERS = PLACE_TIERS.map((t) => t.id)
 
+// The given opacity where the feature-state is set, otherwise none
+function byState(state: string, opacity: number): ExpressionSpecification {
+    return ['case', ['boolean', ['feature-state', state], false], opacity, 0]
+}
+
 const EMPTY: FeatureCollection = {
     type: 'FeatureCollection',
     features: [],
@@ -143,6 +150,7 @@ export class MapLibreProvider implements MapProvider {
     private arcs = new Map<string, [number, number][]>()
     private routesVisible = false
     private countryLayerId = ''
+    private countrySource = 'maplibre'
     private highlighted = new Set<string>()
     private wished = new Set<string>()
     private focused = ''
@@ -153,12 +161,15 @@ export class MapLibreProvider implements MapProvider {
     private insets: MapInsets = { top: 80, right: 60, bottom: 80, left: 360 }
 
     mount(container: HTMLElement): void {
-        // Keep the map hidden until our custom styling is applied, so the
-        // base style's colours never flash on load.
+        // Keep the map hidden until the overlays are drawn, so the visited
+        // countries never pop in after the base map.
         container.style.background = Colors.water
         this.map = new MLMap({
             container,
             style: 'https://demotiles.maplibre.org/style.json',
+            // Restyled before the first render: changing a layout or adding a
+            // source after load would fetch and parse every tile again
+            transformStyle: (_, style) => this.restyle(style),
             center: [15, 32],
             zoom: 2.5,
             minZoom: 2,
@@ -178,311 +189,6 @@ export class MapLibreProvider implements MapProvider {
         this.map.touchZoomRotate.disableRotation()
 
         this.map.on('load', () => {
-            // The base style (demotiles) already has a country fill layer;
-            // restyle it instead of adding an error-prone source and layer of our own.
-            const baseCountryLayer = this.map!.getStyle()?.layers?.find(
-                (l) => l.type === 'fill' && l.id.startsWith('countries')
-            )
-
-            if (baseCountryLayer) {
-                this.countryLayerId = baseCountryLayer.id
-
-                this.map!.setPaintProperty(
-                    this.countryLayerId,
-                    'fill-color',
-                    Colors.countryBase
-                )
-                this.map!.setPaintProperty(
-                    'crimea-fill',
-                    'fill-color',
-                    Colors.countryBase
-                )
-
-                this.map!.setPaintProperty(
-                    this.countryLayerId,
-                    'fill-opacity',
-                    0.75
-                )
-                this.map!.setPaintProperty('crimea-fill', 'fill-opacity', 0)
-            } else {
-                console.warn('No country fill layer found in the base style.')
-            }
-
-            this.map!.setPaintProperty(
-                'countries-boundary',
-                'line-color',
-                Colors.water
-            )
-            this.map!.setPaintProperty(
-                'countries-label',
-                'text-color',
-                Colors.label
-            )
-            this.map!.setPaintProperty(
-                'countries-label',
-                'text-halo-color',
-                undefined
-            )
-            // Bigger countries are placed first and win label collisions
-            const bySize = [
-                'match',
-                ['get', 'NAME'],
-                ...Object.entries(countryAreas()).flatMap(([name, area]) => [
-                    name,
-                    -area,
-                ]),
-                0,
-            ]
-            this.map!.setLayoutProperty(
-                'countries-label',
-                'symbol-sort-key',
-                bySize as ExpressionSpecification
-            )
-
-            this.map!.setPaintProperty(
-                'background',
-                'background-color',
-                Colors.water
-            )
-            this.map!.setPaintProperty('coastline', 'line-color', Colors.water)
-
-            this.map!.setPaintProperty('geolines', 'line-color', Colors.geoline)
-            this.map!.removeLayer('geolines-label')
-
-            // Overlay used for the visited-country colour. It reads the same
-            // tiles but promotes ADM0_A3 to the feature id so that feature-state
-            // can be used.
-            this.map!.addSource(HIGHLIGHT_SOURCE, {
-                type: 'vector',
-                url: 'https://demotiles.maplibre.org/tiles/tiles.json',
-                promoteId: { countries: 'ADM0_A3' },
-            })
-            this.map!.addLayer(
-                {
-                    id: 'countries-visited',
-                    type: 'fill',
-                    source: HIGHLIGHT_SOURCE,
-                    'source-layer': 'countries',
-                    paint: {
-                        'fill-color': Colors.countryHighlightOnBase,
-                        'fill-opacity': [
-                            'case',
-                            ['boolean', ['feature-state', 'visited'], false],
-                            1,
-                            0,
-                        ],
-                    },
-                },
-                'countries-boundary'
-            )
-
-            this.map!.addLayer(
-                {
-                    id: 'countries-wishlist',
-                    type: 'fill',
-                    source: HIGHLIGHT_SOURCE,
-                    'source-layer': 'countries',
-                    paint: {
-                        'fill-color': Colors.countryWishlist,
-                        'fill-opacity': [
-                            'case',
-                            ['boolean', ['feature-state', 'wishlist'], false],
-                            0.4,
-                            0,
-                        ],
-                    },
-                },
-                'countries-boundary'
-            )
-
-            // Wishlist countries get a light fill plus an outline: planned,
-            // not yet visited
-            this.map!.addLayer(
-                {
-                    id: 'countries-wishlist-outline',
-                    type: 'line',
-                    source: HIGHLIGHT_SOURCE,
-                    'source-layer': 'countries',
-                    paint: {
-                        'line-color': Colors.countryWishlist,
-                        'line-width': 1.5,
-                        'line-opacity': [
-                            'case',
-                            ['boolean', ['feature-state', 'wishlist'], false],
-                            1,
-                            0,
-                        ],
-                    },
-                },
-                'countries-label'
-            )
-
-            this.map!.addLayer({
-                id: 'countries-focus',
-                type: 'line',
-                source: HIGHLIGHT_SOURCE,
-                'source-layer': 'countries',
-                paint: {
-                    'line-color': Colors.countryFocus,
-                    'line-width': 2.5,
-                    'line-opacity': [
-                        'case',
-                        ['boolean', ['feature-state', 'focused'], false],
-                        1,
-                        0,
-                    ],
-                },
-            })
-
-            this.map!.addSource('flights', {
-                type: 'geojson',
-                data: { type: 'FeatureCollection', features: [] },
-            })
-
-            this.map!.addLayer({
-                id: 'flights-line',
-                type: 'line',
-                source: 'flights',
-                paint: {
-                    'line-color': Colors.flight,
-                    'line-width': 1.5,
-                    'line-dasharray': [3, 2],
-                    'line-opacity': 0.85,
-                },
-                layout: { visibility: 'none' },
-            })
-
-            // One point per route at the middle of its arc, so each route
-            // gets exactly one horizontal label
-            this.map!.addSource('flight-labels', {
-                type: 'geojson',
-                data: { type: 'FeatureCollection', features: [] },
-            })
-
-            this.map!.addLayer({
-                id: 'flights-label',
-                type: 'symbol',
-                source: 'flight-labels',
-                layout: {
-                    visibility: 'none',
-                    'text-field': ['get', 'label'],
-                    'text-font': ['Open Sans Semibold'],
-                    'text-size': 13,
-                    'text-allow-overlap': true,
-                    'text-ignore-placement': true,
-                },
-                paint: {
-                    'text-color': Colors.flightLabel,
-                },
-            })
-
-            // Place names, filled while a trip is edited
-            this.map!.addSource('places', {
-                type: 'geojson',
-                data: EMPTY,
-            })
-            for (const tier of PLACE_TIERS) {
-                this.map!.addLayer({
-                    id: tier.id,
-                    type: 'symbol',
-                    source: 'places',
-                    minzoom: tier.minZoom,
-                    filter: [
-                        'all',
-                        ['>=', ['get', 'p'], tier.min],
-                        ['<', ['get', 'p'], tier.max],
-                    ],
-                    layout: {
-                        visibility: 'none',
-                        'text-field': ['get', 'name'],
-                        'text-font': ['Open Sans Semibold'],
-                        'text-size': tier.size,
-                        'text-padding': 4,
-                        'symbol-sort-key': ['-', 0, ['get', 'p']],
-                    },
-                    paint: {
-                        'text-color': Colors.place,
-                        // Dark outline keeps names readable on the gold and violet fills
-                        'text-halo-color': Colors.countryBase,
-                        'text-halo-width': 2,
-                        'text-halo-blur': 0.5,
-                    },
-                })
-            }
-
-            // The open trip: a line in visiting order and numbered stops
-            this.map!.addSource('trip', { type: 'geojson', data: EMPTY })
-            const isLine: ExpressionSpecification = [
-                '==',
-                ['geometry-type'],
-                'LineString',
-            ]
-            const isPoint: ExpressionSpecification = [
-                '==',
-                ['geometry-type'],
-                'Point',
-            ]
-            // All trips as thin lines, below the open trip
-            this.map!.addSource('trip-routes', { type: 'geojson', data: EMPTY })
-            this.map!.addLayer({
-                id: 'trip-routes-line',
-                type: 'line',
-                source: 'trip-routes',
-                filter: isLine,
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': Colors.trip,
-                    'line-width': 2.5,
-                },
-            })
-            this.map!.addLayer({
-                id: 'trip-routes-dots',
-                type: 'circle',
-                source: 'trip-routes',
-                filter: isPoint,
-                paint: {
-                    'circle-radius': 3.5,
-                    'circle-color': Colors.trip,
-                },
-            })
-            this.map!.addLayer({
-                id: 'trip-line',
-                type: 'line',
-                source: 'trip',
-                filter: isLine,
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': Colors.trip,
-                    'line-width': 3,
-                },
-            })
-            this.map!.addLayer({
-                id: 'trip-stops',
-                type: 'circle',
-                source: 'trip',
-                filter: isPoint,
-                paint: {
-                    'circle-radius': 10,
-                    'circle-color': Colors.trip,
-                    'circle-stroke-color': Colors.water,
-                    'circle-stroke-width': 1.5,
-                },
-            })
-            this.map!.addLayer({
-                id: 'trip-numbers',
-                type: 'symbol',
-                source: 'trip',
-                filter: isPoint,
-                layout: {
-                    'text-field': ['to-string', ['get', 'n']],
-                    'text-font': ['Open Sans Semibold'],
-                    'text-size': 11,
-                    'text-allow-overlap': true,
-                    'text-ignore-placement': true,
-                },
-                paint: { 'text-color': Colors.tripNumber },
-            })
-
             this.map!.on('click', (e) => {
                 if (!this.mapClickCallback) return
                 const point = this.pointAt(e.point.x, e.point.y)
@@ -518,10 +224,273 @@ export class MapLibreProvider implements MapProvider {
             })
 
             this.loaded = true
+            // The language may have changed while the style loaded
             this.applyCountryNames()
             this.readyCallback?.()
             this.reveal()
         })
+    }
+
+    // The base style (demotiles) in our colours, plus our own sources and
+    // layers
+    private restyle(style: StyleSpecification): StyleSpecification {
+        const layers = style.layers.filter((l) => l.id !== 'geolines-label')
+        type Props = Record<string, unknown>
+        const set = (id: string, paint: Props, layout: Props = {}) => {
+            const layer = layers.find((l) => l.id === id) as
+                { paint?: Props; layout?: Props } | undefined
+            if (!layer) return
+            layer.paint = { ...layer.paint, ...paint }
+            layer.layout = { ...layer.layout, ...layout }
+        }
+        const insertBefore = (
+            before: string,
+            ...added: LayerSpecification[]
+        ) => {
+            const i = layers.findIndex((l) => l.id === before)
+            layers.splice(i < 0 ? layers.length : i, 0, ...added)
+        }
+
+        // The base style already has a country fill layer; restyle it instead
+        // of adding an error-prone source and layer of our own.
+        const countryLayer = layers.find(
+            (l): l is FillLayerSpecification =>
+                l.type === 'fill' && l.id.startsWith('countries')
+        )
+        if (countryLayer) {
+            this.countryLayerId = countryLayer.id
+            this.countrySource = countryLayer.source
+            set(countryLayer.id, {
+                'fill-color': Colors.countryBase,
+                'fill-opacity': 0.75,
+            })
+            set('crimea-fill', {
+                'fill-color': Colors.countryBase,
+                'fill-opacity': 0,
+            })
+        } else {
+            console.warn('No country fill layer found in the base style.')
+        }
+        // ADM0_A3 as the feature id, so that feature-state can recolour
+        // countries without reloading tiles
+        const source = style.sources[this.countrySource]
+        if (source?.type === 'vector') {
+            source.promoteId = { countries: 'ADM0_A3' }
+        }
+
+        set('countries-boundary', { 'line-color': Colors.water })
+        // Bigger countries are placed first and win label collisions
+        const bySize = [
+            'match',
+            ['get', 'NAME'],
+            ...Object.entries(countryAreas()).flatMap(([name, area]) => [
+                name,
+                -area,
+            ]),
+            0,
+        ]
+        set(
+            'countries-label',
+            { 'text-color': Colors.label, 'text-halo-color': 'rgba(0,0,0,0)' },
+            {
+                'symbol-sort-key': bySize,
+                'text-field': this.countryNameField(),
+            }
+        )
+        set('background', { 'background-color': Colors.water })
+        set('coastline', { 'line-color': Colors.water })
+        set('geolines', { 'line-color': Colors.geoline })
+
+        const countries = {
+            source: this.countrySource,
+            'source-layer': 'countries',
+        }
+        insertBefore(
+            'countries-boundary',
+            {
+                id: 'countries-visited',
+                type: 'fill',
+                ...countries,
+                paint: {
+                    'fill-color': Colors.countryHighlightOnBase,
+                    'fill-opacity': byState('visited', 1),
+                },
+            },
+            {
+                id: 'countries-wishlist',
+                type: 'fill',
+                ...countries,
+                paint: {
+                    'fill-color': Colors.countryWishlist,
+                    'fill-opacity': byState('wishlist', 0.4),
+                },
+            }
+        )
+        // Wishlist countries get a light fill plus an outline: planned, not
+        // yet visited
+        insertBefore('countries-label', {
+            id: 'countries-wishlist-outline',
+            type: 'line',
+            ...countries,
+            paint: {
+                'line-color': Colors.countryWishlist,
+                'line-width': 1.5,
+                'line-opacity': byState('wishlist', 1),
+            },
+        })
+
+        const isLine: ExpressionSpecification = [
+            '==',
+            ['geometry-type'],
+            'LineString',
+        ]
+        const isPoint: ExpressionSpecification = [
+            '==',
+            ['geometry-type'],
+            'Point',
+        ]
+        layers.push(
+            {
+                id: 'countries-focus',
+                type: 'line',
+                ...countries,
+                paint: {
+                    'line-color': Colors.countryFocus,
+                    'line-width': 2.5,
+                    'line-opacity': byState('focused', 1),
+                },
+            },
+            {
+                id: 'flights-line',
+                type: 'line',
+                source: 'flights',
+                paint: {
+                    'line-color': Colors.flight,
+                    'line-width': 1.5,
+                    'line-dasharray': [3, 2],
+                    'line-opacity': 0.85,
+                },
+                layout: { visibility: 'none' },
+            },
+            {
+                id: 'flights-label',
+                type: 'symbol',
+                source: 'flight-labels',
+                layout: {
+                    visibility: 'none',
+                    'text-field': ['get', 'label'],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-size': 13,
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true,
+                },
+                paint: {
+                    'text-color': Colors.flightLabel,
+                },
+            },
+            ...PLACE_TIERS.map((tier): LayerSpecification => ({
+                id: tier.id,
+                type: 'symbol',
+                source: 'places',
+                minzoom: tier.minZoom,
+                filter: [
+                    'all',
+                    ['>=', ['get', 'p'], tier.min],
+                    ['<', ['get', 'p'], tier.max],
+                ],
+                layout: {
+                    visibility: 'none',
+                    'text-field': ['get', 'name'],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-size': tier.size,
+                    'text-padding': 4,
+                    'symbol-sort-key': ['-', 0, ['get', 'p']],
+                },
+                paint: {
+                    'text-color': Colors.place,
+                    // Dark outline keeps names readable on the gold and violet fills
+                    'text-halo-color': Colors.countryBase,
+                    'text-halo-width': 2,
+                    'text-halo-blur': 0.5,
+                },
+            })),
+            {
+                id: 'trip-routes-line',
+                type: 'line',
+                source: 'trip-routes',
+                filter: isLine,
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': Colors.trip,
+                    'line-width': 2.5,
+                },
+            },
+            {
+                id: 'trip-routes-dots',
+                type: 'circle',
+                source: 'trip-routes',
+                filter: isPoint,
+                paint: {
+                    'circle-radius': 3.5,
+                    'circle-color': Colors.trip,
+                },
+            },
+            {
+                id: 'trip-line',
+                type: 'line',
+                source: 'trip',
+                filter: isLine,
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': Colors.trip,
+                    'line-width': 3,
+                },
+            },
+            {
+                id: 'trip-stops',
+                type: 'circle',
+                source: 'trip',
+                filter: isPoint,
+                paint: {
+                    'circle-radius': 10,
+                    'circle-color': Colors.trip,
+                    'circle-stroke-color': Colors.water,
+                    'circle-stroke-width': 1.5,
+                },
+            },
+            {
+                id: 'trip-numbers',
+                type: 'symbol',
+                source: 'trip',
+                filter: isPoint,
+                layout: {
+                    'text-field': ['to-string', ['get', 'n']],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-size': 11,
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true,
+                },
+                paint: { 'text-color': Colors.tripNumber },
+            }
+        )
+
+        return {
+            ...style,
+            sources: {
+                ...style.sources,
+                flights: { type: 'geojson', data: EMPTY },
+                // One point per route at the middle of its arc, so each route
+                // gets exactly one horizontal label
+                'flight-labels': { type: 'geojson', data: EMPTY },
+                // Place names, filled while a trip is edited
+                places: { type: 'geojson', data: EMPTY },
+                // The open trip: a line in visiting order and numbered stops
+                trip: { type: 'geojson', data: EMPTY },
+                // All trips as thin lines, below the open trip
+                'trip-routes': { type: 'geojson', data: EMPTY },
+            },
+            layers,
+        }
     }
 
     setCountryNames(names: Record<string, string> | null): void {
@@ -529,9 +498,17 @@ export class MapLibreProvider implements MapProvider {
         if (this.loaded) this.applyCountryNames()
     }
 
+    private applyCountryNames(): void {
+        this.map!.setLayoutProperty(
+            'countries-label',
+            'text-field',
+            this.countryNameField()
+        )
+    }
+
     // The base style shows abbreviations ("Ger.") below zoom 4; translated
     // ones are derived from the translated names
-    private applyCountryNames(): void {
+    private countryNameField(): ExpressionSpecification {
         const names = this.countryNames
         const full = names
             ? [
@@ -571,11 +548,7 @@ export class MapLibreProvider implements MapProvider {
             6,
             full,
         ]
-        this.map!.setLayoutProperty(
-            'countries-label',
-            'text-field',
-            name as ExpressionSpecification
-        )
+        return name as ExpressionSpecification
     }
 
     onReady(callback: () => void): void {
@@ -594,7 +567,7 @@ export class MapLibreProvider implements MapProvider {
     }
 
     highlightCountries(isoCodes: string[]): void {
-        if (!this.map?.getSource(HIGHLIGHT_SOURCE)) return
+        if (!this.map?.getSource(this.countrySource)) return
         const next = new Set(isoCodes)
 
         // Feature-state changes don't reload tiles, unlike changing a
@@ -609,11 +582,11 @@ export class MapLibreProvider implements MapProvider {
     }
 
     highlightWishlist(isoCodes: string[]): void {
-        if (!this.map?.getSource(HIGHLIGHT_SOURCE)) return
+        if (!this.map?.getSource(this.countrySource)) return
         const next = new Set(isoCodes)
         const set = (id: string, wishlist: boolean) =>
             this.map!.setFeatureState(
-                { source: HIGHLIGHT_SOURCE, sourceLayer: 'countries', id },
+                { source: this.countrySource, sourceLayer: 'countries', id },
                 { wishlist }
             )
         this.wished.forEach((iso) => {
@@ -626,10 +599,10 @@ export class MapLibreProvider implements MapProvider {
     }
 
     private setFocused(iso: string | null): void {
-        if (!this.map?.getSource(HIGHLIGHT_SOURCE)) return
+        if (!this.map?.getSource(this.countrySource)) return
         const state = (id: string, focused: boolean) =>
             this.map!.setFeatureState(
-                { source: HIGHLIGHT_SOURCE, sourceLayer: 'countries', id },
+                { source: this.countrySource, sourceLayer: 'countries', id },
                 { focused }
             )
         if (this.focused) state(this.focused, false)
@@ -640,7 +613,7 @@ export class MapLibreProvider implements MapProvider {
     private setVisited(iso: string, visited: boolean): void {
         this.map?.setFeatureState(
             {
-                source: HIGHLIGHT_SOURCE,
+                source: this.countrySource,
                 sourceLayer: 'countries',
                 id: iso,
             },
@@ -713,13 +686,11 @@ export class MapLibreProvider implements MapProvider {
         )
     }
 
-    showFlightRoutes(routes: FlightRoute[], visible: boolean): void {
+    setFlightRoutes(routes: FlightRoute[]): void {
         if (!this.map?.getSource('flights')) return
 
         const arcs = routes.map((r) => ({ r, points: curve(r.from, r.to) }))
         this.arcs = new Map(arcs.map(({ r, points }) => [r.id, points]))
-        this.routesVisible = visible
-        if (!visible) this.map.getCanvas().classList.remove('route-hover')
 
         ;(this.map.getSource('flights') as GeoJSONSource).setData({
             type: 'FeatureCollection',
@@ -740,6 +711,13 @@ export class MapLibreProvider implements MapProvider {
                 properties: { id: r.id, label: r.label ?? '' },
             })),
         })
+    }
+
+    showFlightRoutes(visible: boolean): void {
+        if (!this.map?.getLayer('flights-line')) return
+        this.routesVisible = visible
+        if (!visible) this.map.getCanvas().classList.remove('route-hover')
+
         for (const layer of ['flights-line', 'flights-label']) {
             this.map.setLayoutProperty(
                 layer,
@@ -750,15 +728,6 @@ export class MapLibreProvider implements MapProvider {
 
         // While routes are shown, the countries step back so the routes are
         // the only strong colour: visited and wishlist countries fade
-        const byState = (
-            state: string,
-            opacity: number
-        ): ExpressionSpecification => [
-            'case',
-            ['boolean', ['feature-state', state], false],
-            opacity,
-            0,
-        ]
         this.map.setPaintProperty(
             'countries-visited',
             'fill-opacity',

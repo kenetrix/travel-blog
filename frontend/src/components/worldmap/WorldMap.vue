@@ -73,7 +73,11 @@ onMounted(() => {
     if (!mapContainer.value) return
     // A trip opened by URL asks for its focus before the map has loaded
     provider.onReady(() => {
-        syncMap()
+        syncCountries()
+        syncFlights()
+        provider.showFlightRoutes(props.view === 'flights')
+        provider.highlightFlight(highlightedFlightId.value)
+        provider.showTrip(tripMap.value?.stops ?? null)
         updateTripRoutes()
         updatePlaces()
         if (tripMap.value) fitTrip()
@@ -252,7 +256,7 @@ watch(
     { immediate: true }
 )
 
-function syncMap() {
+function syncCountries() {
     const shown = new Set(visited.value)
     const wished = new Set(wishlist.value)
     if (preview.value) {
@@ -264,20 +268,29 @@ function syncMap() {
     }
     provider.highlightCountries([...shown])
     provider.highlightWishlist([...wished])
-    provider.showFlightRoutes(
+}
+
+function syncFlights() {
+    provider.setFlightRoutes(
         flights.value.map((f) => ({
             id: f.id,
             from: f.from,
             to: f.to,
             label: f.label,
-        })),
-        props.view === 'flights'
+        }))
     )
-    provider.highlightFlight(highlightedFlightId.value)
-    provider.showTrip(tripMap.value?.stops ?? null)
 }
 
-// Re-sync whenever store or view changes
+// Each change updates only its own part of the map: re-sending the routes
+// on every hover or view switch would re-tile them each time
+watch([visited, wishlist, preview], syncCountries, { deep: true })
+watch(flights, syncFlights, { deep: true })
+watch(
+    () => props.view,
+    (view) => provider.showFlightRoutes(view === 'flights')
+)
+watch(highlightedFlightId, (id) => provider.highlightFlight(id))
+
 // Zoom to the selected country, whether picked on the map or via search
 watch(selectedIso, (iso) => {
     // Defer so the colour change is painted first; computing the bounds of a
@@ -294,19 +307,6 @@ watch(flightFocus, () => {
             provider.focusFlight(selectedFlightId.value, insets())
     }, 50)
 })
-
-watch(
-    [
-        visited,
-        wishlist,
-        preview,
-        flights,
-        highlightedFlightId,
-        () => props.view,
-    ],
-    syncMap,
-    { deep: true }
-)
 </script>
 
 <template>

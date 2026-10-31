@@ -209,19 +209,14 @@ watchEffect(() => {
             {{ store.toast }}
         </div>
 
-        <!-- Country panel -->
-        <Transition name="fade">
-            <CountryPanel
-                v-if="store.profile && view === 'countries' && !editingTrip"
-            />
-        </Transition>
-
-        <!-- Flight panel -->
-        <Transition name="fade">
-            <FlightPanel
-                v-if="store.profile && view === 'flights' && !editingTrip"
-            />
-        </Transition>
+        <!-- Swapped without a transition: a fading panel lingered on top of
+             the new one -->
+        <CountryPanel
+            v-if="store.profile && view === 'countries' && !editingTrip"
+        />
+        <FlightPanel
+            v-if="store.profile && view === 'flights' && !editingTrip"
+        />
 
         <!-- Full-page routes (e.g. a trip) and the trip editor -->
         <RouterView />
@@ -588,14 +583,5 @@ watchEffect(() => {
         left: 1.2rem;
         transform: none;
     }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
 }
 </style>
