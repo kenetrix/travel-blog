@@ -9,8 +9,11 @@ services:
       target: api
     restart: unless-stopped
     # OIDC_* variables (docs/oidc.md) enable single sign-on
+    # LEGAL_* variables fill the Impressum (docker/README.md)
     env_file:
       - path: oidc.env
+        required: false
+      - path: legal.env
         required: false
     volumes:
       - data:/opt/travel-blog/data

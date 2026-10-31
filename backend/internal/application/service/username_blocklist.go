@@ -34,7 +34,7 @@ var reservedNames = []string{
 	"admin", "administrator", "sysadmin", "root", "system", "support", "staff",
 	"moderator", "mod", "owner", "official", "help", "helpdesk", "security",
 	"postmaster", "webmaster", "hostmaster", "noreply", "api", "www", "null",
-	"undefined", "anonymous", "everyone", "travelblog",
+	"undefined", "anonymous", "everyone", "travelblog", "legal",
 }
 
 var (

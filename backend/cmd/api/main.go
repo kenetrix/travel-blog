@@ -9,6 +9,7 @@ import (
 
 	"travel-blog/backend/internal/adapter/http/auth"
 	"travel-blog/backend/internal/adapter/http/handler"
+	"travel-blog/backend/internal/adapter/http/legal"
 	"travel-blog/backend/internal/adapter/http/oidc"
 	"travel-blog/backend/internal/adapter/http/router"
 	"travel-blog/backend/internal/adapter/repository/sqlite"
@@ -93,7 +94,7 @@ func main() {
 	}
 
 	r := router.New(handler.New(travel, trips, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
-		auth.Sessions(accounts, asUser...), provider.Routes)
+		auth.Sessions(accounts, asUser...), provider.Routes, legal.Routes(os.Getenv))
 
 	// Localhost by default avoids the Windows firewall dialog on every go run;
 	// containers set LISTEN_ADDR so nginx in another container can reach the API
