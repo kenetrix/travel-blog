@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
 import { t } from '../../i18n'
+import { useWindowListener } from './useWindowListener'
 
 const props = defineProps<{
     title: string
@@ -16,12 +16,9 @@ const emit = defineEmits<{
     cancel: []
 }>()
 
-function onKeydown(event: KeyboardEvent) {
+useWindowListener('keydown', (event) => {
     if (event.key === 'Escape') emit('cancel')
-}
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+})
 </script>
 
 <template>

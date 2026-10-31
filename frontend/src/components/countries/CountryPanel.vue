@@ -6,6 +6,7 @@ import {
     Countries,
     byCountryName,
     countryName,
+    flagClass,
     getCountryByIso,
     matchesCountry,
     type Country,
@@ -115,9 +116,7 @@ const listedCountries = computed(() => {
                                 type="button"
                                 @click="store.selectCountry(country.alpha3)"
                             >
-                                <span
-                                    :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                                ></span>
+                                <span :class="flagClass(country)"></span>
                                 {{ countryName(country) }}
                             </button>
                         </li>
@@ -137,9 +136,7 @@ const listedCountries = computed(() => {
                                 type="button"
                                 @click="store.selectCountry(country.alpha3)"
                             >
-                                <span
-                                    :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                                ></span>
+                                <span :class="flagClass(country)"></span>
                                 {{ countryName(country) }}
                                 <span
                                     v-if="query && visited.has(country.alpha3)"

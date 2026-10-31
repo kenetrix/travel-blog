@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PageWrapper from '../ui/PageWrapper.vue'
 import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import TabBar from '../ui/TabBar.vue'
 import OidcSettings from './OidcSettings.vue'
+import { useTimedMessage } from '../ui/useTimedMessage'
+import { useWindowListener } from '../ui/useWindowListener'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
 import { t, type MessageKey } from '../../i18n'
@@ -32,7 +34,8 @@ const tabs = computed(() => [
 const users = ref<AdminUser[]>([])
 const registrationOpen = ref(true)
 const loaded = ref(false)
-const message = ref<{ text: string; error: boolean } | null>(null)
+// Hides after a while, like the profile page's messages
+const { message, say } = useTimedMessage()
 
 // User with an open password form, and the password typed into it
 const resetting = ref<string | null>(null)
@@ -74,15 +77,6 @@ function hue(user: AdminUser) {
     let h = 0
     for (const c of user.username) h = (h * 31 + c.charCodeAt(0)) % 360
     return h
-}
-
-let messageTimer: ReturnType<typeof setTimeout> | undefined
-
-// Hides after a while, like the profile page's messages
-function say(text: string, error = false) {
-    message.value = { text, error }
-    clearTimeout(messageTimer)
-    messageTimer = setTimeout(() => (message.value = null), 3000)
 }
 
 async function load() {
@@ -147,14 +141,8 @@ function closeMenu(event: Event) {
     menuFor.value = null
 }
 
-onMounted(() => {
-    window.addEventListener('click', closeMenu)
-    window.addEventListener('keydown', closeMenu)
-})
-onBeforeUnmount(() => {
-    window.removeEventListener('click', closeMenu)
-    window.removeEventListener('keydown', closeMenu)
-})
+useWindowListener('click', closeMenu)
+useWindowListener('keydown', closeMenu)
 
 function startRoleChange(user: AdminUser) {
     toChangeRole.value = user

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { RouterLink, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
+import { useLeaveGuard } from '../ui/useLeaveGuard'
+import { visibilityOptions } from '../ui/visibility'
 import { useTravelStore, type Trip } from '../stores/store'
-import { countryName, getCountryByIso } from '../countries/countries'
+import { countryNameOf, flagClassOf } from '../countries/countries'
 import { pathKm } from '../geo/geo'
 import { formatDay, formatDistance } from '../../i18n/format'
 import { t } from '../../i18n'
@@ -34,16 +36,6 @@ watch(
     },
     { immediate: true }
 )
-
-function nameOf(iso: string): string {
-    const country = getCountryByIso(iso)
-    return country ? countryName(country) : iso
-}
-
-function flagOf(iso: string): string {
-    const country = getCountryByIso(iso)
-    return country ? `fi fi-${country.alpha2.toLowerCase()}` : ''
-}
 
 const days = computed(() => (trip.value ? tripDays(trip.value) : null))
 
@@ -249,10 +241,7 @@ const tripProblems = computed(() => {
     return list
 })
 
-const visibilityOptions = computed(() => [
-    { value: 'private' as const, label: t('common.onlyMe') },
-    { value: 'public' as const, label: t('common.public') },
-])
+const visibilityChoices = computed(() => visibilityOptions())
 
 // "Done" saves the trip fields; with problems or a failed save it stays open
 async function toggleEditMode() {
@@ -287,22 +276,14 @@ async function remove() {
     confirmDelete.value = false
     if (!trip.value || !(await store.deleteTrip(trip.value.id))) return
     store.notify(t('trip.deleted'))
-    leaving = true
+    allowLeave()
     router.push({ name: 'home' })
 }
 
 // Like the editors: leaving with unsaved trip fields or stop details asks first
-const pendingLeave = ref<(() => void) | null>(null)
-let leaving = false
-
-onBeforeRouteLeave((to) => {
-    if (leaving || !(tripDirty.value || detailsDirty.value)) return true
-    pendingLeave.value = () => {
-        leaving = true
-        router.push(to.fullPath)
-    }
-    return false
-})
+const { pendingLeave, allowLeave, confirmLeave, cancelLeave } = useLeaveGuard(
+    () => tripDirty.value || detailsDirty.value
+)
 </script>
 
 <template>
@@ -407,7 +388,7 @@ onBeforeRouteLeave((to) => {
                     </div>
                     <SegmentedControl
                         v-model="tripForm.visibility"
-                        :options="visibilityOptions"
+                        :options="visibilityChoices"
                         :label="t('trip.visibility')"
                     />
                     <div class="field-group">
@@ -426,8 +407,8 @@ onBeforeRouteLeave((to) => {
                 </div>
                 <p v-else-if="trip.countries.length" class="countries">
                     <span v-for="iso in trip.countries" :key="iso" class="pill">
-                        <span :class="flagOf(iso)" />
-                        {{ nameOf(iso) }}
+                        <span :class="flagClassOf(iso)" />
+                        {{ countryNameOf(iso) }}
                     </span>
                     <span class="pill muted">{{
                         trip.visibility === 'public'
@@ -562,8 +543,8 @@ onBeforeRouteLeave((to) => {
                                 </div>
                             </div>
                             <p class="meta">
-                                <span :class="flagOf(stop.country)" />
-                                {{ nameOf(stop.country) }}
+                                <span :class="flagClassOf(stop.country)" />
+                                {{ countryNameOf(stop.country) }}
                                 <template v-if="stop.arrival">
                                     · {{ formatDay(stop.arrival) }}
                                 </template>
@@ -751,8 +732,8 @@ onBeforeRouteLeave((to) => {
         :message="t('trip.discardMessage')"
         :confirm-label="t('trip.discard')"
         danger
-        @confirm="(pendingLeave!(), (pendingLeave = null))"
-        @cancel="pendingLeave = null"
+        @confirm="confirmLeave"
+        @cancel="cancelLeave"
     />
 </template>
 

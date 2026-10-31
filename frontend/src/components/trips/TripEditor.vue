@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppSheet from '../ui/AppSheet.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
 import { useLayout } from '../ui/useLayout'
+import { useLeaveGuard } from '../ui/useLeaveGuard'
+import { useWindowListener } from '../ui/useWindowListener'
+import { visibilityOptions } from '../ui/visibility'
 import {
     useTravelStore,
     type Trip,
@@ -12,7 +15,7 @@ import {
     type MapPoint,
     type Visibility,
 } from '../stores/store'
-import { countryName, getCountryByIso } from '../countries/countries'
+import { countryNameOf, flagClassOf } from '../countries/countries'
 import { suggestName } from '../worldmap/places'
 import type { StopCategory } from './categories'
 import { t } from '../../i18n'
@@ -255,9 +258,7 @@ watch(
 
 const pinCountry = computed(() => {
     const iso = store.pin?.iso
-    if (!iso) return null
-    const country = getCountryByIso(iso)
-    return country ? countryName(country) : iso
+    return iso ? countryNameOf(iso) : null
 })
 
 const nameInputs = ref<Record<number, HTMLInputElement | null>>({})
@@ -299,16 +300,6 @@ async function confirmPlace() {
 }
 
 // --- Stops ---------------------------------------------------------------
-
-function nameOf(iso: string): string {
-    const country = getCountryByIso(iso)
-    return country ? countryName(country) : iso
-}
-
-function flagOf(iso: string): string {
-    const country = getCountryByIso(iso)
-    return country ? `fi fi-${country.alpha2.toLowerCase()}` : ''
-}
 
 const label = (stop: DraftStop) => stop.name.trim() || t('trip.unnamed')
 
@@ -369,8 +360,9 @@ const canSave = computed(
         (dirty.value || !id.value)
 )
 
-// Set once the user confirmed leaving, or after saving
-let leaving = false
+const { pendingLeave, allowLeave, confirmLeave, cancelLeave } = useLeaveGuard(
+    () => dirty.value
+)
 
 async function save() {
     if (!canSave.value) return
@@ -400,7 +392,7 @@ async function save() {
     const trip = await store.saveTrip(id.value, input)
     saving.value = false
     if (!trip) return
-    leaving = true
+    allowLeave()
     router.push(tripPage(trip.id))
 }
 
@@ -432,18 +424,6 @@ function cancel() {
     router.push(id.value ? tripPage(id.value) : { name: 'home' })
 }
 
-// What the "discard changes" dialog does once confirmed
-const pendingLeave = ref<(() => void) | null>(null)
-
-onBeforeRouteLeave((to) => {
-    if (leaving || !dirty.value) return true
-    pendingLeave.value = () => {
-        leaving = true
-        router.push(to.fullPath)
-    }
-    return false
-})
-
 // Escape cancels and Ctrl+Enter saves, as in the country details
 function onKey(e: KeyboardEvent) {
     if (pendingLeave.value) return
@@ -457,15 +437,9 @@ function onKey(e: KeyboardEvent) {
     cancel()
 }
 
-onMounted(() => window.addEventListener('keydown', onKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+useWindowListener('keydown', onKey)
 
-const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
-    () => [
-        { value: 'private', label: t('common.onlyMe') },
-        { value: 'public', label: t('common.public') },
-    ]
-)
+const visibilityChoices = computed(() => visibilityOptions())
 
 const heading = computed(() =>
     id.value ? t('trip.editTitle') : t('trip.newTitle')
@@ -479,10 +453,10 @@ const heading = computed(() =>
             <div>
                 <h2>{{ t('trip.nameStop') }}</h2>
                 <p class="sub">
-                    <span :class="flagOf(naming.iso ?? '')" />
+                    <span :class="flagClassOf(naming.iso ?? '')" />
                     {{
                         t('trip.inCountry', {
-                            country: nameOf(naming.iso ?? ''),
+                            country: countryNameOf(naming.iso ?? ''),
                         })
                     }}
                 </p>
@@ -620,7 +594,7 @@ const heading = computed(() =>
                 </div>
                 <SegmentedControl
                     v-model="draft.visibility"
-                    :options="visibilityOptions"
+                    :options="visibilityChoices"
                     :label="t('trip.visibility')"
                     :disabled="readOnly"
                     stretch
@@ -672,8 +646,10 @@ const heading = computed(() =>
                                         maxlength="120"
                                     />
                                     <span class="country">
-                                        <span :class="flagOf(stop.country)" />
-                                        {{ nameOf(stop.country) }}
+                                        <span
+                                            :class="flagClassOf(stop.country)"
+                                        />
+                                        {{ countryNameOf(stop.country) }}
                                     </span>
                                 </div>
                                 <div class="tools">
@@ -825,8 +801,8 @@ const heading = computed(() =>
         :message="t('trip.discardMessage')"
         :confirm-label="t('trip.discard')"
         danger
-        @confirm="(pendingLeave!(), (pendingLeave = null))"
-        @cancel="pendingLeave = null"
+        @confirm="confirmLeave"
+        @cancel="cancelLeave"
     />
 </template>
 

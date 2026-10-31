@@ -32,6 +32,23 @@ export function countryName(c: Country): string {
     return regionName(c.alpha2, c.name)
 }
 
+// Name of the country with this alpha-3 code; the code itself if unknown
+export function countryNameOf(iso: string): string {
+    const country = getCountryByIso(iso)
+    return country ? countryName(country) : iso
+}
+
+// CSS classes of the flag-icons flag
+export function flagClass(c: Country): string {
+    return `fi fi-${c.alpha2.toLowerCase()}`
+}
+
+// Flag of the country with this alpha-3 code; no classes if unknown
+export function flagClassOf(iso: string): string {
+    const country = getCountryByIso(iso)
+    return country ? flagClass(country) : ''
+}
+
 export function byCountryName(a: Country, b: Country): number {
     return collator().compare(countryName(a), countryName(b))
 }

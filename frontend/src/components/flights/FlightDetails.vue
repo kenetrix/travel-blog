@@ -7,6 +7,7 @@ import {
     type Visibility,
 } from '../stores/store'
 import SegmentedControl from '../ui/SegmentedControl.vue'
+import { visibilityOptions } from '../ui/visibility'
 import { t } from '../../i18n'
 import { vEnterNext } from '../ui/enterNext'
 import { estimateDurationMinutes } from './distance'
@@ -21,6 +22,7 @@ import { AIRCRAFT_TYPES } from './aircraft'
 
 const OTHER = 'other'
 const MAX_MINUTES = 24 * 60
+const MAX_AIRCRAFT = 60
 
 const props = defineProps<{ flight: Flight }>()
 const store = useTravelStore()
@@ -105,7 +107,7 @@ const canSave = computed(
         store.canWrite &&
         normalizedNumber.value !== null &&
         durationValid.value &&
-        aircraftValue.value.length <= 60 &&
+        aircraftValue.value.length <= MAX_AIRCRAFT &&
         Object.keys(patch.value).length > 0
 )
 
@@ -115,18 +117,7 @@ const durationLabel = computed(() =>
         : `≈ ${formatDuration(estimate.value)}`
 )
 
-const visibilityOptions = computed(() => [
-    {
-        value: 'private' as const,
-        label: t('common.onlyMe'),
-        title: t('country.privateTitle'),
-    },
-    {
-        value: 'public' as const,
-        label: t('common.public'),
-        title: t('country.publicTitle'),
-    },
-])
+const visibilityChoices = computed(() => visibilityOptions(true))
 
 const formatDate = (day: string) =>
     formatDay(day, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -206,7 +197,7 @@ async function save() {
                 <label>{{ t('flights.visibility') }}</label>
                 <SegmentedControl
                     v-model="visibility"
-                    :options="visibilityOptions"
+                    :options="visibilityChoices"
                     :label="t('flights.visibility')"
                     :disabled="!store.canWrite"
                     stretch
@@ -283,7 +274,7 @@ async function save() {
                         v-model="otherAircraft"
                         class="other"
                         :placeholder="t('flights.aircraftType')"
-                        maxlength="60"
+                        :maxlength="MAX_AIRCRAFT"
                         :aria-label="t('flights.otherAircraft')"
                         :disabled="!store.canWrite"
                     />

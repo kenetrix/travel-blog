@@ -1,19 +1,17 @@
 <script setup lang="ts">
-import {
-    ref,
-    computed,
-    watch,
-    onMounted,
-    onBeforeUnmount,
-    type Directive,
-} from 'vue'
+import { ref, computed, watch, onBeforeUnmount, type Directive } from 'vue'
 import {
     useTravelStore,
     emptyDetails,
     type CountryStatus,
     type Visibility,
 } from '../stores/store'
-import { countryName, getCountryByIso } from './countries'
+import {
+    countryName,
+    countryNameOf,
+    flagClass,
+    getCountryByIso,
+} from './countries'
 import { getCountryFacts } from './countryFacts'
 import {
     currencyName,
@@ -24,6 +22,8 @@ import {
 import { RouterLink, useRoute } from 'vue-router'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
+import { useWindowListener } from '../ui/useWindowListener'
+import { visibilityOptions } from '../ui/visibility'
 import { localizedData, t } from '../../i18n'
 import { tripDates } from '../trips/dates'
 
@@ -142,8 +142,7 @@ function onKey(e: KeyboardEvent) {
     else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save()
 }
 
-onMounted(() => window.addEventListener('keydown', onKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+useWindowListener('keydown', onKey)
 
 // --- Facts -------------------------------------------------------------
 
@@ -257,27 +256,11 @@ const trips = computed(() =>
 // The other countries a trip visits, by name
 function otherCountries(countries: string[]): string {
     return formatList(
-        countries
-            .filter((iso) => iso !== props.iso)
-            .map((iso) => {
-                const c = getCountryByIso(iso)
-                return c ? countryName(c) : iso
-            })
+        countries.filter((iso) => iso !== props.iso).map(countryNameOf)
     )
 }
 
-const visibilityOptions = computed(() => [
-    {
-        value: 'private' as const,
-        label: t('common.onlyMe'),
-        title: t('country.privateTitle'),
-    },
-    {
-        value: 'public' as const,
-        label: t('common.public'),
-        title: t('country.publicTitle'),
-    },
-])
+const visibilityChoices = computed(() => visibilityOptions(true))
 </script>
 
 <template>
@@ -286,10 +269,7 @@ const visibilityOptions = computed(() => [
             <div>
                 <div class="title-row">
                     <h2>
-                        <span
-                            v-if="country"
-                            :class="`fi fi-${country.alpha2.toLowerCase()}`"
-                        ></span>
+                        <span v-if="country" :class="flagClass(country)"></span>
                         {{ name }}
                     </h2>
                     <div
@@ -331,7 +311,7 @@ const visibilityOptions = computed(() => [
         <SegmentedControl
             v-if="status !== 'none'"
             v-model="vis"
-            :options="visibilityOptions"
+            :options="visibilityChoices"
             :label="t('country.visibility')"
             stretch
         />

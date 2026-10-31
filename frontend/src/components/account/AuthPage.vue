@@ -81,27 +81,36 @@ onMounted(async () => {
     passwordLogin.value = config.passwordLogin || !config.enabled
 })
 
-const title = computed(() => {
-    if (step.value === 'login') return t('auth.titleLogin')
-    if (step.value === 'register') return t('auth.titleRegister')
-    return t('auth.titleStart')
-})
+// Texts of each step; `busy` labels the button while its request runs
+const STEP_TEXTS = {
+    username: {
+        title: 'auth.titleStart',
+        subtitle: 'auth.subtitleStart',
+        button: 'auth.continue',
+        busy: 'auth.checking',
+    },
+    login: {
+        title: 'auth.titleLogin',
+        subtitle: 'auth.subtitleLogin',
+        button: 'auth.logIn',
+        busy: 'auth.loggingIn',
+    },
+    register: {
+        title: 'auth.titleRegister',
+        subtitle: 'auth.subtitleRegister',
+        button: 'auth.createAccount',
+        busy: 'auth.creating',
+    },
+} as const satisfies Record<
+    typeof step.value,
+    Record<'title' | 'subtitle' | 'button' | 'busy', MessageKey>
+>
 
-const subtitle = computed(() => {
-    if (step.value === 'login') return t('auth.subtitleLogin')
-    if (step.value === 'register') return t('auth.subtitleRegister')
-    return t('auth.subtitleStart')
-})
-
+const title = computed(() => t(STEP_TEXTS[step.value].title))
+const subtitle = computed(() => t(STEP_TEXTS[step.value].subtitle))
 const buttonLabel = computed(() => {
-    if (busy.value) {
-        if (step.value === 'login') return t('auth.loggingIn')
-        if (step.value === 'register') return t('auth.creating')
-        return t('auth.checking')
-    }
-    if (step.value === 'login') return t('auth.logIn')
-    if (step.value === 'register') return t('auth.createAccount')
-    return t('auth.continue')
+    const texts = STEP_TEXTS[step.value]
+    return t(busy.value ? texts.busy : texts.button)
 })
 
 const passwordLongEnough = computed(() => password.value.length >= MIN_PASSWORD)
@@ -151,14 +160,13 @@ async function submit() {
                   language: language.value,
               })
     busy.value = false
+    password.value = ''
     if (failed) {
         setError(failed)
-        password.value = ''
         await nextTick()
         passwordInput.value?.focus()
         return
     }
-    password.value = ''
     router.push({ name: 'home' })
 }
 

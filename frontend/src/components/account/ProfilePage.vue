@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
@@ -8,6 +8,9 @@ import TabBar from '../ui/TabBar.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
 import ProfileHeader from './ProfileHeader.vue'
 import { vEnterNext } from '../ui/enterNext'
+import { useLeaveGuard } from '../ui/useLeaveGuard'
+import { useTimedMessage } from '../ui/useTimedMessage'
+import { visibilityOptions } from '../ui/visibility'
 import { Countries, byCountryName, countryName } from '../countries/countries'
 import { useTravelStore, type Settings } from '../stores/store'
 import { LANGUAGES, setLanguage, t, type Language } from '../../i18n'
@@ -22,14 +25,7 @@ const tabs = computed(() => [
 const router = useRouter()
 
 // The store's toast lives in the map panels, under this page; confirm here
-const message = ref<{ text: string; error: boolean } | null>(null)
-let messageTimer: ReturnType<typeof setTimeout> | undefined
-
-function say(text: string, error = false) {
-    message.value = { text, error }
-    clearTimeout(messageTimer)
-    messageTimer = setTimeout(() => (message.value = null), 3000)
-}
+const { message, say } = useTimedMessage()
 
 // --- Profile -----------------------------------------------------------
 
@@ -66,17 +62,9 @@ const profileDirty = computed(
 )
 
 // Like the editors: leaving with unsaved profile edits asks first
-const pendingLeave = ref<(() => void) | null>(null)
-let leaving = false
-
-onBeforeRouteLeave((to) => {
-    if (leaving || !profileDirty.value) return true
-    pendingLeave.value = () => {
-        leaving = true
-        router.push(to.fullPath)
-    }
-    return false
-})
+const { pendingLeave, allowLeave, confirmLeave, cancelLeave } = useLeaveGuard(
+    () => profileDirty.value
+)
 // Not on every profile change: the colour is saved on its own and must not
 // wipe what is typed into the form
 watch(
@@ -146,7 +134,7 @@ const confirmDelete = ref(false)
 async function logout() {
     const failed = await store.logout()
     if (failed) return say(failed, true)
-    leaving = true
+    allowLeave()
     router.push({ name: 'home' })
 }
 
@@ -157,7 +145,7 @@ async function deleteAccount() {
         say(failed, true)
         return
     }
-    leaving = true
+    allowLeave()
     router.push({ name: 'home' })
 }
 </script>
@@ -356,10 +344,7 @@ async function deleteAccount() {
                             :model-value="store.settings.defaultVisibility"
                             :label="t('profile.newItems')"
                             :disabled="!store.canWrite"
-                            :options="[
-                                { value: 'private', label: t('common.onlyMe') },
-                                { value: 'public', label: t('common.public') },
-                            ]"
+                            :options="visibilityOptions()"
                             @update:model-value="
                                 setSetting('defaultVisibility', $event)
                             "
@@ -437,8 +422,8 @@ async function deleteAccount() {
             :message="t('country.discardMessage')"
             :confirm-label="t('country.discard')"
             danger
-            @confirm="(pendingLeave!(), (pendingLeave = null))"
-            @cancel="pendingLeave = null"
+            @confirm="confirmLeave"
+            @cancel="cancelLeave"
         />
     </PageWrapper>
 </template>
