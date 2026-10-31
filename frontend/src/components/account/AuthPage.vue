@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LegalFooter from '../ui/LegalFooter.vue'
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTravelStore } from '../stores/store'
@@ -442,6 +443,8 @@ async function changeUsername() {
                     </option>
                 </select>
             </div>
+
+            <LegalFooter />
         </main>
     </div>
 </template>

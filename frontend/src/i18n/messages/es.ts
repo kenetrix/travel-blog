@@ -510,4 +510,40 @@ export default {
         invalid_date: 'La fecha debe ser un día entre 1900 y 2100.',
         invalid_duration: 'La duración debe ser de 1 a {max} minutos.',
     },
+    legal: {
+        impressum: 'Aviso legal',
+        privacy: 'Privacidad',
+        impressumTitle: 'Aviso legal (Impressum)',
+        impressumIntro:
+            'Información según el § 5 DDG. Este es un sitio web privado y sin fines comerciales.',
+        provider: 'Responsable del sitio',
+        contact: 'Contacto',
+        responsible: 'Responsable del contenido (§ 18 (2) MStV)',
+        unavailable: 'No se pudieron cargar los datos del responsable.',
+        missing: 'El responsable aún no ha indicado datos de contacto.',
+        privacyTitle: 'Política de privacidad',
+        privacyIntro:
+            'Qué ocurre con tus datos en este sitio, en pocas palabras y sin rastreo.',
+        controllerTitle: 'Responsable del tratamiento',
+        controllerText:
+            'El responsable indicado en el aviso legal. Es un proyecto privado sin fines comerciales.',
+        logsTitle: 'Registros del servidor',
+        logsText:
+            'Al abrir el sitio, el servidor web trata tu dirección IP, la hora y la página solicitada. Es técnicamente necesario para entregar el sitio y mantenerlo seguro (art. 6.1.f RGPD). Los datos no se combinan con otros y solo se conservan el tiempo necesario para ese fin.',
+        accountTitle: 'Cuenta y contenido',
+        accountText:
+            'Si te registras, el sitio guarda tu nombre de usuario, nombre visible, correo electrónico, un hash de tu contraseña, tus ajustes y lo que añadas: países visitados, vuelos, viajes, lugares y fotos (art. 6.1.b RGPD). Tú decides para cada perfil y viaje si es público. Al eliminar tu cuenta se borran estos datos del servidor.',
+        storageTitle: 'Cookies y almacenamiento local',
+        storageText:
+            'Una cookie, «session», mantiene tu sesión iniciada. Se elimina al cerrar sesión o al caducar. El almacenamiento local del navegador guarda tu idioma y una copia de tus últimos datos para usarlos sin conexión. Todo ello es estrictamente necesario para el servicio que solicitas (§ 25 (2) TDDDG), por lo que no hay banner de consentimiento. No hay cookies de rastreo, analítica ni publicidad, y las fuentes se sirven desde este sitio.',
+        mapTitle: 'Datos del mapa',
+        mapText:
+            'El estilo y las teselas del mapa se cargan desde demotiles.maplibre.org. Por ello tu navegador envía su dirección IP y datos del navegador a ese servidor (art. 6.1.f RGPD, para mostrar el mapa).',
+        ssoTitle: 'Inicio de sesión único',
+        ssoText:
+            'Si el responsable activó el acceso con un proveedor externo, serás redirigido a él y tratará tus datos según su propia política de privacidad.',
+        rightsTitle: 'Tus derechos',
+        rightsText:
+            'Puedes solicitar acceso, rectificación, supresión, limitación y portabilidad de tus datos y oponerte a su tratamiento (arts. 15–21 RGPD). También puedes presentar una reclamación ante una autoridad de protección de datos.',
+    },
 } satisfies Messages

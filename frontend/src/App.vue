@@ -6,6 +6,7 @@ import FlightPanel from './components/flights/FlightPanel.vue'
 import CountryPanel from './components/countries/CountryPanel.vue'
 import WorldMap from './components/worldmap/WorldMap.vue'
 import OfflineBanner from './components/ui/OfflineBanner.vue'
+import LegalFooter from './components/ui/LegalFooter.vue'
 import { t } from './i18n'
 
 const store = useTravelStore()
@@ -25,11 +26,13 @@ watch(
     () => (view.value = store.settings.defaultView)
 )
 
-// Without a session visitors see the bare map; every other page needs a login
+// Without a session visitors see the bare map and the legal pages; every
+// other page needs a login
+const PUBLIC_ROUTES = ['home', 'login', 'impressum', 'privacy']
 watch(
     () => [store.authState, route.name],
     ([state, name]) => {
-        if (state === 'anonymous' && name !== 'home' && name !== 'login') {
+        if (state === 'anonymous' && !PUBLIC_ROUTES.includes(name as string)) {
             router.replace({ name: 'login' })
         }
     },
@@ -220,10 +223,21 @@ watchEffect(() => {
 
         <!-- Full-page routes (e.g. a trip) and the trip editor -->
         <RouterView />
+
+        <LegalFooter v-if="store.authState === 'anonymous'" class="map-legal" />
     </div>
 </template>
 
 <style scoped>
+/* Small links over the bare map; pages cover them with their own z-index */
+.map-legal {
+    position: absolute;
+    left: calc(var(--safe-left) + var(--edge));
+    bottom: calc(var(--safe-bottom) + 0.2rem);
+    z-index: 10;
+    margin: 0;
+}
+
 .wrapper {
     position: relative;
     width: 100vw;

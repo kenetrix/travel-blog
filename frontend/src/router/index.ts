@@ -5,6 +5,8 @@ import AuthPage from '../components/account/AuthPage.vue'
 import ProfilePage from '../components/account/ProfilePage.vue'
 import PasswordPage from '../components/account/PasswordPage.vue'
 import AdminPage from '../components/admin/AdminPage.vue'
+import ImpressumPage from '../components/legal/ImpressumPage.vue'
+import PrivacyPage from '../components/legal/PrivacyPage.vue'
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -20,6 +22,8 @@ export const router = createRouter({
         { path: '/profile', redirect: { name: 'account' } },
         { path: '/password', name: 'password', component: PasswordPage },
         { path: '/admin', name: 'admin', component: AdminPage },
+        { path: '/impressum', name: 'impressum', component: ImpressumPage },
+        { path: '/privacy', name: 'privacy', component: PrivacyPage },
         { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
     ],
 })

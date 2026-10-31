@@ -502,4 +502,40 @@ export default {
         invalid_date: 'The date must be a day between 1900 and 2100.',
         invalid_duration: 'The duration must be 1 to {max} minutes.',
     },
+    legal: {
+        impressum: 'Legal notice',
+        privacy: 'Privacy',
+        impressumTitle: 'Legal notice (Impressum)',
+        impressumIntro:
+            'Information according to § 5 DDG. This is a private, non-commercial website.',
+        provider: 'Operator',
+        contact: 'Contact',
+        responsible: 'Responsible for the content (§ 18 (2) MStV)',
+        unavailable: 'The operator’s details could not be loaded.',
+        missing: 'The operator has not entered contact details yet.',
+        privacyTitle: 'Privacy policy',
+        privacyIntro:
+            'What happens to your data on this site, in short and without tracking.',
+        controllerTitle: 'Who is responsible',
+        controllerText:
+            'The operator named in the legal notice. This is a private project without commercial purpose.',
+        logsTitle: 'Server logs',
+        logsText:
+            'When you open the site, the web server processes your IP address, the time and the requested page. This is technically necessary to deliver the site and keep it secure (Art. 6 (1)(f) GDPR). The data is not combined with other data and kept only as long as needed for this purpose.',
+        accountTitle: 'Account and content',
+        accountText:
+            'If you register, the site stores your username, display name, email address, a hash of your password, your settings and what you add: visited countries, flights, trips, places and photos (Art. 6 (1)(b) GDPR). You decide for each profile and trip whether it is public. Deleting your account removes this data from the server.',
+        storageTitle: 'Cookies and local storage',
+        storageText:
+            'One cookie, “session”, keeps you logged in. It is deleted when you log out or it expires. The browser’s local storage holds your language choice and a copy of your last data for offline use. All of this is strictly necessary for the service you asked for (§ 25 (2) TDDDG), so there is no consent banner. There are no tracking, analytics or advertising cookies, and fonts are served from this site.',
+        mapTitle: 'Map data',
+        mapText:
+            'The map style and tiles are loaded from demotiles.maplibre.org. Your browser therefore sends its IP address and browser details to that server (Art. 6 (1)(f) GDPR, to display the map).',
+        ssoTitle: 'Single sign-on',
+        ssoText:
+            'If the operator enabled login with an external provider, you are redirected to that provider, which processes your data under its own privacy policy.',
+        rightsTitle: 'Your rights',
+        rightsText:
+            'You can request access, correction, deletion, restriction and portability of your data and object to its processing (Art. 15–21 GDPR). You can also complain to a data protection supervisory authority.',
+    },
 }

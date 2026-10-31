@@ -512,4 +512,40 @@ export default {
         invalid_date: 'Das Datum muss ein Tag zwischen 1900 und 2100 sein.',
         invalid_duration: 'Die Dauer muss 1 bis {max} Minuten betragen.',
     },
+    legal: {
+        impressum: 'Impressum',
+        privacy: 'Datenschutz',
+        impressumTitle: 'Impressum',
+        impressumIntro:
+            'Angaben gemäß § 5 DDG. Dies ist eine private, nicht kommerzielle Website.',
+        provider: 'Betreiber',
+        contact: 'Kontakt',
+        responsible: 'Verantwortlich für den Inhalt (§ 18 Abs. 2 MStV)',
+        unavailable: 'Die Angaben des Betreibers konnten nicht geladen werden.',
+        missing: 'Der Betreiber hat noch keine Kontaktdaten hinterlegt.',
+        privacyTitle: 'Datenschutzerklärung',
+        privacyIntro:
+            'Was auf dieser Website mit deinen Daten passiert, kurz und ohne Tracking.',
+        controllerTitle: 'Verantwortlicher',
+        controllerText:
+            'Der im Impressum genannte Betreiber. Dies ist ein privates Projekt ohne kommerziellen Zweck.',
+        logsTitle: 'Server-Logfiles',
+        logsText:
+            'Beim Aufruf der Seite verarbeitet der Webserver deine IP-Adresse, die Uhrzeit und die abgerufene Seite. Das ist technisch notwendig, um die Seite auszuliefern und sicher zu betreiben (Art. 6 Abs. 1 lit. f DSGVO). Die Daten werden nicht mit anderen Daten zusammengeführt und nur so lange gespeichert, wie es dafür nötig ist.',
+        accountTitle: 'Konto und Inhalte',
+        accountText:
+            'Wenn du dich registrierst, speichert die Seite deinen Benutzernamen, Anzeigenamen, deine E-Mail-Adresse, einen Hash deines Passworts, deine Einstellungen und das, was du hinzufügst: besuchte Länder, Flüge, Reisen, Orte und Fotos (Art. 6 Abs. 1 lit. b DSGVO). Für jedes Profil und jede Reise entscheidest du, ob sie öffentlich ist. Wenn du dein Konto löschst, werden diese Daten vom Server entfernt.',
+        storageTitle: 'Cookies und lokaler Speicher',
+        storageText:
+            'Ein Cookie, „session“, hält dich angemeldet. Es wird beim Abmelden oder mit Ablauf gelöscht. Der lokale Speicher des Browsers enthält deine Sprachauswahl und eine Kopie deiner letzten Daten für die Offline-Nutzung. Das alles ist für den von dir gewünschten Dienst unbedingt erforderlich (§ 25 Abs. 2 TDDDG), daher gibt es kein Einwilligungsbanner. Es gibt keine Tracking-, Analyse- oder Werbe-Cookies, und Schriften werden von dieser Seite ausgeliefert.',
+        mapTitle: 'Kartendaten',
+        mapText:
+            'Kartenstil und Kacheln werden von demotiles.maplibre.org geladen. Dein Browser übermittelt dafür seine IP-Adresse und Browserdaten an diesen Server (Art. 6 Abs. 1 lit. f DSGVO, zur Darstellung der Karte).',
+        ssoTitle: 'Single Sign-on',
+        ssoText:
+            'Wenn der Betreiber die Anmeldung über einen externen Anbieter aktiviert hat, wirst du zu diesem weitergeleitet. Er verarbeitet deine Daten nach seiner eigenen Datenschutzerklärung.',
+        rightsTitle: 'Deine Rechte',
+        rightsText:
+            'Du kannst Auskunft, Berichtigung, Löschung, Einschränkung und Übertragbarkeit deiner Daten verlangen und der Verarbeitung widersprechen (Art. 15–21 DSGVO). Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren.',
+    },
 } satisfies Messages

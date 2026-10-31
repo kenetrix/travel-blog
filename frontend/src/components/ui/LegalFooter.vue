@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { t } from '../../i18n'
 
 const version = __APP_VERSION__
@@ -8,6 +9,12 @@ const version = __APP_VERSION__
     <!-- Written by the build (licenses.ts); a plain link, so it opens
          outside the app and also works offline from the precache -->
     <p class="legal">
+        <RouterLink :to="{ name: 'impressum' }">
+            {{ t('legal.impressum') }}
+        </RouterLink>
+        <RouterLink :to="{ name: 'privacy' }">
+            {{ t('legal.privacy') }}
+        </RouterLink>
         <a href="/third-party-licenses.txt" target="_blank" rel="noopener">
             {{ t('profile.licenses') }}
         </a>
