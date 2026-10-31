@@ -9,6 +9,9 @@ passwordless administrator `admin`, so you can start without logging in):
 
     go run ./cmd/api -dev
 
+It listens on `localhost:8080`; `LISTEN_ADDR` (e.g. `:8080`) changes that, as the Docker
+image does so nginx in another container can reach it.
+
 All routes except `/api/auth/*` and `/api/public/*` require a login. On first start the
 server creates the administrator `admin` with a random password, written to
 `data/initial-admin.txt` until it is changed (see below).

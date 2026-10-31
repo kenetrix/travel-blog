@@ -95,10 +95,15 @@ func main() {
 	r := router.New(handler.New(travel, trips, accounts, handler.WithOIDC(provider), handler.WithOIDCConfig(oidcConfig)),
 		auth.Sessions(accounts, asUser...), provider.Routes)
 
-	// Listen on localhost only - avoids the Windows firewall dialog on every go run
-	log.Println("Server listening on localhost:8080")
+	// Localhost by default avoids the Windows firewall dialog on every go run;
+	// containers set LISTEN_ADDR so nginx in another container can reach the API
+	addr := os.Getenv("LISTEN_ADDR")
+	if addr == "" {
+		addr = "localhost:8080"
+	}
+	log.Printf("Server listening on %s", addr)
 	srv := &http.Server{
-		Addr:              "localhost:8080",
+		Addr:              addr,
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       60 * time.Second, // photo uploads up to 20 MB
