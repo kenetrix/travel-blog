@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import LegalFooter from '../ui/LegalFooter.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
@@ -44,19 +44,39 @@ const form = ref({
 })
 const profileError = ref('')
 
-function reset() {
+function stored() {
     const p = store.profile
-    if (!p) return
-    form.value = {
-        username: p.username,
-        email: p.email ?? '',
-        firstName: p.firstName,
-        lastName: p.lastName,
-        displayName: p.displayName,
-        bio: p.bio,
-        homeCountry: p.homeCountry,
+    return {
+        username: p?.username ?? '',
+        email: p?.email ?? '',
+        firstName: p?.firstName ?? '',
+        lastName: p?.lastName ?? '',
+        displayName: p?.displayName ?? '',
+        bio: p?.bio ?? '',
+        homeCountry: p?.homeCountry ?? '',
     }
 }
+
+function reset() {
+    if (store.profile) form.value = stored()
+}
+
+const profileDirty = computed(
+    () => JSON.stringify(form.value) !== JSON.stringify(stored())
+)
+
+// Like the editors: leaving with unsaved profile edits asks first
+const pendingLeave = ref<(() => void) | null>(null)
+let leaving = false
+
+onBeforeRouteLeave((to) => {
+    if (leaving || !profileDirty.value) return true
+    pendingLeave.value = () => {
+        leaving = true
+        router.push(to.fullPath)
+    }
+    return false
+})
 // Not on every profile change: the colour is saved on its own and must not
 // wipe what is typed into the form
 watch(
@@ -68,6 +88,7 @@ watch(
 const countries = computed(() => [...Countries].sort(byCountryName))
 
 async function saveProfile() {
+    if (!profileDirty.value) return
     profileError.value = ''
     const failed = await store.updateProfile(form.value)
     if (failed) profileError.value = failed
@@ -125,6 +146,7 @@ const confirmDelete = ref(false)
 async function logout() {
     const failed = await store.logout()
     if (failed) return say(failed, true)
+    leaving = true
     router.push({ name: 'home' })
 }
 
@@ -135,6 +157,7 @@ async function deleteAccount() {
         say(failed, true)
         return
     }
+    leaving = true
     router.push({ name: 'home' })
 }
 </script>
@@ -145,7 +168,11 @@ async function deleteAccount() {
         :subtitle="store.profile ? `@${store.profile.username}` : undefined"
     >
         <template #actions>
-            <button class="logout" :disabled="!store.canWrite" @click="logout">
+            <button
+                class="btn secondary"
+                :disabled="!store.canWrite"
+                @click="logout"
+            >
                 {{ t('app.logout') }}
             </button>
         </template>
@@ -163,7 +190,11 @@ async function deleteAccount() {
                 <ProfileHeader @say="say" />
                 <section class="panel">
                     <h2>{{ t('profile.aboutYou') }}</h2>
-                    <form class="fields" @submit.prevent="saveProfile">
+                    <form
+                        v-enter-next
+                        class="fields"
+                        @submit.prevent="saveProfile"
+                    >
                         <div class="row">
                             <div>
                                 <label for="first">{{
@@ -217,7 +248,7 @@ async function deleteAccount() {
                         <button
                             class="btn"
                             type="submit"
-                            :disabled="!store.canWrite"
+                            :disabled="!store.canWrite || !profileDirty"
                         >
                             {{ t('profile.saveProfile') }}
                         </button>
@@ -396,8 +427,18 @@ async function deleteAccount() {
             :title="t('profile.deleteAccount')"
             :message="t('profile.deleteConfirm')"
             :confirm-label="t('common.delete')"
+            danger
             @confirm="deleteAccount"
             @cancel="confirmDelete = false"
+        />
+        <ConfirmModal
+            v-if="pendingLeave"
+            :title="t('country.discardTitle')"
+            :message="t('country.discardMessage')"
+            :confirm-label="t('country.discard')"
+            danger
+            @confirm="(pendingLeave!(), (pendingLeave = null))"
+            @cancel="pendingLeave = null"
         />
     </PageWrapper>
 </template>
@@ -428,31 +469,5 @@ async function deleteAccount() {
 .panel .pref select {
     width: auto;
     min-width: 10rem;
-}
-
-.logout {
-    min-height: var(--touch);
-    padding: 0.4rem 0.9rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 0.5rem;
-    background: transparent;
-    font: inherit;
-    font-size: 0.8rem;
-    color: var(--text);
-    cursor: pointer;
-}
-
-.logout:disabled {
-    opacity: 0.5;
-}
-
-@media (pointer: fine) {
-    .logout {
-        min-height: 0;
-    }
-}
-
-.logout:hover {
-    background: var(--chip);
 }
 </style>

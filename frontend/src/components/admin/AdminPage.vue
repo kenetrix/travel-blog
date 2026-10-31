@@ -76,8 +76,13 @@ function hue(user: AdminUser) {
     return h
 }
 
+let messageTimer: ReturnType<typeof setTimeout> | undefined
+
+// Hides after a while, like the profile page's messages
 function say(text: string, error = false) {
     message.value = { text, error }
+    clearTimeout(messageTimer)
+    messageTimer = setTimeout(() => (message.value = null), 3000)
 }
 
 async function load() {
@@ -386,6 +391,7 @@ async function deleteUser() {
                                 v-if="resetting === user.id"
                                 class="reset"
                                 @submit.prevent="resetPassword(user)"
+                                @keydown.esc="startReset(user)"
                             >
                                 <input
                                     v-model="newPassword"
@@ -454,6 +460,7 @@ async function deleteUser() {
             :title="t('profile.deleteAccount')"
             :message="t('admin.deleteConfirm', { name: toDelete.username })"
             :confirm-label="t('common.delete')"
+            danger
             @confirm="deleteUser"
             @cancel="toDelete = null"
         />
@@ -699,7 +706,7 @@ async function deleteUser() {
 }
 
 .menu button.danger {
-    color: #e0675a;
+    color: var(--danger);
 }
 
 .menu button.danger:hover {
@@ -724,13 +731,13 @@ async function deleteUser() {
 }
 
 .role-option.on {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
     background: #3a7d5c1a;
 }
 
 .role-option input {
     margin: 0.15rem 0 0;
-    accent-color: #3a7d5c;
+    accent-color: var(--accent);
 }
 
 .role-option > span {

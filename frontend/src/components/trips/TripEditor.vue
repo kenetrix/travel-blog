@@ -444,8 +444,14 @@ onBeforeRouteLeave((to) => {
     return false
 })
 
+// Escape cancels and Ctrl+Enter saves, as in the country details
 function onKey(e: KeyboardEvent) {
-    if (pendingLeave.value || e.key !== 'Escape') return
+    if (pendingLeave.value) return
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        if (!placing.value) save()
+        return
+    }
+    if (e.key !== 'Escape') return
     // Fields keep Escape for themselves, e.g. a native date picker
     if ((e.target as HTMLElement)?.closest?.('input, textarea')) return
     cancel()
@@ -535,7 +541,18 @@ const heading = computed(() =>
             </p>
             <div class="actions">
                 <button
-                    class="btn btn-primary"
+                    class="btn secondary"
+                    type="button"
+                    @click="finishPlacing"
+                >
+                    {{
+                        !placingStop && draft.stops.length
+                            ? t('common.done')
+                            : t('common.cancel')
+                    }}
+                </button>
+                <button
+                    class="btn"
                     type="button"
                     :disabled="!store.pin?.iso"
                     @click="confirmPlace"
@@ -546,17 +563,6 @@ const heading = computed(() =>
                             : coarsePointer
                               ? t('trip.addStopHere')
                               : t('trip.addStop')
-                    }}
-                </button>
-                <button
-                    class="btn btn-secondary"
-                    type="button"
-                    @click="finishPlacing"
-                >
-                    {{
-                        !placingStop && draft.stops.length
-                            ? t('common.done')
-                            : t('common.cancel')
                     }}
                 </button>
             </div>
@@ -614,10 +620,10 @@ const heading = computed(() =>
                 </div>
                 <SegmentedControl
                     v-model="draft.visibility"
-                    class="visibility"
                     :options="visibilityOptions"
                     :label="t('trip.visibility')"
                     :disabled="readOnly"
+                    stretch
                 />
 
                 <div>
@@ -673,7 +679,7 @@ const heading = computed(() =>
                                 <div class="tools">
                                     <button
                                         type="button"
-                                        class="icon"
+                                        class="icon-btn"
                                         :disabled="i === 0"
                                         :aria-label="
                                             t('trip.moveUp', {
@@ -691,7 +697,7 @@ const heading = computed(() =>
                                     </button>
                                     <button
                                         type="button"
-                                        class="icon"
+                                        class="icon-btn"
                                         :disabled="i === draft.stops.length - 1"
                                         :aria-label="
                                             t('trip.moveDown', {
@@ -709,7 +715,7 @@ const heading = computed(() =>
                                     </button>
                                     <button
                                         type="button"
-                                        class="icon"
+                                        class="icon-btn"
                                         :aria-label="
                                             t('trip.move', {
                                                 name: label(stop),
@@ -726,7 +732,7 @@ const heading = computed(() =>
                                     </button>
                                     <button
                                         type="button"
-                                        class="icon"
+                                        class="icon-btn danger"
                                         :aria-label="
                                             t('trip.removeStop', {
                                                 name: label(stop),
@@ -794,15 +800,11 @@ const heading = computed(() =>
                     {{ problem }}
                 </p>
                 <div class="actions">
-                    <button
-                        class="btn btn-secondary"
-                        type="button"
-                        @click="cancel"
-                    >
+                    <button class="btn secondary" type="button" @click="cancel">
                         {{ t('common.cancel') }}
                     </button>
                     <button
-                        class="btn btn-primary"
+                        class="btn"
                         type="button"
                         :disabled="!canSave"
                         :title="
@@ -822,6 +824,7 @@ const heading = computed(() =>
         :title="t('trip.discardTitle')"
         :message="t('trip.discardMessage')"
         :confirm-label="t('trip.discard')"
+        danger
         @confirm="(pendingLeave!(), (pendingLeave = null))"
         @cancel="pendingLeave = null"
     />
@@ -870,7 +873,7 @@ label {
 }
 
 .field:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
 }
 
 textarea.field {
@@ -910,15 +913,6 @@ textarea.field {
     gap: 0.5rem;
 }
 
-/* Full width like the fields above, so both halves share it */
-.visibility {
-    display: flex;
-}
-
-.visibility :deep(button) {
-    flex: 1;
-}
-
 .actions {
     display: flex;
     gap: 0.5rem;
@@ -926,40 +920,16 @@ textarea.field {
 
 .btn {
     flex: 1;
-    min-height: var(--touch);
-    padding: 0.5rem 0.9rem;
-    border: 1px solid transparent;
-    border-radius: 0.5rem;
-    font: inherit;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.btn-primary {
-    background: #3a7d5c;
-    color: #fff;
-}
-
-.btn-secondary {
-    border-color: var(--line-strong);
-    background: transparent;
-    color: var(--text);
-}
-
-.btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
 }
 
 .hint {
     margin: 0;
     font-size: 0.72rem;
-    color: #c0392b;
+    color: var(--danger);
 }
 
 .hint.offline {
-    color: #8a5a12;
+    color: var(--warn);
 }
 
 .stops {
@@ -990,7 +960,7 @@ textarea.field {
     border: 1px dashed var(--line-strong);
     border-radius: 0.5rem;
     background: transparent;
-    color: #3a7d5c;
+    color: var(--accent);
     font: inherit;
     font-size: 0.82rem;
     font-weight: 500;
@@ -1051,22 +1021,6 @@ li[draggable='true'] .number {
     max-width: calc(2 * var(--touch));
 }
 
-.icon {
-    width: var(--touch);
-    height: var(--touch);
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--muted);
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.icon:disabled {
-    opacity: 0.3;
-}
-
 .stop-details {
     margin-top: 0.2rem;
 }
@@ -1103,13 +1057,7 @@ li[draggable='true'] .number {
         max-width: none;
     }
 
-    .icon {
-        width: 1.9rem;
-        height: 1.9rem;
-    }
-
-    .field,
-    .btn {
+    .field {
         min-height: 0;
     }
 }

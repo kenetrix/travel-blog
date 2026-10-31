@@ -158,7 +158,7 @@ function onBlur() {
 }
 
 .clear:hover {
-    color: #c0392b;
+    color: var(--danger);
 }
 
 .selected {
@@ -183,7 +183,7 @@ input {
 }
 
 input:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
 }
 
 .list {

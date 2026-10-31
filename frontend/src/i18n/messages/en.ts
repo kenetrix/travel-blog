@@ -274,6 +274,9 @@ export default {
         savedReloadFailed: 'Saved, but could not reload',
         removeFailed: 'Could not remove the configuration',
         removed: 'Single sign-on is off',
+        removeTitle: 'Remove single sign-on',
+        removeMessage:
+            'Remove the stored provider settings? Users can no longer sign in with it.',
         removedReloadFailed: 'Removed, but could not reload',
         loadFailed: 'Could not load single sign-on',
         envNote:
@@ -380,10 +383,7 @@ export default {
         sameAirport: 'Choose two different airports.',
         tapForDetails: 'tap for details',
         count: plural({ one: '{count} flight', other: '{count} flights' }),
-        makePrivate: '{route} is public; make it private',
-        makePublic: '{route} is private; make it public',
-        publicTitle: 'Public - click to make private',
-        privateTitle: 'Only you - click to make public',
+        visibility: 'Visibility',
         remove: 'Remove {route}',
         removeTitle: 'Remove flight',
         removeMessage: 'Remove {route} from your flights?',

@@ -232,7 +232,7 @@ async function changeUsername() {
 
             <template v-if="sso && step === 'username'">
                 <a
-                    class="btn sso"
+                    class="cta sso"
                     :class="{ disabled: !store.canWrite }"
                     :href="ssoHref"
                     :aria-disabled="!store.canWrite"
@@ -289,7 +289,7 @@ async function changeUsername() {
                     />
                 </div>
 
-                <div v-if="step !== 'username'" class="chip">
+                <div v-if="step !== 'username'" class="user-chip">
                     <span class="initial" aria-hidden="true">
                         {{ username.charAt(0).toUpperCase() }}
                     </span>
@@ -411,7 +411,7 @@ async function changeUsername() {
                 </div>
 
                 <button
-                    class="btn primary"
+                    class="cta primary"
                     type="submit"
                     :disabled="busy || !store.canWrite"
                     :aria-busy="busy"
@@ -568,7 +568,7 @@ h1 {
     border: 1px solid rgb(192 57 43 / 0.35);
     border-radius: 0.6rem;
     background: rgb(192 57 43 / 0.1);
-    color: #c0392b;
+    color: var(--danger);
     font-size: 0.85rem;
     line-height: 1.4;
 }
@@ -588,7 +588,7 @@ h1 {
     margin-top: 0.05rem;
 }
 
-.btn {
+.cta {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -608,38 +608,38 @@ h1 {
         border-color 0.15s;
 }
 
-.btn.primary {
+.cta.primary {
     margin-top: 0.5rem;
     border: none;
-    background: #3a7d5c;
+    background: var(--accent);
     color: #fff;
 }
 
-.btn.primary:hover:not(:disabled) {
-    background: #2f6a4e;
+.cta.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
 }
 
-.btn.primary:disabled {
+.cta.primary:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
-.btn.primary[aria-busy='true'] {
+.cta.primary[aria-busy='true'] {
     cursor: progress;
 }
 
 /* Secondary: the provider is another way in, not the page's main action */
-.btn.sso {
+.cta.sso {
     border: 1px solid var(--line-strong);
     background: var(--page);
     color: var(--text);
 }
 
-.btn.sso:hover {
-    border-color: #3a7d5c;
+.cta.sso:hover {
+    border-color: var(--accent);
 }
 
-.btn.sso.disabled {
+.cta.sso.disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
@@ -707,12 +707,12 @@ select {
 input:focus,
 select:focus {
     outline: none;
-    border-color: #3a7d5c;
+    border-color: var(--accent);
     box-shadow: 0 0 0 3px rgb(58 125 92 / 0.25);
 }
 
 input[aria-invalid='true'] {
-    border-color: #c0392b;
+    border-color: var(--danger);
 }
 
 /* Small and below the form: most visitors keep the detected language */
@@ -747,7 +747,7 @@ input[aria-invalid='true'] {
     }
 }
 
-.chip {
+.user-chip {
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -764,7 +764,7 @@ input[aria-invalid='true'] {
     width: 2rem;
     height: 2rem;
     border-radius: 50%;
-    background: #3a7d5c;
+    background: var(--accent);
     color: #fff;
     font-weight: 500;
 }
@@ -785,7 +785,7 @@ input[aria-invalid='true'] {
     border: none;
     border-radius: 2rem;
     background: none;
-    color: #3a7d5c;
+    color: var(--accent);
     font: inherit;
     font-size: 0.85rem;
     font-weight: 500;
@@ -834,7 +834,7 @@ input[aria-invalid='true'] {
 }
 
 .hint.ok {
-    color: #3a7d5c;
+    color: var(--accent);
 }
 
 .hint.warn {

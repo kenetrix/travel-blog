@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, problemMessage, type Schemas } from '../../api/client'
 import { useTravelStore } from '../stores/store'
+import ConfirmModal from '../ui/ConfirmModal.vue'
 import { t } from '../../i18n'
 
 type OidcConfig = Schemas['OidcAdminConfig']
@@ -22,6 +23,7 @@ const oidcForm = ref({
     disablePassword: false,
 })
 const oidcBusy = ref(false)
+const confirmRemove = ref(false)
 const callbackUrl = `${window.location.origin}/api/auth/oidc/callback`
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
@@ -116,6 +118,7 @@ async function saveOidc() {
 }
 
 async function removeOidc() {
+    confirmRemove.value = false
     oidcBusy.value = true
     const { error } = await api.DELETE('/admin/oidc')
     oidcBusy.value = false
@@ -244,13 +247,23 @@ onMounted(async () => {
                     type="button"
                     class="btn danger"
                     :disabled="oidcBusy || !store.canWrite"
-                    @click="removeOidc"
+                    @click="confirmRemove = true"
                 >
                     {{ t('common.remove') }}
                 </button>
             </div>
         </form>
     </section>
+
+    <ConfirmModal
+        v-if="confirmRemove"
+        :title="t('oidc.removeTitle')"
+        :message="t('oidc.removeMessage')"
+        :confirm-label="t('common.remove')"
+        danger
+        @confirm="removeOidc"
+        @cancel="confirmRemove = false"
+    />
 </template>
 
 <style src="../ui/panel.css"></style>
@@ -271,7 +284,7 @@ onMounted(async () => {
 }
 
 .light.bad {
-    background: #c0392b;
+    background: var(--danger);
     box-shadow: 0 0 0 3px #c0392b33;
 }
 

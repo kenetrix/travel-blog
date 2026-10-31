@@ -123,6 +123,11 @@ input {
     color: var(--text);
     font: inherit;
     font-size: var(--field-font);
+    outline: none;
+}
+
+input:focus {
+    border-color: var(--accent);
 }
 
 .note {
@@ -134,36 +139,18 @@ input {
 .error {
     margin: 0.4rem 0 0;
     font-size: 0.78rem;
-    color: #c0392b;
+    color: var(--danger);
 }
 
 .btn {
-    min-height: var(--touch);
     margin-top: 0.9rem;
-    padding: 0.6rem;
-    border: none;
-    border-radius: 0.5rem;
-    background: #3a7d5c;
-    color: #fff;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
 }
 
 .btn.secondary {
     margin-top: 0.4rem;
-    border: 1px solid var(--line-strong);
-    background: var(--raised);
-    color: var(--text);
 }
 
 .offline {
-    color: #8a5a12;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: wait;
+    color: var(--warn);
 }
 </style>

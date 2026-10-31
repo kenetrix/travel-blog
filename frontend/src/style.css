@@ -100,6 +100,15 @@ button:disabled {
     --map-water: #373838;
 }
 
+/* Accent and state colours, the same in both themes */
+:root {
+    --accent: #3a7d5c;
+    --accent-hover: #2f6a4e;
+    --danger: #c0392b;
+    --warn: #8a5a12;
+    --star: #ca8f22;
+}
+
 /* Installed iOS app: the status bar is translucent over the map, so labels and
    borders show through behind the clock. A solid strip keeps it clean. */
 body::before {

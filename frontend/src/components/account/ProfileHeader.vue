@@ -38,21 +38,18 @@ async function setColor(value: string) {
 
 <template>
     <section class="panel">
-        <div class="head">
-            <h2 id="visibility-title">{{ t('profile.publicProfile') }} 🌐</h2>
-            <button
-                type="button"
-                class="switch"
-                :class="{ on: isPublic }"
+        <!-- The same switch as the administration's settings -->
+        <label class="check toggle">
+            <span class="title">{{ t('profile.publicProfile') }} 🌐</span>
+            <input
+                type="checkbox"
                 role="switch"
+                class="switch"
+                :checked="isPublic"
                 :disabled="!store.canWrite"
-                :aria-checked="isPublic"
-                aria-labelledby="visibility-title"
-                @click="toggle"
-            >
-                <span class="knob" />
-            </button>
-        </div>
+                @change="toggle"
+            />
+        </label>
         <div class="head divider">
             <h2 id="color-title">{{ t('profile.colour') }}</h2>
             <label
@@ -130,46 +127,9 @@ async function setColor(value: string) {
     cursor: pointer;
 }
 
-.switch {
-    position: relative;
-    flex: none;
-    width: 2.6rem;
-    height: 1.5rem;
-    padding: 0;
-    border: none;
-    border-radius: 1rem;
-    background: var(--line-strong);
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-/* A 44px touch target around the smaller track */
-.switch::before {
-    content: '';
-    position: absolute;
-    inset: -10px -4px;
-}
-
-.switch:disabled {
-    opacity: 0.5;
-}
-
-.switch.on {
-    background: #3a7d5c;
-}
-
-.knob {
-    position: absolute;
-    top: 0.2rem;
-    left: 0.2rem;
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform 0.15s;
-}
-
-.switch.on .knob {
-    transform: translateX(1.1rem);
+.title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
 }
 </style>

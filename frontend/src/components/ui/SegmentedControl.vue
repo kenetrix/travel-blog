@@ -1,15 +1,23 @@
 <script setup lang="ts" generic="T extends string">
 defineProps<{
     modelValue: T
-    options: { value: T; label: string }[]
+    // color: background of the picked option instead of the accent
+    options: { value: T; label: string; title?: string; color?: string }[]
     label: string
     disabled?: boolean
+    // As wide as the container, the options sharing it
+    stretch?: boolean
 }>()
 defineEmits<{ 'update:modelValue': [value: T] }>()
 </script>
 
 <template>
-    <div class="segmented" role="radiogroup" :aria-label="label">
+    <div
+        class="segmented"
+        :class="{ stretch }"
+        role="radiogroup"
+        :aria-label="label"
+    >
         <button
             v-for="o in options"
             :key="o.value"
@@ -17,6 +25,12 @@ defineEmits<{ 'update:modelValue': [value: T] }>()
             role="radio"
             :aria-checked="o.value === modelValue"
             :class="{ on: o.value === modelValue }"
+            :style="
+                o.color && o.value === modelValue
+                    ? { background: o.color, color: 'var(--on-status)' }
+                    : undefined
+            "
+            :title="o.title"
             :disabled="disabled"
             @click="$emit('update:modelValue', o.value)"
         >
@@ -34,6 +48,14 @@ defineEmits<{ 'update:modelValue': [value: T] }>()
     background: var(--page);
 }
 
+.segmented.stretch {
+    display: flex;
+}
+
+.stretch button {
+    flex: 1;
+}
+
 button {
     min-height: 2.2rem;
     padding: 0.3rem 0.8rem;
@@ -47,13 +69,17 @@ button {
     cursor: pointer;
 }
 
+button:hover:not(:disabled):not(.on) {
+    color: var(--text);
+}
+
 button.on {
-    background: #3a7d5c;
+    background: var(--accent);
     color: #fff;
 }
 
 button:disabled {
     opacity: 0.5;
-    cursor: default;
+    cursor: not-allowed;
 }
 </style>

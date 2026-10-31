@@ -285,6 +285,9 @@ export default {
         savedReloadFailed: 'Сохранено, но не удалось перезагрузить',
         removeFailed: 'Не удалось удалить конфигурацию',
         removed: 'Единый вход выключен',
+        removeTitle: 'Удалить единый вход',
+        removeMessage:
+            'Удалить сохранённые настройки провайдера? Войти через него больше будет нельзя.',
         removedReloadFailed: 'Удалено, но не удалось перезагрузить',
         loadFailed: 'Не удалось загрузить единый вход',
         envNote:
@@ -402,10 +405,7 @@ export default {
             many: '{count} перелётов',
             other: '{count} перелёта',
         }),
-        makePrivate: '{route} публичный; сделать закрытым',
-        makePublic: '{route} закрытый; сделать публичным',
-        publicTitle: 'Публично — нажмите, чтобы закрыть',
-        privateTitle: 'Только вы — нажмите, чтобы открыть',
+        visibility: 'Видимость',
         remove: 'Убрать {route}',
         removeTitle: 'Убрать перелёт',
         removeMessage: 'Убрать {route} из ваших перелётов?',

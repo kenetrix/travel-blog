@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import PageWrapper from '../ui/PageWrapper.vue'
 import ConfirmModal from '../ui/ConfirmModal.vue'
 import SegmentedControl from '../ui/SegmentedControl.vue'
@@ -111,6 +111,27 @@ function startEdit(stop: Trip['stops'][number]) {
         links: stop.links.map((l) => ({ url: l.url, label: l.label ?? '' })),
     }
 }
+
+const editingStop = computed(() =>
+    trip.value?.stops.find((s) => s.id === editingId.value)
+)
+
+const detailsDirty = computed(() => {
+    const stop = editingStop.value
+    if (!stop) return false
+    return (
+        JSON.stringify(form.value) !==
+        JSON.stringify({
+            notes: stop.notes,
+            category: stop.category,
+            rating: stop.rating,
+            links: stop.links.map((l) => ({
+                url: l.url,
+                label: l.label ?? '',
+            })),
+        })
+    )
+})
 
 function setRating(n: number) {
     form.value.rating = form.value.rating === n ? 0 : n
@@ -264,8 +285,22 @@ async function remove() {
     confirmDelete.value = false
     if (!trip.value || !(await store.deleteTrip(trip.value.id))) return
     store.notify(t('trip.deleted'))
+    leaving = true
     router.push({ name: 'home' })
 }
+
+// Like the editors: leaving with unsaved trip fields or stop details asks first
+const pendingLeave = ref<(() => void) | null>(null)
+let leaving = false
+
+onBeforeRouteLeave((to) => {
+    if (leaving || !(tripDirty.value || detailsDirty.value)) return true
+    pendingLeave.value = () => {
+        leaving = true
+        router.push(to.fullPath)
+    }
+    return false
+})
 </script>
 
 <template>
@@ -416,6 +451,7 @@ async function remove() {
                             type="button"
                             class="chip"
                             :class="{ on: !filter }"
+                            :aria-pressed="!filter"
                             @click="filter = ''"
                         >
                             {{ t('trip.filterAll') }}
@@ -542,6 +578,7 @@ async function remove() {
                                 v-if="editingId === stop.id"
                                 class="details-form"
                                 @submit.prevent="saveDetails"
+                                @keydown.esc="editingId = null"
                             >
                                 <div class="filters" role="group">
                                     <button
@@ -616,7 +653,7 @@ async function remove() {
                                     />
                                     <button
                                         type="button"
-                                        class="icon"
+                                        class="icon-btn danger"
                                         :aria-label="t('trip.removeLink')"
                                         :title="t('trip.removeLink')"
                                         @click="form.links.splice(li, 1)"
@@ -640,15 +677,19 @@ async function remove() {
                                 <div class="form-actions">
                                     <button
                                         type="button"
-                                        class="chip"
+                                        class="btn secondary"
                                         @click="editingId = null"
                                     >
                                         {{ t('common.cancel') }}
                                     </button>
                                     <button
                                         type="submit"
-                                        class="chip on"
-                                        :disabled="saving || !linksValid"
+                                        class="btn"
+                                        :disabled="
+                                            saving ||
+                                            !linksValid ||
+                                            !detailsDirty
+                                        "
                                     >
                                         {{ t('common.save') }}
                                     </button>
@@ -689,6 +730,7 @@ async function remove() {
         :title="t('trip.removeStopTitle')"
         :message="t('trip.removeStopMessage', { name: removing.name })"
         :confirm-label="t('common.remove')"
+        danger
         @confirm="removeStop"
         @cancel="removing = null"
     />
@@ -697,8 +739,18 @@ async function remove() {
         :title="t('trip.deleteTitle')"
         :message="t('trip.deleteMessage', { title: trip.title })"
         :confirm-label="t('common.delete')"
+        danger
         @confirm="remove"
         @cancel="confirmDelete = false"
+    />
+    <ConfirmModal
+        v-if="pendingLeave"
+        :title="t('trip.discardTitle')"
+        :message="t('trip.discardMessage')"
+        :confirm-label="t('trip.discard')"
+        danger
+        @confirm="(pendingLeave!(), (pendingLeave = null))"
+        @cancel="pendingLeave = null"
     />
 </template>
 
@@ -708,40 +760,6 @@ async function remove() {
 .header-actions {
     display: flex;
     gap: 0.4rem;
-}
-
-.header-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    box-sizing: border-box;
-    min-height: var(--touch);
-    padding: 0.4rem 0.9rem;
-    border: none;
-    border-radius: 0.5rem;
-    background: #3a7d5c;
-    color: #fff;
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.header-actions .btn.secondary {
-    border: 1px solid var(--line-strong);
-    background: transparent;
-    color: var(--text);
-}
-
-.header-actions .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-@media (pointer: fine) {
-    .header-actions .btn {
-        min-height: 0;
-    }
 }
 
 .state {
@@ -849,23 +867,6 @@ async function remove() {
     gap: 0.3rem;
 }
 
-.chip {
-    min-height: 30px;
-    padding: 0.1rem 0.6rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--text);
-    font: inherit;
-    font-size: 0.74rem;
-    cursor: pointer;
-}
-
-.chip.on {
-    border-color: var(--trip);
-    background: color-mix(in srgb, var(--trip) 18%, transparent);
-}
-
 .stops {
     display: flex;
     flex-direction: column;
@@ -906,44 +907,15 @@ async function remove() {
     gap: 0.3rem;
 }
 
-.icon-btn {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-}
-
-.icon-btn:hover:not(:disabled) {
-    background: var(--line-faint);
-    color: var(--text);
-}
-
-.icon-btn.danger:hover:not(:disabled) {
-    background: #c0392b22;
-    color: #e0675a;
-}
-
-.icon-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-
+/* Touch targets reach into the row's spacing instead of stretching it */
 @media (pointer: coarse) {
-    .icon-btn {
-        width: var(--touch);
-        height: var(--touch);
+    .stop-side .icon-btn {
         margin: -6px -6px -6px 0;
     }
 }
 
 .rating {
-    color: #ca8f22;
+    color: var(--star);
     font-size: 0.8rem;
     letter-spacing: 0.05em;
     white-space: nowrap;
@@ -953,16 +925,28 @@ async function remove() {
     color: var(--faint);
 }
 
+/* Below the list, where the next stop will appear; as in the editor */
 .add-stop {
-    display: block;
+    display: grid;
+    place-items: center;
+    min-height: var(--touch);
     margin-top: 0.2rem;
-    padding: 0.6rem;
     border: 1px dashed var(--line-strong);
-    border-radius: 0.6rem;
-    color: var(--muted);
+    border-radius: 0.5rem;
+    color: var(--accent);
     font-size: 0.82rem;
-    text-align: center;
+    font-weight: 500;
     text-decoration: none;
+}
+
+.add-stop:hover {
+    background: var(--line-faint);
+}
+
+@media (pointer: fine) {
+    .add-stop {
+        min-height: 2rem;
+    }
 }
 
 .details-form {
@@ -989,7 +973,7 @@ async function remove() {
 }
 
 .star.on {
-    color: #ca8f22;
+    color: var(--star);
 }
 
 .link-row {
@@ -998,7 +982,7 @@ async function remove() {
     gap: 0.3rem;
 }
 
-.link-row .icon {
+.link-row .icon-btn {
     grid-column: 2;
     grid-row: 1 / span 2;
 }
@@ -1008,20 +992,25 @@ async function remove() {
     border: none;
     background: transparent;
     padding: 0.2rem 0;
-    color: var(--muted);
+    color: var(--accent);
     font: inherit;
     font-size: 0.78rem;
+    font-weight: 500;
     cursor: pointer;
 }
 
 .error {
-    color: var(--danger, #e5645c);
+    color: var(--danger);
     font-size: 0.75rem;
 }
 
 .form-actions {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
+}
+
+.form-actions .btn {
+    flex: 1;
 }
 
 .links {

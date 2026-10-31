@@ -277,6 +277,9 @@ export default {
         savedReloadFailed: 'Guardado, pero no se pudo recargar',
         removeFailed: 'No se pudo quitar la configuración',
         removed: 'El inicio de sesión único está desactivado',
+        removeTitle: 'Quitar el inicio de sesión único',
+        removeMessage:
+            '¿Quitar los ajustes guardados del proveedor? Ya nadie podrá iniciar sesión con él.',
         removedReloadFailed: 'Quitado, pero no se pudo recargar',
         loadFailed: 'No se pudo cargar el inicio de sesión único',
         envNote:
@@ -386,10 +389,7 @@ export default {
         sameAirport: 'Elige dos aeropuertos distintos.',
         tapForDetails: 'toca para ver detalles',
         count: plural({ one: '{count} vuelo', other: '{count} vuelos' }),
-        makePrivate: '{route} es público; hacerlo privado',
-        makePublic: '{route} es privado; hacerlo público',
-        publicTitle: 'Público: haz clic para hacerlo privado',
-        privateTitle: 'Solo tú: haz clic para hacerlo público',
+        visibility: 'Visibilidad',
         remove: 'Quitar {route}',
         removeTitle: 'Quitar vuelo',
         removeMessage: '¿Quitar {route} de tus vuelos?',

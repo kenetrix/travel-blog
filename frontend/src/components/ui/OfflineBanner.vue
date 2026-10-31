@@ -33,7 +33,7 @@ const store = useTravelStore()
     margin: 0;
     padding: 0.3rem 0.8rem;
     border-radius: 1rem;
-    background: #8a5a12;
+    background: var(--warn);
     color: #fff;
     font-size: 0.75rem;
     text-align: center;

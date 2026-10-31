@@ -13,6 +13,7 @@ import '@fontsource/dm-serif-display/400.css'
 import './cyrillic.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './style.css'
+import './components/ui/controls.css'
 import 'flag-icons/css/flag-icons.min.css'
 
 const app = createApp(App)

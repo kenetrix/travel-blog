@@ -93,8 +93,9 @@ const listedCountries = computed(() => {
                         v-for="t in allTags"
                         :key="t"
                         type="button"
-                        class="tag"
+                        class="chip"
                         :class="{ on: activeTag === t }"
+                        :aria-pressed="activeTag === t"
                         @click="activeTag = activeTag === t ? '' : t"
                     >
                         {{ t }}
@@ -264,31 +265,6 @@ ol::-webkit-scrollbar {
     gap: 0.3rem;
 }
 
-.tag {
-    min-height: 2rem;
-    padding: 0.1rem 0.7rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 1rem;
-    background: var(--raised);
-    font-size: 0.75rem;
-    color: var(--muted-strong);
-    cursor: pointer;
-}
-
-@media (pointer: fine) {
-    .tag {
-        min-height: 0;
-        padding: 0.1rem 0.5rem;
-        font-size: 0.72rem;
-    }
-}
-
-.tag.on {
-    background: var(--accent-soft);
-    border-color: #3a7d5c;
-    color: #2f6a4e;
-}
-
 .wish {
     color: var(--wishlist);
     font-size: 0.8em;
@@ -296,7 +272,7 @@ ol::-webkit-scrollbar {
 }
 
 .rating {
-    color: #ca8f22;
+    color: var(--star);
     font-size: 0.65em;
     margin-left: 0.3rem;
 }
@@ -307,7 +283,7 @@ li.empty {
 }
 
 .check {
-    color: #3a7d5c;
+    color: var(--accent);
     font-size: 0.8em;
     margin-left: 0.3rem;
 }
@@ -328,6 +304,6 @@ input {
 }
 
 input:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
 }
 </style>

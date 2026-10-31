@@ -209,7 +209,7 @@ function skipNumber() {
             <div class="actions">
                 <button
                     v-if="!number.trim()"
-                    class="btn btn-secondary"
+                    class="btn secondary"
                     type="button"
                     @click="skipNumber"
                 >
@@ -217,7 +217,7 @@ function skipNumber() {
                 </button>
                 <button
                     v-else
-                    class="btn btn-primary"
+                    class="btn"
                     type="submit"
                     :disabled="!store.canWrite || !normalizedNumber"
                     :title="
@@ -271,7 +271,15 @@ function skipNumber() {
 
             <div class="actions">
                 <button
-                    class="btn btn-primary"
+                    v-if="store.flights.length"
+                    class="btn secondary"
+                    type="button"
+                    @click="cancelAdd"
+                >
+                    {{ t('common.cancel') }}
+                </button>
+                <button
+                    class="btn"
                     type="submit"
                     :disabled="!canAdd"
                     :title="
@@ -279,14 +287,6 @@ function skipNumber() {
                     "
                 >
                     {{ t('flights.addRoute') }}
-                </button>
-                <button
-                    v-if="store.flights.length"
-                    class="btn btn-secondary"
-                    type="button"
-                    @click="cancelAdd"
-                >
-                    {{ t('common.cancel') }}
                 </button>
             </div>
             <p v-if="!store.canWrite" class="hint offline">
@@ -328,7 +328,7 @@ function skipNumber() {
                     </p>
                 </div>
                 <button
-                    class="btn btn-primary add"
+                    class="btn add"
                     type="button"
                     :disabled="!store.canWrite"
                     :aria-label="t('flights.add')"
@@ -385,37 +385,7 @@ function skipNumber() {
                         </button>
                         <button
                             type="button"
-                            class="icon visibility"
-                            :disabled="!store.canWrite"
-                            :aria-label="
-                                t(
-                                    f.visibility === 'public'
-                                        ? 'flights.makePrivate'
-                                        : 'flights.makePublic',
-                                    { route: f.label }
-                                )
-                            "
-                            :title="
-                                !store.canWrite
-                                    ? t('common.offlineHint')
-                                    : f.visibility === 'public'
-                                      ? t('flights.publicTitle')
-                                      : t('flights.privateTitle')
-                            "
-                            @click="
-                                store.setFlightVisibility(
-                                    f.id,
-                                    f.visibility === 'public'
-                                        ? 'private'
-                                        : 'public'
-                                )
-                            "
-                        >
-                            {{ f.visibility === 'public' ? '🌐' : '🔒' }}
-                        </button>
-                        <button
-                            type="button"
-                            class="icon remove"
+                            class="icon-btn danger"
                             :disabled="!store.canWrite"
                             :title="
                                 store.canWrite
@@ -445,6 +415,7 @@ function skipNumber() {
         :title="t('flights.removeTitle')"
         :message="t('flights.removeMessage', { route: pendingRemoval.label })"
         :confirm-label="t('common.remove')"
+        danger
         @confirm="removeFlight"
         @cancel="pendingRemoval = null"
     />
@@ -491,7 +462,7 @@ label {
 }
 
 .field:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
 }
 
 .actions {
@@ -533,7 +504,6 @@ label {
     width: auto;
     min-width: var(--touch);
     padding: 0.45rem 1rem;
-    border-radius: 999px;
 }
 
 /* The narrow desktop panel: icon only, so the total stays on one line */
@@ -562,11 +532,11 @@ label {
 .hint {
     margin: -0.4rem 0 0;
     font-size: 0.72rem;
-    color: #c0392b;
+    color: var(--danger);
 }
 
 .hint.offline {
-    color: #8a5a12;
+    color: var(--warn);
 }
 
 .hint.below {
@@ -622,31 +592,14 @@ label {
     font-size: 0.72rem;
 }
 
-.icon {
-    flex: none;
-    width: var(--touch);
-    height: var(--touch);
-    padding: 0;
-    border: none;
-    background: none;
-    line-height: 1;
-    cursor: pointer;
-}
-
 /* Mouse: denser rows, as before */
 @media (pointer: fine) {
     .flights li {
         font-size: 0.8rem;
     }
 
-    .route,
-    .icon {
+    .route {
         min-height: 1.8rem;
-        height: auto;
-    }
-
-    .icon {
-        width: 1.6rem;
     }
 
     .field {
@@ -654,60 +607,7 @@ label {
     }
 }
 
-.visibility {
-    font-size: 0.8rem;
-    opacity: 0.55;
-}
-
-.visibility:hover:not(:disabled) {
-    opacity: 1;
-}
-
-.remove {
-    color: var(--muted);
-    font-size: 1.1rem;
-}
-
-.remove:hover:not(:disabled) {
-    color: #c0392b;
-}
-
-.icon:disabled {
-    opacity: 0.3;
-}
-
-.btn {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: var(--touch);
-    padding: 0.5rem;
-    border: none;
-    border-radius: 0.5rem;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-@media (pointer: fine) {
-    .btn {
-        min-height: 0;
-        font-size: 0.82rem;
-    }
-}
-
-.btn-primary {
-    background: #1a1c1e;
-    color: white;
-}
-
-.btn-secondary {
-    background: var(--line-faint);
-    color: var(--text);
-}
-
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.actions .btn {
+    flex: 1;
 }
 </style>

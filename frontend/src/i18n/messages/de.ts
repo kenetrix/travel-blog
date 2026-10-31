@@ -278,6 +278,9 @@ export default {
         savedReloadFailed: 'Gespeichert, aber Neuladen fehlgeschlagen',
         removeFailed: 'Die Konfiguration konnte nicht entfernt werden',
         removed: 'Single Sign-on ist aus',
+        removeTitle: 'Single Sign-on entfernen',
+        removeMessage:
+            'Gespeicherte Anbieter-Einstellungen entfernen? Niemand kann sich dann mehr damit anmelden.',
         removedReloadFailed: 'Entfernt, aber Neuladen fehlgeschlagen',
         loadFailed: 'Single Sign-on konnte nicht geladen werden',
         envNote:
@@ -388,10 +391,7 @@ export default {
         sameAirport: 'Wähle zwei verschiedene Flughäfen.',
         tapForDetails: 'für Details tippen',
         count: plural({ one: '{count} Flug', other: '{count} Flüge' }),
-        makePrivate: '{route} ist öffentlich; privat machen',
-        makePublic: '{route} ist privat; öffentlich machen',
-        publicTitle: 'Öffentlich – klicken, um es privat zu machen',
-        privateTitle: 'Nur du – klicken, um es öffentlich zu machen',
+        visibility: 'Sichtbarkeit',
         remove: '{route} entfernen',
         removeTitle: 'Flug entfernen',
         removeMessage: '{route} aus deinen Flügen entfernen?',

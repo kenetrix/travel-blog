@@ -7,6 +7,8 @@ const props = defineProps<{
     message: string
     confirmLabel?: string
     confirmDisabled?: boolean
+    // Red confirm button for actions that delete or discard something
+    danger?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -31,11 +33,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 <p class="message">{{ message }}</p>
                 <slot />
                 <div class="actions">
-                    <button class="btn cancel" @click="emit('cancel')">
+                    <button class="btn secondary" @click="emit('cancel')">
                         {{ t('common.cancel') }}
                     </button>
                     <button
-                        class="btn confirm"
+                        class="btn"
+                        :class="{ danger: props.danger }"
                         :disabled="props.confirmDisabled"
                         @click="emit('confirm')"
                     >
@@ -102,60 +105,5 @@ h3 {
         flex-direction: row;
         justify-content: flex-end;
     }
-}
-
-.btn {
-    min-height: var(--touch);
-    padding: 0.4rem 0.9rem;
-    border-radius: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-    font-family: inherit;
-    transition:
-        border-color 0.15s ease,
-        background-color 0.15s ease;
-}
-
-@media (pointer: fine) {
-    .btn {
-        min-height: 0;
-    }
-}
-
-.btn.cancel {
-    background: transparent;
-    border-color: var(--line-strong);
-    color: var(--muted);
-}
-
-.btn.cancel:hover {
-    border-color: rgba(0, 0, 0, 0.25);
-}
-
-.btn.cancel:focus {
-    outline: none;
-    border-color: #3a7d5c;
-}
-
-.btn.confirm {
-    background: #3a7d5c;
-    border-color: #3a7d5c;
-    color: #fff;
-}
-
-.btn.confirm:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-
-.btn.confirm:hover:not(:disabled) {
-    background: #2f6a4e;
-}
-
-.btn.confirm:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(58, 125, 92, 0.35);
 }
 </style>

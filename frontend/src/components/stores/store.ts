@@ -664,10 +664,6 @@ export const useTravelStore = defineStore('travel', () => {
         }
     }
 
-    function setFlightVisibility(id: string, visibility: Visibility) {
-        return updateFlight(id, { visibility })
-    }
-
     // Applied right away, restored if the server rejects it
     async function removeFlight(id: string) {
         const index = flightRecords.value.findIndex((f) => f.id === id)
@@ -852,7 +848,6 @@ export const useTravelStore = defineStore('travel', () => {
         saveCountry,
         loadCountryDetails,
         addFlight,
-        setFlightVisibility,
         updateFlight,
         removeFlight,
         highlightedFlightId,

@@ -23,6 +23,7 @@ import {
 } from '../../i18n/format'
 import { RouterLink, useRoute } from 'vue-router'
 import ConfirmModal from '../ui/ConfirmModal.vue'
+import SegmentedControl from '../ui/SegmentedControl.vue'
 import { localizedData, t } from '../../i18n'
 import { tripDates } from '../trips/dates'
 
@@ -223,13 +224,24 @@ function fit(el: HTMLTextAreaElement) {
     el.style.height = `${el.scrollHeight + 2}px`
 }
 
-const statusOptions = computed<{ value: CountryStatus; label: string }[]>(
-    () => [
-        { value: 'visited', label: t('country.visited') },
-        { value: 'wishlist', label: t('country.wishlist') },
-        { value: 'none', label: t('country.notSet') },
-    ]
-)
+// Picked statuses take their map colour
+const statusOptions = computed(() => [
+    {
+        value: 'visited' as const,
+        label: t('country.visited'),
+        color: 'var(--visited)',
+    },
+    {
+        value: 'wishlist' as const,
+        label: t('country.wishlist'),
+        color: 'var(--wishlist)',
+    },
+    {
+        value: 'none' as const,
+        label: t('country.notSet'),
+        color: 'var(--chip)',
+    },
+])
 
 // Trips with a stop in this country: latest start first, undated ones last
 const trips = computed(() =>
@@ -254,12 +266,18 @@ function otherCountries(countries: string[]): string {
     )
 }
 
-const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
-    () => [
-        { value: 'private', label: t('common.onlyMe') },
-        { value: 'public', label: t('common.public') },
-    ]
-)
+const visibilityOptions = computed(() => [
+    {
+        value: 'private' as const,
+        label: t('common.onlyMe'),
+        title: t('country.privateTitle'),
+    },
+    {
+        value: 'public' as const,
+        label: t('common.public'),
+        title: t('country.publicTitle'),
+    },
+])
 </script>
 
 <template>
@@ -303,39 +321,20 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
             </button>
         </div>
 
-        <div class="segmented" role="group" :aria-label="t('country.status')">
-            <button
-                v-for="o in statusOptions"
-                :key="o.value"
-                type="button"
-                :class="{ on: status === o.value, [o.value]: true }"
-                @click="status = o.value"
-            >
-                {{ o.label }}
-            </button>
-        </div>
+        <SegmentedControl
+            v-model="status"
+            :options="statusOptions"
+            :label="t('country.status')"
+            stretch
+        />
 
-        <div
+        <SegmentedControl
             v-if="status !== 'none'"
-            class="segmented visibility"
-            role="group"
-            :aria-label="t('country.visibility')"
-        >
-            <button
-                v-for="o in visibilityOptions"
-                :key="o.value"
-                type="button"
-                :class="{ on: vis === o.value }"
-                :title="
-                    o.value === 'public'
-                        ? t('country.publicTitle')
-                        : t('country.privateTitle')
-                "
-                @click="vis = o.value"
-            >
-                {{ o.label }}
-            </button>
-        </div>
+            v-model="vis"
+            :options="visibilityOptions"
+            :label="t('country.visibility')"
+            stretch
+        />
 
         <details open>
             <summary>{{ t('country.overview') }}</summary>
@@ -433,7 +432,7 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
                     {{ tag }}
                     <button
                         type="button"
-                        class="icon"
+                        class="remove-tag"
                         :aria-label="t('country.removeTag', { tag })"
                         @click="removeTag(tag)"
                     >
@@ -463,11 +462,11 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
             <p v-if="!store.canWrite" class="hint offline">
                 {{ t('common.offlineHint') }}
             </p>
-            <button class="btn cancel" @click="leave(() => emit('close'))">
+            <button class="btn secondary" @click="leave(() => emit('close'))">
                 {{ t('common.cancel') }}
             </button>
             <button
-                class="btn save"
+                class="btn"
                 :disabled="!dirty || loadingDetails || !store.canWrite"
                 :title="
                     !store.canWrite
@@ -488,6 +487,7 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
         :title="t('country.discardTitle')"
         :message="t('country.discardMessage')"
         :confirm-label="t('country.discard')"
+        danger
         @confirm="(pendingLeave!(), (pendingLeave = null))"
         @cancel="pendingLeave = null"
     />
@@ -497,6 +497,7 @@ const visibilityOptions = computed<{ value: Visibility; label: string }[]>(
         :title="t('country.removeTitle')"
         :message="t('country.removeMessage', { name })"
         :confirm-label="t('common.remove')"
+        danger
         @confirm="persist"
         @cancel="showRemoveConfirm = false"
     />
@@ -547,56 +548,6 @@ h2 {
     cursor: pointer;
 }
 
-/* Status */
-.segmented {
-    display: flex;
-    border: 1px solid var(--line-strong);
-    border-radius: 0.5rem;
-    overflow: hidden;
-}
-
-.segmented button {
-    flex: 1;
-    min-height: 40px;
-    padding: 0.35rem 0;
-    border: none;
-    background: var(--raised);
-    font-size: 0.78rem;
-    color: var(--muted);
-    cursor: pointer;
-}
-
-.segmented button + button {
-    border-left: 1px solid var(--line-strong);
-}
-
-.segmented button.on.visited {
-    background: var(--visited);
-    color: var(--on-status);
-}
-
-.segmented button.on.wishlist {
-    background: var(--wishlist);
-    color: var(--on-status);
-}
-
-.segmented button.on.none {
-    background: var(--chip);
-    color: var(--text-soft);
-}
-
-.segmented.visibility button {
-    min-height: 36px;
-    padding: 0.25rem 0;
-    font-size: 0.72rem;
-}
-
-.segmented.visibility button.on {
-    background: var(--accent-soft);
-    color: var(--text);
-    font-weight: 500;
-}
-
 /* Rating */
 .title-row {
     display: flex;
@@ -618,7 +569,7 @@ h2 {
 }
 
 .star.on {
-    color: #ca8f22;
+    color: var(--star);
 }
 
 /* Sections */
@@ -680,32 +631,12 @@ details > :not(summary) + :not(summary) {
     gap: 0.3rem;
 }
 
-.chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    min-height: 2rem;
-    padding: 0.15rem 0.65rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 1rem;
-    background: var(--raised);
-    font-size: 0.75rem;
-    color: var(--muted-strong);
-    cursor: pointer;
-}
-
+/* Picked tags are removed with their ×, not by a click on the chip */
 .chip.on {
-    background: var(--accent-soft);
-    border-color: #3a7d5c;
-    color: #2f6a4e;
     cursor: default;
 }
 
-.chip .fi {
-    margin-right: 0.2rem;
-}
-
-.icon {
+.remove-tag {
     padding: 0.2rem 0.3rem;
     margin-right: -0.3rem;
     border: none;
@@ -716,11 +647,15 @@ details > :not(summary) + :not(summary) {
     cursor: pointer;
 }
 
+.remove-tag:hover {
+    color: var(--danger);
+}
+
 .link-btn {
     display: inline-block;
     padding: 0.5rem 0;
     font-size: 0.78rem;
-    color: #3a7d5c;
+    color: var(--accent);
     text-decoration: none;
     cursor: pointer;
 }
@@ -772,7 +707,7 @@ textarea,
 input:not([type='checkbox']) {
     width: 100%;
     box-sizing: border-box;
-    padding: 0.4rem 0.6rem;
+    padding: 0.5rem 0.6rem;
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
     font-family: inherit;
@@ -789,11 +724,11 @@ textarea {
 
 textarea:focus,
 input:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
 }
 
 input[type='checkbox'] {
-    accent-color: #3a7d5c;
+    accent-color: var(--accent);
 }
 
 /* Stays at the bottom of the panel while the details scroll; reaches the
@@ -815,38 +750,6 @@ input[type='checkbox'] {
 .hint.offline {
     grid-column: 1 / -1;
     margin: 0;
-    color: #8a5a12;
-}
-
-.btn {
-    min-height: var(--touch);
-    padding: 0 1rem;
-    font-family: inherit;
-    border-radius: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-}
-
-.btn.cancel {
-    background: transparent;
-    border-color: var(--line-strong);
-    color: var(--muted);
-}
-
-.btn.save {
-    background: #3a7d5c;
-    border-color: #3a7d5c;
-    color: #fff;
-}
-
-.btn.save:hover:not(:disabled) {
-    background: #2f6a4e;
-}
-
-.btn.save:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+    color: var(--warn);
 }
 </style>

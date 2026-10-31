@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useTravelStore, type Flight, type FlightUpdate } from '../stores/store'
+import {
+    useTravelStore,
+    type Flight,
+    type FlightUpdate,
+    type Visibility,
+} from '../stores/store'
+import SegmentedControl from '../ui/SegmentedControl.vue'
 import { t } from '../../i18n'
 import { vEnterNext } from '../ui/enterNext'
 import { estimateDurationMinutes } from './distance'
@@ -28,6 +34,7 @@ const hours = ref<number | ''>('')
 const minutes = ref<number | ''>('')
 const aircraft = ref('')
 const otherAircraft = ref('')
+const visibility = ref<Visibility>('private')
 // The duration inputs start with the estimate, which is only stored once
 // the user changes them
 const initialDuration = ref(0)
@@ -42,6 +49,7 @@ function reset() {
     const known = !f.aircraft || AIRCRAFT_TYPES.includes(f.aircraft)
     aircraft.value = known ? (f.aircraft ?? '') : OTHER
     otherAircraft.value = known ? '' : (f.aircraft ?? '')
+    visibility.value = f.visibility
 }
 
 // Also after saving, so a newly saved number shows the other fields at once
@@ -52,6 +60,7 @@ watch(
         props.flight.date,
         props.flight.durationMinutes,
         props.flight.aircraft,
+        props.flight.visibility,
     ],
     reset,
     { immediate: true }
@@ -80,6 +89,7 @@ const patch = computed<FlightUpdate>(() => {
     const out: FlightUpdate = {}
     if (normalizedNumber.value !== (f.flightNumber ?? ''))
         out.flightNumber = normalizedNumber.value ?? ''
+    if (visibility.value !== f.visibility) out.visibility = visibility.value
     // The other fields are only shown once a number is stored
     if (!f.flightNumber) return out
     if (date.value !== (f.date ?? '')) out.date = date.value
@@ -104,6 +114,19 @@ const durationLabel = computed(() =>
         ? formatDuration(props.flight.durationMinutes)
         : `≈ ${formatDuration(estimate.value)}`
 )
+
+const visibilityOptions = computed(() => [
+    {
+        value: 'private' as const,
+        label: t('common.onlyMe'),
+        title: t('country.privateTitle'),
+    },
+    {
+        value: 'public' as const,
+        label: t('common.public'),
+        title: t('country.publicTitle'),
+    },
+])
 
 const formatDate = (day: string) =>
     formatDay(day, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -177,6 +200,17 @@ async function save() {
                 <p v-else-if="!flight.flightNumber" class="muted small">
                     {{ t('flights.numberFirst') }}
                 </p>
+            </div>
+
+            <div>
+                <label>{{ t('flights.visibility') }}</label>
+                <SegmentedControl
+                    v-model="visibility"
+                    :options="visibilityOptions"
+                    :label="t('flights.visibility')"
+                    :disabled="!store.canWrite"
+                    stretch
+                />
             </div>
 
             <template v-if="flight.flightNumber">
@@ -309,7 +343,7 @@ dd {
     display: flex;
     align-items: center;
     min-height: var(--touch);
-    color: #3a7d5c;
+    color: var(--accent);
     font-size: 0.85rem;
     font-weight: 500;
     text-decoration: none;
@@ -349,7 +383,7 @@ select {
 
 input:focus,
 select:focus {
-    border-color: #3a7d5c;
+    border-color: var(--accent);
     outline: none;
 }
 
@@ -377,44 +411,20 @@ select:disabled {
 .hint {
     margin: 0.3rem 0 0;
     font-size: 0.72rem;
-    color: #c0392b;
+    color: var(--danger);
 }
 
 .hint.offline {
     margin: -0.4rem 0 0;
-    color: #8a5a12;
-}
-
-.btn {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: var(--touch);
-    padding: 0.5rem;
-    border: none;
-    border-radius: 0.5rem;
-    background: #1a1c1e;
-    color: white;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.btn:disabled {
-    opacity: 0.5;
+    color: var(--warn);
 }
 
 /* Mouse: denser controls, as in the rest of the panel */
 @media (pointer: fine) {
     input,
     select,
-    .btn,
     .link {
         min-height: 2rem;
-    }
-
-    .btn {
-        font-size: 0.82rem;
     }
 
     .link {

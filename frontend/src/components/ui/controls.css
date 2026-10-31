@@ -1,0 +1,135 @@
+/* Buttons, chips and icon buttons shared by every panel, page and dialog.
+   Components add only layout (width, flex) on top of these. */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+    min-height: var(--touch);
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--accent);
+    border-radius: 0.5rem;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        border-color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
+}
+
+.btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn.secondary {
+    border-color: var(--line-strong);
+    background: transparent;
+    color: var(--text);
+}
+
+.btn.secondary:hover:not(:disabled) {
+    border-color: var(--line-strong);
+    background: var(--line-faint);
+}
+
+.btn.danger {
+    border-color: var(--danger);
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn.danger:hover:not(:disabled) {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 85%, black);
+}
+
+/* Toggleable filter and suggestion chips */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2rem;
+    padding: 0.1rem 0.7rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--raised);
+    color: var(--muted-strong);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.chip.on {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--text);
+}
+
+/* Square icon buttons in lists: edit, remove, move */
+.icon-btn {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--line-faint);
+    color: var(--text);
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
+}
+
+.icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* A mouse needs no 44px targets */
+@media (pointer: fine) {
+    .btn {
+        min-height: 2rem;
+        padding: 0.4rem 0.9rem;
+    }
+
+    .chip {
+        min-height: 1.6rem;
+        padding: 0.1rem 0.55rem;
+        font-size: 0.72rem;
+    }
+
+    .icon-btn {
+        width: 1.9rem;
+        height: 1.9rem;
+    }
+}

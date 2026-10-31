@@ -488,13 +488,13 @@ watchEffect(() => {
     min-height: var(--login-h);
     padding: 0 0.9rem;
     border-radius: 1.2rem;
-    background: #3a7d5c;
+    background: var(--accent);
     color: #fff;
 }
 
 .login:hover {
     color: #fff;
-    background: #2f6a4e;
+    background: var(--accent-hover);
 }
 
 /* The button is the touch target; the circle inside is what shows */
@@ -516,7 +516,7 @@ watchEffect(() => {
     width: 2rem;
     height: 2rem;
     border-radius: 50%;
-    background: #3a7d5c;
+    background: var(--accent);
 }
 
 .avatar:hover {
