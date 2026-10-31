@@ -444,7 +444,7 @@ watch(
     }
 }
 
-/* Phones: zoom and attribution move to the top right, away from the sheet */
+/* Phones: zoom controls move to the top right, away from the sheet */
 @media (max-width: 479px), (max-width: 599px) and (min-height: 501px) {
     .map :deep(.maplibregl-ctrl-bottom-right) {
         top: calc(var(--safe-top) + var(--appbar-h) + 5.4rem);

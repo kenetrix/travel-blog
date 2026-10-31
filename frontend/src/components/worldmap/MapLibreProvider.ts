@@ -2,7 +2,6 @@ import { COUNTRY_BOUNDS } from './countryBounds'
 import { abbreviate, countryAreas } from './countryLabels'
 import {
     Map as MLMap,
-    AttributionControl,
     GeoJSONSource,
     LngLatBounds,
     Marker,
@@ -129,20 +128,6 @@ const EMPTY: FeatureCollection = {
     features: [],
 }
 
-// Attribution as the (i) button only, never opened by itself (MapLibre opens it
-// on load and resize). Without MapLibre's own credit it stays hidden until a
-// map source brings an attribution, as the demo tiles do not.
-class CollapsedAttribution extends AttributionControl {
-    constructor() {
-        super({ compact: true })
-        const update = this._updateCompact
-        this._updateCompact = () => {
-            update()
-            this._container?.classList.remove('maplibregl-compact-show')
-        }
-    }
-}
-
 export class MapLibreProvider implements MapProvider {
     private map?: MLMap
     private clickCallback?: (countryCode: string) => void
@@ -184,7 +169,6 @@ export class MapLibreProvider implements MapProvider {
         canvasContainer.style.opacity = '0'
         canvasContainer.style.transition = 'opacity 0.3s'
 
-        this.map.addControl(new CollapsedAttribution(), 'bottom-right')
         this.map.addControl(
             new NavigationControl({ showCompass: false }),
             'bottom-right'
@@ -396,8 +380,6 @@ export class MapLibreProvider implements MapProvider {
             this.map!.addSource('places', {
                 type: 'geojson',
                 data: EMPTY,
-                attribution:
-                    '<a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a>',
             })
             for (const tier of PLACE_TIERS) {
                 this.map!.addLayer({

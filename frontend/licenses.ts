@@ -26,6 +26,15 @@ const PREBUILT_PACKAGES = ['maplibre-gl']
 
 const VITE_LIST = '.vite/licenses.json'
 
+// Data credited here instead of on the map
+const DATA_CREDITS = [
+    'GeoNames (CC BY 4.0)',
+    '',
+    'Place names from GeoNames, https://www.geonames.org',
+    'Licensed under Creative Commons Attribution 4.0,',
+    'https://creativecommons.org/licenses/by/4.0/',
+]
+
 interface Entry {
     name: string
     version: string
@@ -98,6 +107,12 @@ function render(entries: Entry[]): string {
         'Each package is listed with its version, license and license text.',
         '',
         ...parts,
+        line,
+        'Data',
+        line,
+        '',
+        ...DATA_CREDITS,
+        '',
     ].join('\n')
 }
 
