@@ -188,7 +188,15 @@ export class MapLibreProvider implements MapProvider {
         this.map.keyboard.disable()
         this.map.touchZoomRotate.disableRotation()
 
+        // A chunk of its own, loaded while the style and tiles load
+        const lakes = import('./lakes.json')
+
         this.map.on('load', () => {
+            lakes.then(({ default: data }) =>
+                (
+                    this.map?.getSource('lakes') as GeoJSONSource | undefined
+                )?.setData(data as FeatureCollection)
+            )
             this.map!.on('click', (e) => {
                 if (!this.mapClickCallback) return
                 const point = this.pointAt(e.point.x, e.point.y)
@@ -324,6 +332,14 @@ export class MapLibreProvider implements MapProvider {
                     'fill-color': Colors.countryWishlist,
                     'fill-opacity': byState('wishlist', 0.4),
                 },
+            },
+            // Large lakes the base map leaves out or loses at low zoom, as
+            // water over the country fills
+            {
+                id: 'lakes',
+                type: 'fill',
+                source: 'lakes',
+                paint: { 'fill-color': Colors.water },
             }
         )
         // Wishlist countries get a light fill plus an outline: planned, not
@@ -478,6 +494,7 @@ export class MapLibreProvider implements MapProvider {
             ...style,
             sources: {
                 ...style.sources,
+                lakes: { type: 'geojson', data: EMPTY },
                 flights: { type: 'geojson', data: EMPTY },
                 // One point per route at the middle of its arc, so each route
                 // gets exactly one horizontal label
